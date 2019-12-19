@@ -7,3 +7,10 @@ A distributed key-value database
 - Fabian Frey
 - Franziska Lang
 - Elena Liebl
+
+### Before committing
+
+`cargo clippy`
+
+`cargo fmt`
+
