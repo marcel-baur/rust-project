@@ -146,3 +146,7 @@ Cargo.lock
 **/*.rs.bk
 
 # End of https://www.gitignore.io/api/rust,linux,clion,macos
+
+#Added by cargo
+
+/target
