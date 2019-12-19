@@ -28,7 +28,7 @@ fn main() {
             return;
         }
     }
-    if matches.is_present("IP-Adress") {
+    if matches.is_present("ip-address") {
         // TODO: Join existing p2p network on given ip address
         let addr;
         match matches.value_of("ip-address") {
@@ -47,8 +47,10 @@ fn main() {
 
 fn create_network(own_name: &str) {
     // TODO
+    println!("Create network with {} as own name", own_name);
 }
 
 fn join_network(own_name: &str, ip_address: &str) {
     // TODO
+    println!("Join {} as {}", ip_address, own_name);
 }
