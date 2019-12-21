@@ -1,6 +1,8 @@
 extern crate clap;
 
 use clap::{App, Arg};
+mod network;
+mod database;
 
 fn main() {
     let matches = App::new("music_p2p")
@@ -41,13 +43,8 @@ fn main() {
         join_network(name, addr);
     } else {
         // TODO: Create new p2p network
-        create_network(name);
+        network::create_network(name);
     }
-}
-
-fn create_network(own_name: &str) {
-    // TODO
-    println!("Create network with {} as own name", own_name);
 }
 
 fn join_network(own_name: &str, ip_address: &str) {
