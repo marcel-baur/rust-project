@@ -1,8 +1,8 @@
 extern crate clap;
 
 use clap::{App, Arg};
-mod network;
 mod database;
+mod network;
 
 fn main() {
     let matches = App::new("music_p2p")
