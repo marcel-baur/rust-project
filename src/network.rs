@@ -56,29 +56,12 @@ pub fn create_network(onw_name: &str) -> Peer {
     };
     println!("Local IP Address: {}", this_ipv4);
     let tokens: Vec<&str> = this_ipv4.split(".").collect();
-
-    let peer_socket_addr = parse_socket_addr_from_string(tokens);
+    let ipv4_port = format!("{}:{}", this_ipv4, "8080");
+    let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
+        Ok(val) => val,
+        Err(e) => panic!("Could not parse ip address to SocketAddr"),
+    };
     let mut network_table = HashMap::new();
     network_table.insert(onw_name.to_string(), peer_socket_addr);
     Peer::create(peer_socket_addr, onw_name, network_table)
-}
-
-fn parse_socket_addr_from_string(tokens: Vec<&str>) -> SocketAddr {
-    let mut int_tokens = Vec::new();
-    for token in tokens {
-        let int_token = match token.parse::<u8>() {
-            Ok(val) => val,
-            Err(e) => panic!("Parsing string to number failed"),
-        };
-        int_tokens.push(int_token);
-    }
-    SocketAddr::new(
-        IpAddr::V4(Ipv4Addr::new(
-            int_tokens[0],
-            int_tokens[1],
-            int_tokens[2],
-            int_tokens[3],
-        )),
-        8080,
-    )
 }
