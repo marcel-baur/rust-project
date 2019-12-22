@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::Binary;
 use std::fs::File;
 
 pub struct Database {
