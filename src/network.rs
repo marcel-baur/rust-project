@@ -45,7 +45,9 @@ pub fn create_network(onw_name: &str) -> Peer {
     let tokens: Vec<&str> = this_ipv4.split(".").collect();
 
     let peer_socket_addr = parse_socket_addr_from_string(tokens);
-    Peer::create(peer_socket_addr, onw_name, HashMap::new())
+    let mut network_table = HashMap::new();
+    network_table.insert(onw_name.to_string(), peer_socket_addr);
+    Peer::create(peer_socket_addr, onw_name, network_table)
 }
 
 fn parse_socket_addr_from_string(tokens: Vec<&str>) -> SocketAddr {
