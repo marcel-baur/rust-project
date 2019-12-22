@@ -6,6 +6,7 @@ extern crate get_if_addrs;
 
 use super::database::*;
 
+/// Represents a Peer in the network
 pub struct Peer {
     name: String,
     ip_address: SocketAddr,
@@ -14,6 +15,11 @@ pub struct Peer {
 }
 
 impl Peer {
+    /// Creates a new `Peer`
+    /// # Arguments:
+    /// * `ip_address` - `SocketAddr` that represents the own network address
+    /// * `own_name` - String that denotes the name of the Peer
+    /// * `network_table` - HashMap that contains the addresses of the other Peers in the network
     pub fn create(
         ip_address: SocketAddr,
         onw_name: &str,
@@ -28,6 +34,13 @@ impl Peer {
     }
 }
 
+/// Function to create a new network
+/// # Arguments:
+///
+/// * `own_name` - String that denotes the name of the initial Peer
+///
+/// # Returns:
+/// A new `Peer`
 pub fn create_network(onw_name: &str) -> Peer {
     let ifs = match get_if_addrs::get_if_addrs() {
         Ok(v) => v,
@@ -41,7 +54,7 @@ pub fn create_network(onw_name: &str) -> Peer {
     } else {
         "Local ip address not found".to_string()
     };
-    println!("Local IP Adress: {}", this_ipv4);
+    println!("Local IP Address: {}", this_ipv4);
     let tokens: Vec<&str> = this_ipv4.split(".").collect();
 
     let peer_socket_addr = parse_socket_addr_from_string(tokens);
