@@ -111,7 +111,3 @@ pub fn listen_tcp() -> Result<(), String> {
     }
     Ok(())
 }
-
-pub fn handle_user_input(message: &str, peer: Peer) {
-    println!("Handle user interaction here");
-}
