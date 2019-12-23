@@ -90,6 +90,6 @@ pub fn push_music_to_database(name: &str, file_path: &str , peer: Peer) {
     // get key/name of buffer string
 
     println!("{}", name);
-    println!("{}", filepath);
+    println!("{}", file_path);
 
 }
