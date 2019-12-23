@@ -1,24 +1,27 @@
 use crate::constants;
 use crate::network::{Peer};
 use std::error::Error;
-use std::io::stdin;
+use std::io::{stdin, ErrorKind};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{thread, io};
+use std::path::Path;
+use std::fs;
+use std::borrow::BorrowMut;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
     let i_clone = interaction_in_progress.clone();
     let peer = arc.lock().unwrap();
     // Use the peer clone, drop the original alloc of the peer
-    let peer_clone = peer.clone();
-    let peer_clone_write = peer.clone();
-    drop(peer);
+    let mut peer_clone = peer.clone();
+    let mut peer_clone_write = peer.clone();
+    //drop(peer);
     let _handle = thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
             i_clone.store(true, Ordering::SeqCst);
-            handle_user_input(&peer_clone);
+            handle_user_input(& mut peer_clone);
             i_clone.store(false, Ordering::SeqCst);
         }).unwrap();
 
@@ -39,7 +42,7 @@ pub fn show_db_status(peer: &Peer) {
     }
 }
 
-pub fn handle_user_input(peer_clone: &Peer) {
+pub fn handle_user_input(peer: & mut Peer) {
     let buffer = &mut String::new();
     stdin().read_line(buffer).unwrap();
     buffer.trim_end();
@@ -54,9 +57,9 @@ pub fn handle_user_input(peer_clone: &Peer) {
         },
         Some(&"push") => {
             if instructions.len() == 3 {
-                push_music_to_database(instructions[1], instructions[2], peer_clone.clone());
+                push_music_to_database(instructions[1], instructions[2], peer);
             } else {
-                println!("You need to specify name and filepath\n");
+                println!("You need to specify name and filepath. For more information type help.\n");
             }
         }
         _ => println!("No valid instructions. Try help!\n")
@@ -86,10 +89,21 @@ pub fn show_help_instructions() {
 ///
 /// # Returns:
 /// Result //@TODO
-pub fn push_music_to_database(name: &str, file_path: &str , peer: Peer) {
-    // get key/name of buffer string
-
-    println!("{}", name);
-    println!("{}", file_path);
-
+pub fn push_music_to_database(name: &str, file_path: &str , peer: & mut Peer) -> Result<(), io::Error> {
+    // get mp3 file
+    let path = Path::new(file_path);
+    if path.exists() {
+        let read_result = fs::read(path);
+        match read_result {
+            Ok(content) => {
+                println!("file eingelesen");
+                //@TODO save to database
+                peer.get_db().add_file(name, content);
+                println!("saved to hash map");
+                return Ok(());
+            }
+            Err(err) => return Err(err),
+        }
+    }
+    return Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"));
 }
