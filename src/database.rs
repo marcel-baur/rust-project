@@ -1,7 +1,8 @@
+use crate::network::Peer;
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::fmt::Binary;
 use std::fs::File;
-use std::borrow::BorrowMut;
 
 #[derive(Clone)]
 pub struct Database {
@@ -9,7 +10,9 @@ pub struct Database {
 }
 impl Database {
     pub fn new() -> Database {
-        Database { data: HashMap::new() }
+        Database {
+            data: HashMap::new(),
+        }
     }
 
     pub fn add_file(&mut self, key: &str, content: Vec<u8>) {

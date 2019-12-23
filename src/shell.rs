@@ -1,18 +1,18 @@
 use crate::constants;
-use crate::network::{Peer};
+use crate::network::Peer;
 use std::error::Error;
+use std::fs;
 use std::io::{stdin, ErrorKind};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::{thread, io};
-use std::path::Path;
-use std::fs;
-use std::borrow::BorrowMut;
+use std::{io, thread};
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
     let i_clone = interaction_in_progress.clone();
     let peer = arc.lock().unwrap();
+    let peer_mutex = Arc::new(Mutex::new(peer.clone()));
     // Use the peer clone, drop the original alloc of the peer
     let mut peer_clone = peer.clone();
     let mut peer_clone_write = peer.clone();
@@ -21,14 +21,15 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
         .name("Interaction".to_string())
         .spawn(move || loop {
             i_clone.store(true, Ordering::SeqCst);
-            handle_user_input(& mut peer_clone);
+            handle_user_input(peer_mutex.lock().unwrap().clone());
             i_clone.store(false, Ordering::SeqCst);
-        }).unwrap();
+        })
+        .unwrap();
 
     loop {
         if !interaction_in_progress.load(Ordering::SeqCst) {
             //println!("Action dispatched.");
-            show_db_status(&peer_clone_write);
+            // show_db_status(&peer_clone_write);
         }
         thread::sleep(constants::THREAD_SLEEP_DURATION);
     }
@@ -42,34 +43,34 @@ pub fn show_db_status(peer: &Peer) {
     }
 }
 
-pub fn handle_user_input(peer: & mut Peer) {
+pub fn handle_user_input(peer: Peer) {
     let buffer = &mut String::new();
     stdin().read_line(buffer).unwrap();
     buffer.trim_end();
-    let mut bufferIter = buffer.split_whitespace();
-    let instructions: Vec<&str> = bufferIter.collect();
+    let mut buffer_iter = buffer.split_whitespace();
+    let instructions: Vec<&str> = buffer_iter.collect();
     match instructions.first() {
         Some(&"h") => {
             show_help_instructions();
-        },
+        }
         Some(&"help") => {
             show_help_instructions();
-        },
+        }
         Some(&"push") => {
             if instructions.len() == 3 {
                 push_music_to_database(instructions[1], instructions[2], peer);
             } else {
-                println!("You need to specify name and filepath. For more information type help.\n");
+                println!(
+                    "You need to specify name and filepath. For more information type help.\n"
+                );
             }
         }
-        _ => println!("No valid instructions. Try help!\n")
+        _ => println!("No valid instructions. Try help!\n"),
     }
 }
 
-
 pub fn show_help_instructions() {
-    let info =
-        "\nHelp Menu:\n\n\
+    let info = "\nHelp Menu:\n\n\
         Use following instructions: \n\n\
         push [mp3 name] [direction to mp3] - add mp3 to database\n\
         get [mp3 name] - get mp3 file from database\n\
@@ -78,7 +79,6 @@ pub fn show_help_instructions() {
         ";
     print!("{}", info);
 }
-
 
 /// Function to check file path to mp3 and saves to db afterwards
 /// # Arguments:
@@ -89,7 +89,7 @@ pub fn show_help_instructions() {
 ///
 /// # Returns:
 /// Result //@TODO
-pub fn push_music_to_database(name: &str, file_path: &str , peer: & mut Peer) -> Result<(), io::Error> {
+pub fn push_music_to_database(name: &str, file_path: &str, peer: Peer) -> Result<(), io::Error> {
     // get mp3 file
     let path = Path::new(file_path);
     if path.exists() {
@@ -98,7 +98,8 @@ pub fn push_music_to_database(name: &str, file_path: &str , peer: & mut Peer) ->
             Ok(content) => {
                 println!("file eingelesen");
                 //@TODO save to database
-                peer.get_db().add_file(name, content);
+                //                peer.get_db().add_file(name, content);
+                //                peer.store((name.parse().unwrap(), content));
                 println!("saved to hash map");
                 return Ok(());
             }

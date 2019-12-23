@@ -1,6 +1,7 @@
 extern crate clap;
 
 use clap::{App, Arg};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 
 mod constants;
@@ -62,5 +63,7 @@ fn main() {
                 return;
             }
         };
+        let server = network::startup(peer);
+        server.join().expect_err("Failed to startup peer");
     }
 }
