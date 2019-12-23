@@ -12,8 +12,6 @@ impl Database {
         return Database { data: fresh_db };
     }
 
-    pub fn clone() {}
-
     pub fn get_data(&self) -> &HashMap<String, Vec<u8>> {
         return &self.data;
     }

@@ -96,7 +96,7 @@ pub fn create_network(onw_name: &str) -> Result<Peer, String> {
 }
 
 pub fn join_network(onw_name: &str, ip_address: SocketAddr) {
-    todo!();
+    //todo!();
 }
 
 pub fn listen_tcp() -> Result<(), String> {
