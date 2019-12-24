@@ -3,6 +3,7 @@ extern crate clap;
 use clap::{App, Arg};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
 
 mod constants;
 mod database;
@@ -63,7 +64,10 @@ fn main() {
                 return;
             }
         };
-        let server = network::startup(peer);
+        let arc = Arc::new(Mutex::new(peer));
+        let clone1 = arc.clone();
+        let server = network::startup(arc);
+        let listener = network::listen_tcp(clone1);
         server.join().expect_err("Failed to startup peer");
     }
 }

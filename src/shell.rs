@@ -1,5 +1,5 @@
 use crate::constants;
-use crate::network::Peer;
+use crate::network::{send_write_request, Peer};
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -11,17 +11,17 @@ use std::{io, thread};
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
     let i_clone = interaction_in_progress.clone();
-    let peer = arc.lock().unwrap();
-    let peer_mutex = Arc::new(Mutex::new(peer.clone()));
-    // Use the peer clone, drop the original alloc of the peer
-    let mut peer_clone = peer.clone();
-    let mut peer_clone_write = peer.clone();
+    //    let peer = arc.lock().unwrap();
+    //    let peer_mutex = Arc::new(Mutex::new(peer.clone()));
+    //    // Use the peer clone, drop the original alloc of the peer
+    //    let mut peer_clone = peer.clone();
+    //    let mut peer_clone_write = peer.clone();
     //drop(peer);
     let _handle = thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
             i_clone.store(true, Ordering::SeqCst);
-            handle_user_input(peer_mutex.lock().unwrap().clone());
+            handle_user_input(arc.clone());
             i_clone.store(false, Ordering::SeqCst);
         })
         .unwrap();
@@ -35,15 +35,16 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     }
 }
 
-pub fn show_db_status(peer: &Peer) {
+pub fn show_db_status(peer: Peer) {
     //println!("Current state of local database");
     // TODO: Print current keys of db
+    println!("Show");
     for k in peer.get_db().get_data() {
         println!("{:?}", k);
     }
 }
 
-pub fn handle_user_input(peer: Peer) {
+pub fn handle_user_input(peer: Arc<Mutex<Peer>>) {
     let buffer = &mut String::new();
     stdin().read_line(buffer).unwrap();
     buffer.trim_end();
@@ -58,12 +59,24 @@ pub fn handle_user_input(peer: Peer) {
         }
         Some(&"push") => {
             if instructions.len() == 3 {
-                push_music_to_database(instructions[1], instructions[2], peer);
+                //                let mutex = *peer.lock().unwrap();
+                //                push_music_to_database(instructions[1], instructions[2], mutex);
             } else {
                 println!(
                     "You need to specify name and filepath. For more information type help.\n"
                 );
             }
+        }
+        Some(&"dummyrequest") => {
+            let mut dummy = Vec::new();
+            dummy.push(1);
+            dummy.push(0);
+            let p = peer.lock().unwrap().clone();
+            let ip = p.get_ip();
+            send_write_request(
+                *peer.lock().unwrap().get_ip(),
+                ("Hello".parse().unwrap(), dummy),
+            );
         }
         _ => println!("No valid instructions. Try help!\n"),
     }
@@ -99,12 +112,17 @@ pub fn push_music_to_database(name: &str, file_path: &str, peer: Peer) -> Result
                 println!("file eingelesen");
                 //@TODO save to database
                 //                peer.get_db().add_file(name, content);
-                //                peer.store((name.parse().unwrap(), content));
+                peer.store((name.parse().unwrap(), content));
                 println!("saved to hash map");
                 return Ok(());
             }
-            Err(err) => return Err(err),
+            Err(err) => {
+                println!("Error while parsing file");
+                return Err(err);
+            }
         }
+    } else {
+        println!("The file could not be found at this path: {:?}", path);
     }
     return Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"));
 }

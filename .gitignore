@@ -152,3 +152,6 @@ Cargo.lock
 #Added by cargo
 
 /target
+
+# mp3 files
+/file

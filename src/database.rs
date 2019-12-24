@@ -15,7 +15,7 @@ impl Database {
         }
     }
 
-    pub fn add_file(&mut self, key: &str, content: Vec<u8>) {
+    pub fn add_file(mut self, key: &str, content: Vec<u8>) {
         self.data.insert(key.to_string(), content);
     }
 

@@ -10,6 +10,7 @@ use crate::constants;
 use crate::database::*;
 use crate::shell::spawn_shell;
 use core::fmt;
+use std::borrow::Borrow;
 use std::error::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -43,14 +44,21 @@ impl Peer {
         }
     }
 
-    pub fn store(&mut self, data: (String, Vec<u8>)) {
-        unimplemented!();
-        //        self.database.store_entry(data.clone());
+    pub fn store(self, data: (String, Vec<u8>)) {
+        let k = data.0;
+        let v = data.1;
+        self.database.add_file(&k, v);
+    }
+
+    pub fn get_ip(&self) -> &SocketAddr {
+        return &self.ip_address;
     }
 
     pub fn get_db(&self) -> &Database {
         return &self.database;
     }
+
+    pub fn process_store_request(&mut self, data: (String, Vec<u8>)) {}
 }
 
 /// Function to create a new network
@@ -84,24 +92,25 @@ pub fn create_network(onw_name: &str) -> Result<Peer, String> {
     let peer = Peer::create(peer_socket_addr, onw_name, network_table);
     Ok(peer)
 }
-pub fn startup(peer: Peer) -> JoinHandle<()> {
-    let peer_arc = Arc::new(Mutex::new(peer));
+pub fn startup(peer_arc: Arc<Mutex<Peer>>) -> JoinHandle<()> {
+    //    let peer_arc = Arc::new(Mutex::new(peer));
     let server = thread::Builder::new()
         .name("Server".to_string())
         .spawn(move || {
-            let handle1 = thread::Builder::new()
-                .name("Listener".to_string())
-                .spawn(move || {
-                    listen_tcp().expect("Failed to start listener");
-                })
-                .unwrap();
+            //            let handle1 = thread::Builder::new()
+            //                .name("Listener".to_string())
+            //                .spawn(move || {
+            //                    println!("Handle one started");
+            //                    //                    listen_tcp().expect("Failed to start listener");
+            //                })
+            //                .unwrap();
             let handle2 = thread::Builder::new()
                 .name("Interaction".to_string())
                 .spawn(move || {
                     spawn_shell(peer_arc).expect("Failed to spawn shell");
                 })
                 .unwrap();
-            handle1.join().expect_err("Handle1 failed");
+            //            handle1.join().expect_err("Handle1 failed");
             handle2.join().expect_err("Handle2 failed");
         })
         .unwrap();
@@ -112,14 +121,23 @@ pub fn join_network(onw_name: &str, ip_address: SocketAddr) {
     //todo!();
 }
 
-pub fn listen_tcp() -> Result<(), String> {
-    let listen_ip = "127.0.0.1:1289".to_string().parse::<SocketAddr>().unwrap();
+pub fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
+    let listen_ip = "0.0.0.0:34254".to_string().parse::<SocketAddr>().unwrap();
     let listener = TcpListener::bind(&listen_ip).unwrap();
+    println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
+        println!("Received");
         let mut buf = vec![];
+        dbg!(&stream);
         match stream {
-            Ok(mut s) => s.read_to_end(&mut buf).unwrap(),
-            Err(_e) => return Err("Error".to_string()),
+            Ok(mut s) => {
+                s.read_to_end(&mut buf).unwrap();
+                dbg!(&buf);
+            }
+            Err(_e) => {
+                println!("could not read stream");
+                return Err("Error".to_string());
+            }
         };
     }
     Ok(())
@@ -141,6 +159,7 @@ impl fmt::Display for SendRequest {
 }
 
 pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
+    println!("Hi");
     let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
     let buf = SendRequest {
         data,
