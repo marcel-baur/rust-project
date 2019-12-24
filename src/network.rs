@@ -129,12 +129,13 @@ pub fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
         println!("Received");
-        let mut buf = vec![];
-        dbg!(&stream);
+        let mut buf = String::new();
+        //        dbg!(&stream);
         match stream {
             Ok(mut s) => {
-                s.read_to_end(&mut buf).unwrap();
-                dbg!(&buf);
+                s.read_to_string(&mut buf).unwrap();
+                //                let deserialized: SendRequest = serde_json::from_str(&buf).unwrap();
+                println!("{}", &buf);
             }
             Err(_e) => {
                 println!("could not read stream");
@@ -162,12 +163,17 @@ impl fmt::Display for SendRequest {
 }
 
 pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
-    println!("Hi");
     let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
     let buf = SendRequest {
         data,
         action: "write".to_string(),
     };
+    let serialized = match serde_json::to_string(&buf) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &buf);
+            String::new()
+        }
+    };
     stream.write_all(&buf.to_string().as_bytes()).unwrap();
-    stream.read_exact(&mut [0; 128]).unwrap();
 }
