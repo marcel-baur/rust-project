@@ -1,6 +1,14 @@
 extern crate clap;
 
 use clap::{App, Arg};
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
+
+mod constants;
+mod database;
+mod network;
+mod shell;
 
 fn main() {
     let matches = App::new("music_p2p")
@@ -32,25 +40,24 @@ fn main() {
         // TODO: Join existing p2p network on given ip address
         let addr;
         match matches.value_of("ip-address") {
-            Some(ip) => addr = ip,
+            Some(ip) => {
+                addr = match ip.parse::<SocketAddr>() {
+                    Ok(socket_addr) => socket_addr,
+                    Err(e) => {
+                        println!("Could not parse ip address of remote Peer");
+                        return;
+                    }
+                }
+            }
             None => {
                 println!("Could not parse ip-address");
                 return;
             }
         }
-        join_network(name, addr);
+        network::join_network(name, addr);
     } else {
         // TODO: Create new p2p network
-        create_network(name);
+        let peer = network::startup(name.parse().unwrap());
+        peer.join().expect_err("Could not spawn peer");
     }
-}
-
-fn create_network(own_name: &str) {
-    // TODO
-    println!("Create network with {} as own name", own_name);
-}
-
-fn join_network(own_name: &str, ip_address: &str) {
-    // TODO
-    println!("Join {} as {}", ip_address, own_name);
 }
