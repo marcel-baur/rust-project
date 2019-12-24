@@ -5,11 +5,11 @@ use std::net::{SocketAddr, TcpStream};
 use std::thread;
 use std::{io, time};
 extern crate get_if_addrs;
-
 use crate::constants;
 use crate::database::*;
 use crate::shell::spawn_shell;
 use core::fmt;
+use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::error::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -145,6 +145,7 @@ pub fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 struct SendRequest {
     data: (String, Vec<u8>),
     action: String,

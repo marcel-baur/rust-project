@@ -19,6 +19,10 @@ impl Database {
         self.data.insert(key.to_string(), content);
     }
 
+    pub fn get_file(&self, key: &str) -> Option<&Vec<u8>> {
+        self.data.get(key)
+    }
+
     pub fn get_data(&self) -> &HashMap<String, Vec<u8>> {
         return &self.data;
     }
