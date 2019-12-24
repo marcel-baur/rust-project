@@ -68,7 +68,7 @@ impl Peer {
 ///
 /// # Returns:
 /// A new `Peer` if successful, error string if failed
-pub fn create_network(onw_name: &str) -> Result<Peer, String> {
+pub fn create_peer(onw_name: &str) -> Result<Peer, String> {
     let ifs = match get_if_addrs::get_if_addrs() {
         Ok(v) => v,
         Err(_e) => return Err("Failed to find any network address".to_string()),
@@ -92,29 +92,31 @@ pub fn create_network(onw_name: &str) -> Result<Peer, String> {
     let peer = Peer::create(peer_socket_addr, onw_name, network_table);
     Ok(peer)
 }
-pub fn startup(peer_arc: Arc<Mutex<Peer>>) -> JoinHandle<()> {
-    //    let peer_arc = Arc::new(Mutex::new(peer));
-    let server = thread::Builder::new()
-        .name("Server".to_string())
+
+pub fn startup(name: String) -> JoinHandle<()> {
+    let master = thread::Builder::new().name("Master".to_string());
+    master
         .spawn(move || {
-            //            let handle1 = thread::Builder::new()
-            //                .name("Listener".to_string())
-            //                .spawn(move || {
-            //                    println!("Handle one started");
-            //                    //                    listen_tcp().expect("Failed to start listener");
-            //                })
-            //                .unwrap();
-            let handle2 = thread::Builder::new()
-                .name("Interaction".to_string())
+            let peer = create_peer(name.as_ref()).unwrap();
+            let peer_arc = Arc::new(Mutex::new(peer));
+            let peer_arc_clone_listen = peer_arc.clone();
+            let listener = thread::Builder::new()
+                .name("TCPListener".to_string())
                 .spawn(move || {
-                    spawn_shell(peer_arc).expect("Failed to spawn shell");
+                    listen_tcp(peer_arc_clone_listen);
                 })
                 .unwrap();
-            //            handle1.join().expect_err("Handle1 failed");
-            handle2.join().expect_err("Handle2 failed");
+            let peer_arc_clone_interact = peer_arc.clone();
+            let interact = thread::Builder::new()
+                .name("Interact".to_string())
+                .spawn(move || {
+                    spawn_shell(peer_arc_clone_interact);
+                })
+                .unwrap();
+            listener.join().expect_err("Could not join Listener");
+            interact.join().expect_err("Could not join Interact");
         })
-        .unwrap();
-    return server;
+        .unwrap()
 }
 
 pub fn join_network(onw_name: &str, ip_address: SocketAddr) {

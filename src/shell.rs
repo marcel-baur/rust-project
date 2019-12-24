@@ -3,6 +3,7 @@ use crate::network::{send_write_request, Peer};
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
+use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -11,24 +12,22 @@ use std::{io, thread};
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
     let i_clone = interaction_in_progress.clone();
-    //    let peer = arc.lock().unwrap();
-    //    let peer_mutex = Arc::new(Mutex::new(peer.clone()));
-    //    // Use the peer clone, drop the original alloc of the peer
-    //    let mut peer_clone = peer.clone();
-    //    let mut peer_clone_write = peer.clone();
-    //drop(peer);
+    // Use the peer clone, drop the original alloc of the peer
+    let peer = arc.lock().unwrap();
+    let ip = *peer.get_ip();
+    drop(peer);
     let _handle = thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
             i_clone.store(true, Ordering::SeqCst);
-            handle_user_input(arc.clone());
+            handle_user_input(ip);
             i_clone.store(false, Ordering::SeqCst);
         })
         .unwrap();
 
     loop {
         if !interaction_in_progress.load(Ordering::SeqCst) {
-            //println!("Action dispatched.");
+            println!("Interaction Possible");
             // show_db_status(&peer_clone_write);
         }
         thread::sleep(constants::THREAD_SLEEP_DURATION);
@@ -44,41 +43,40 @@ pub fn show_db_status(peer: Peer) {
     }
 }
 
-pub fn handle_user_input(peer: Arc<Mutex<Peer>>) {
-    let buffer = &mut String::new();
-    stdin().read_line(buffer).unwrap();
-    buffer.trim_end();
-    let mut buffer_iter = buffer.split_whitespace();
-    let instructions: Vec<&str> = buffer_iter.collect();
-    match instructions.first() {
-        Some(&"h") => {
-            show_help_instructions();
-        }
-        Some(&"help") => {
-            show_help_instructions();
-        }
-        Some(&"push") => {
-            if instructions.len() == 3 {
-                //                let mutex = *peer.lock().unwrap();
-                //                push_music_to_database(instructions[1], instructions[2], mutex);
-            } else {
-                println!(
-                    "You need to specify name and filepath. For more information type help.\n"
-                );
+pub fn handle_user_input(ip: SocketAddr) {
+    loop {
+        let buffer = &mut String::new();
+        stdin().read_line(buffer).unwrap();
+        buffer.trim_end();
+        let mut buffer_iter = buffer.split_whitespace();
+        let instructions: Vec<&str> = buffer_iter.collect();
+        match instructions.first() {
+            Some(&"h") => {
+                show_help_instructions();
             }
+            Some(&"help") => {
+                show_help_instructions();
+            }
+            Some(&"push") => {
+                if instructions.len() == 3 {
+                    //                let mutex = *peer.lock().unwrap();
+                    //                push_music_to_database(instructions[1], instructions[2], mutex);
+                } else {
+                    println!(
+                        "You need to specify name and filepath. For more information type help.\n"
+                    );
+                }
+            }
+            Some(&"dummyrequest") => {
+                let mut dummy = Vec::new();
+                dummy.push(1);
+                dummy.push(0);
+                //                let p = peer.lock().unwrap().clone();
+                //                let ip = peer.get_ip();
+                send_write_request(ip, ("Hello".parse().unwrap(), dummy));
+            }
+            _ => println!("No valid instructions. Try help!\n"),
         }
-        Some(&"dummyrequest") => {
-            let mut dummy = Vec::new();
-            dummy.push(1);
-            dummy.push(0);
-            let p = peer.lock().unwrap().clone();
-            let ip = p.get_ip();
-            send_write_request(
-                *peer.lock().unwrap().get_ip(),
-                ("Hello".parse().unwrap(), dummy),
-            );
-        }
-        _ => println!("No valid instructions. Try help!\n"),
     }
 }
 

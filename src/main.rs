@@ -57,17 +57,7 @@ fn main() {
         network::join_network(name, addr);
     } else {
         // TODO: Create new p2p network
-        let peer = match network::create_network(name) {
-            Ok(p) => p,
-            Err(str) => {
-                println!("{}", str);
-                return;
-            }
-        };
-        let arc = Arc::new(Mutex::new(peer));
-        let clone1 = arc.clone();
-        let server = network::startup(arc);
-        let listener = network::listen_tcp(clone1);
-        server.join().expect_err("Failed to startup peer");
+        let peer = network::startup(name.parse().unwrap());
+        peer.join().expect_err("Could not spawn peer");
     }
 }
