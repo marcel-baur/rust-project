@@ -61,6 +61,7 @@ pub fn handle_user_input(ip: SocketAddr) {
                 if instructions.len() == 3 {
                     //                let mutex = *peer.lock().unwrap();
                     //                push_music_to_database(instructions[1], instructions[2], mutex);
+                    push_music_to_database(instructions[1], instructions[2], ip);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -100,7 +101,11 @@ pub fn show_help_instructions() {
 ///
 /// # Returns:
 /// Result //@TODO
-pub fn push_music_to_database(name: &str, file_path: &str, peer: Peer) -> Result<(), io::Error> {
+pub fn push_music_to_database(
+    name: &str,
+    file_path: &str,
+    addr: SocketAddr,
+) -> Result<(), io::Error> {
     // get mp3 file
     let path = Path::new(file_path);
     if path.exists() {
@@ -110,7 +115,8 @@ pub fn push_music_to_database(name: &str, file_path: &str, peer: Peer) -> Result
                 println!("file eingelesen");
                 //@TODO save to database
                 //                peer.get_db().add_file(name, content);
-                peer.store((name.parse().unwrap(), content));
+                //                peer.store((name.parse().unwrap(), content));
+                send_write_request(addr, (name.to_string(), content));
                 println!("saved to hash map");
                 return Ok(());
             }

@@ -58,7 +58,9 @@ impl Peer {
         return &self.database;
     }
 
-    pub fn process_store_request(&mut self, data: (String, Vec<u8>)) {}
+    pub fn process_store_request(&mut self, data: (String, Vec<u8>)) {
+        self.database.data.insert(data.0, data.1);
+    }
 }
 
 /// Function to create a new network
@@ -126,6 +128,7 @@ pub fn join_network(onw_name: &str, ip_address: SocketAddr) {
 pub fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     let listen_ip = "0.0.0.0:34254".to_string().parse::<SocketAddr>().unwrap();
     let listener = TcpListener::bind(&listen_ip).unwrap();
+    let clone = arc.clone();
     println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
         println!("Received");
@@ -134,8 +137,24 @@ pub fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         match stream {
             Ok(mut s) => {
                 s.read_to_string(&mut buf).unwrap();
-                //                let deserialized: SendRequest = serde_json::from_str(&buf).unwrap();
-                println!("{}", &buf);
+                //                println!("Buffer: {}", &buf);
+                let deserialized: SendRequest = match serde_json::from_str(&buf) {
+                    Ok(val) => val,
+                    Err(e) => {
+                        println!("{}", e.to_string());
+                        SendRequest {
+                            key: "key".to_string(),
+                            value: Vec::new(),
+                            action: "write".to_string(),
+                        }
+                    }
+                };
+                let mut peer = clone.lock().unwrap();
+                //                peer.process_store_request((deserialized.data.0, deserialized.data.1));
+                dbg!(deserialized);
+                drop(peer);
+                println!("Done Writing");
+                // TODO: Response, handle duplicate key, redundancy
             }
             Err(_e) => {
                 println!("could not read stream");
@@ -148,7 +167,8 @@ pub fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct SendRequest {
-    data: (String, Vec<u8>),
+    value: Vec<u8>,
+    key: String,
     action: String,
 }
 
@@ -156,24 +176,26 @@ impl fmt::Display for SendRequest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\"data\": \"{:?}\", \"action\": {:?}",
-            self.data, self.action
+            "\"key\": \"{:?}\", \"value\": \"{:?}\", \"action\": {:?}",
+            self.key, self.value, self.action
         )
     }
 }
 
 pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
     let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
+    let mut vec: Vec<u8> = Vec::new();
+    vec.push(1);
+    vec.push(0);
     let buf = SendRequest {
-        data,
+        value: data.1,
+        key: data.0,
         action: "write".to_string(),
     };
-    let serialized = match serde_json::to_string(&buf) {
+    let serialized = match serde_json::to_writer(&stream, &buf) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &buf);
-            String::new()
         }
     };
-    stream.write_all(&buf.to_string().as_bytes()).unwrap();
 }
