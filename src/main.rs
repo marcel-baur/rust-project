@@ -57,7 +57,7 @@ fn main() {
         network::join_network(name, addr);
     } else {
         // TODO: Create new p2p network
-        let peer = network::startup(name.parse().unwrap());
-        peer.join().expect_err("Could not spawn peer");
+        let join_handle = network::startup(name.parse().unwrap());
+        join_handle.join().expect_err("Could not spawn peer");
     }
 }
