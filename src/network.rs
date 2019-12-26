@@ -16,6 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 use local_ipaddress;
+use std::str::FromStr;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -90,7 +91,6 @@ fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
 // This function only gets compiled if the target OS is linux
 #[cfg(not(target_os = "macos"))]
 fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
-    println!("You are running linux!");
     let this_ipv4 = match local_ipaddress::get() {
         Some(val) => val,
         None => return Err("Failed to find any network address".to_string())
@@ -151,27 +151,29 @@ pub fn startup(name: String, port: String) -> JoinHandle<()> {
 
 pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Result<(), String> {
     //get own ip address
-    let peer_socket_addr = match get_own_ip_address(port) {
+    let own_addr = match get_own_ip_address(port) {
         Ok(val) => val,
         Err(error_message) => return Err(error_message)
     };
-    dbg!(peer_socket_addr);
-    dbg!(ip_address);
+
     //open new tcp listener for incoming network tables
     let listener = thread::Builder::new()
-        .name("TCPListener".to_string())
+        .name("table_request".to_string())
         .spawn(move || {
-            listen_tcp_for_handshake();
+            listen_tcp_for_handshake(&own_addr);
         })
         .unwrap();
 
-    //get existing hashmap table
-    send_table_request(ip_address, peer_socket_addr, own_name);
+    //send request existing network table
+    send_table_request(ip_address, own_addr, own_name);
+
+    listener.join();
+    
     Ok(())
 }
 
-pub fn listen_tcp_for_handshake() -> Result<(), String> {
-    let listen_ip = "0.0.0.0:34254".to_string().parse::<SocketAddr>().unwrap();
+pub fn listen_tcp_for_handshake(ip_address: &SocketAddr) -> Result<(), String> {
+    let listen_ip = ip_address.to_string().parse::<SocketAddr>().unwrap();
     let listener = TcpListener::bind(&listen_ip).unwrap();
     println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
@@ -191,9 +193,13 @@ pub fn listen_tcp_for_handshake() -> Result<(), String> {
                         }
                     }
                 };
-                dbg!(&deserialized);
+                //dbg!(&deserialized);
+                let string = String::from_utf8(deserialized.value).unwrap();
                 println!("got the network table");
+                let networkTable = json_string_to_network_table(string);
+                dbg!(&networkTable);
                 // here exit thread to join and create peer
+                break
             }
             Err(_e) => {
                 println!("could not read stream");
@@ -231,7 +237,7 @@ pub fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                 };
                 let mut peer = clone.lock().unwrap();
                 dbg!(&deserialized);
-                handle_incoming_requests(deserialized);
+                handle_incoming_requests(deserialized, &peer);
                 //peer.process_store_request((deserialized.key, deserialized.value));
                 drop(peer);
                 println!("Done Writing");
@@ -288,7 +294,7 @@ pub fn send_table_request(target: SocketAddr, from: SocketAddr, name: &str) {
     };
 }
 
-pub fn handle_incoming_requests(request: SendRequest) {
+pub fn handle_incoming_requests(request: SendRequest, peer: &Peer) {
     let copy = request.value;
     match request.action.as_ref() {
         "get_network_table" => {
@@ -296,10 +302,60 @@ pub fn handle_incoming_requests(request: SendRequest) {
                 Ok(val) => val,
                 Err(utf) => return
             };
+            //@TODO check name in network table with hashmap contains key function
             println!("network table request with name: {}", name);
+            send_network_table(request.from, &peer);
         }
         _ => {println!("no valid request");}
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NetworkInfo {
+    name: String,
+    address: String
+}
+
+pub fn json_string_to_network_table(json_string: String) -> HashMap<String, SocketAddr> {
+    let info_array: Vec<NetworkInfo> = match serde_json::from_str(json_string.as_str()) {
+        Ok(val) => val,
+        Err(e) => {
+            println!("no parcing hashmap");
+            return HashMap::new();
+        }
+    };
+    dbg!(&info_array);
+    let mut hashmap = HashMap::new();
+    for info in info_array {
+        let key = info.name;
+        let addr = SocketAddr::from_str(info.address.as_str()).unwrap();
+        hashmap.insert(key, addr);
+    }
+    hashmap
+}
+
+pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> String {
+    let mut array = vec![];
+    for (key, address) in network_table {
+        array.push(NetworkInfo { name: key.clone(), address: address.clone().to_string() } );
+    }
+    serde_json::to_string( &array).unwrap()
+}
+
+pub fn send_network_table(target: String, peer: &Peer) {
+    let mut stream = TcpStream::connect(target).unwrap();
+    let buf = SendRequest {
+        value: network_table_to_json(&peer.network_table).into_bytes(),
+        key: "network_table".to_string(),
+        from: peer.ip_address.to_string(),
+        action: "ack_network_table".to_string(),
+    };
+    match serde_json::to_writer(&stream, &buf) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &buf);
+        }
+    };
 }
 
 pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
