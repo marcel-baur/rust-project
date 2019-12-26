@@ -65,7 +65,7 @@ impl Peer {
 }
 
 #[cfg(target_os = "macos")]
-fn get_own_ip_address() -> Result<SocketAddr, String> {
+fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     let ifs = match get_if_addrs::get_if_addrs() {
         Ok(v) => v,
         Err(_e) => return Err("Failed to find any network address".to_string()),
@@ -79,7 +79,7 @@ fn get_own_ip_address() -> Result<SocketAddr, String> {
         "Local ip address not found".to_string()
     };
     println!("Local IP Address: {}", this_ipv4);
-    let ipv4_port = format!("{}:{}", this_ipv4, "34254");
+    let ipv4_port = format!("{}:{}", this_ipv4, port);
     let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
         Ok(val) => val,
         Err(e) => return Err("Could not parse ip address to SocketAddr".to_string()),
@@ -89,14 +89,14 @@ fn get_own_ip_address() -> Result<SocketAddr, String> {
 
 // This function only gets compiled if the target OS is linux
 #[cfg(not(target_os = "macos"))]
-fn get_own_ip_address() -> Result<SocketAddr, String> {
+fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     println!("You are running linux!");
     let this_ipv4 = match local_ipaddress::get() {
         Some(val) => val,
         None => return Err("Failed to find any network address".to_string())
     };
     println!("Local IP Address: {}", this_ipv4);
-    let ipv4_port = format!("{}:{}", this_ipv4, "34254");
+    let ipv4_port = format!("{}:{}", this_ipv4, port);
     let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
         Ok(val) => val,
         Err(e) => return Err("Could not parse ip address to SocketAddr".to_string()),
@@ -112,8 +112,8 @@ fn get_own_ip_address() -> Result<SocketAddr, String> {
 ///
 /// # Returns:
 /// A new `Peer` if successful, error string if failed
-pub fn create_peer(onw_name: &str) -> Result<Peer, String> {
-    let peer_socket_addr = match get_own_ip_address() {
+pub fn create_peer(onw_name: &str, port: &str) -> Result<Peer, String> {
+    let peer_socket_addr = match get_own_ip_address(port) {
         Ok(val) => val,
         Err(error_message) => return Err(error_message)
     };
@@ -123,11 +123,11 @@ pub fn create_peer(onw_name: &str) -> Result<Peer, String> {
     Ok(peer)
 }
 
-pub fn startup(name: String) -> JoinHandle<()> {
+pub fn startup(name: String, port: String) -> JoinHandle<()> {
     let concurrent_thread = thread::Builder::new().name("ConThread".to_string());
     concurrent_thread
         .spawn(move || {
-            let peer = create_peer(name.as_ref()).unwrap();
+            let peer = create_peer(name.as_ref(), port.as_ref()).unwrap();
             let peer_arc = Arc::new(Mutex::new(peer));
             let peer_arc_clone_listen = peer_arc.clone();
             let listener = thread::Builder::new()
@@ -149,9 +149,9 @@ pub fn startup(name: String) -> JoinHandle<()> {
         .unwrap()
 }
 
-pub fn join_network(own_name: &str, ip_address: SocketAddr) -> Result<(), String> {
+pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Result<(), String> {
     //get own ip address
-    let peer_socket_addr = match get_own_ip_address() {
+    let peer_socket_addr = match get_own_ip_address(port) {
         Ok(val) => val,
         Err(error_message) => return Err(error_message)
     };
