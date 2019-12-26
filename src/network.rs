@@ -15,6 +15,7 @@ use std::error::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
+use local_ipaddress;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -63,7 +64,8 @@ impl Peer {
     }
 }
 
-pub fn get_own_ip_address() -> Result<SocketAddr, String> {
+#[cfg(target_os = "macos")]
+fn get_own_ip_address() -> Result<SocketAddr, String> {
     let ifs = match get_if_addrs::get_if_addrs() {
         Ok(v) => v,
         Err(_e) => return Err("Failed to find any network address".to_string()),
@@ -84,6 +86,24 @@ pub fn get_own_ip_address() -> Result<SocketAddr, String> {
     };
     Ok(peer_socket_addr)
 }
+
+// This function only gets compiled if the target OS is linux
+#[cfg(not(target_os = "macos"))]
+fn get_own_ip_address() -> Result<SocketAddr, String> {
+    println!("You are running linux!");
+    let this_ipv4 = match local_ipaddress::get() {
+        Some(val) => val,
+        None => return Err("Failed to find any network address".to_string())
+    };
+    println!("Local IP Address: {}", this_ipv4);
+    let ipv4_port = format!("{}:{}", this_ipv4, "1289");
+    let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
+        Ok(val) => val,
+        Err(e) => return Err("Could not parse ip address to SocketAddr".to_string()),
+    };
+    Ok(peer_socket_addr)
+}
+
 
 /// Function to create a new network
 /// # Arguments:
