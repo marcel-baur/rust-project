@@ -76,12 +76,12 @@ pub fn get_own_ip_address() -> Result<SocketAddr, String> {
     } else {
         "Local ip address not found".to_string()
     };
+    println!("Local IP Address: {}", this_ipv4);
     let ipv4_port = format!("{}:{}", this_ipv4, "1289");
     let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
         Ok(val) => val,
         Err(e) => return Err("Could not parse ip address to SocketAddr".to_string()),
     };
-    println!("Local IP Address: {}", this_ipv4);
     Ok(peer_socket_addr)
 }
 
