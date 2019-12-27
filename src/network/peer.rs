@@ -8,8 +8,8 @@ use crate::network::{get_own_ip_address};
 #[derive(Clone)]
 pub struct Peer {
     name: String,
-    pub(crate) ip_address: SocketAddr,
-    pub(crate) network_table: HashMap<String, SocketAddr>,
+    pub ip_address: SocketAddr,
+    pub network_table: HashMap<String, SocketAddr>,
     database: Database,
 }
 

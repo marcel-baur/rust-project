@@ -1,9 +1,7 @@
 extern crate clap;
 
 use clap::{App, Arg};
-use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
 
 mod constants;
 mod database;

@@ -1,16 +1,9 @@
-use std::collections::HashMap;
-use std::io::{stdin, Read, Write};
+use std::io::{Read};
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::thread;
-use std::{io, time};
-use std::borrow::Borrow;
-use std::error::Error;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::thread::{spawn, JoinHandle};
-use local_ipaddress;
-use std::str::FromStr;
+use std::thread::{JoinHandle};
 
 pub mod peer;
 mod handshake;
@@ -18,10 +11,8 @@ mod send_request;
 
 extern crate get_if_addrs;
 
-use crate::constants;
-use crate::database::*;
 use crate::shell::spawn_shell;
-use crate::network::handshake::{json_string_to_network_table, network_table_to_json, send_network_table, send_table_request};
+use crate::network::handshake::{json_string_to_network_table, send_network_table, send_table_request};
 use crate::network::send_request::SendRequest;
 use crate::network::peer::{create_peer, Peer};
 

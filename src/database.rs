@@ -1,8 +1,4 @@
-use crate::network::peer;
-use std::borrow::BorrowMut;
 use std::collections::HashMap;
-use std::fmt::Binary;
-use std::fs::File;
 
 #[derive(Clone)]
 pub struct Database {
