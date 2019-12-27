@@ -1,5 +1,5 @@
 use crate::constants;
-use crate::network::{send_write_request, Peer};
+use crate::network::{send_write_request};
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -8,6 +8,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
+use crate::network::peer::Peer;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));

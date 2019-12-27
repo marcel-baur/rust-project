@@ -1,4 +1,4 @@
-use crate::network::Peer;
+use crate::network::peer;
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::fmt::Binary;
