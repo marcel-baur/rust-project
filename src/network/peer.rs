@@ -7,7 +7,7 @@ use crate::network::{get_own_ip_address};
 /// Represents a Peer in the network
 #[derive(Clone)]
 pub struct Peer {
-    name: String,
+    pub name: String,
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
     database: Database,

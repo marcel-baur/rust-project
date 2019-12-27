@@ -12,9 +12,10 @@ mod send_request;
 extern crate get_if_addrs;
 
 use crate::shell::spawn_shell;
-use crate::network::handshake::{json_string_to_network_table, send_network_table, send_table_request};
+use crate::network::handshake::{json_string_to_network_table, send_network_table, send_table_request, send_change_name_request, send_table_to_all_peers};
 use crate::network::send_request::SendRequest;
 use crate::network::peer::{create_peer, Peer};
+use std::str::FromStr;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -138,7 +139,6 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                 let mut peer = clone.lock().unwrap();
                 dbg!(&deserialized);
                 handle_incoming_requests(deserialized, &mut peer);
-                //peer.process_store_request((deserialized.key, deserialized.value));
                 drop(peer);
                 println!("Done Writing");
                 // TODO: Response, handle duplicate key, redundancy
@@ -160,16 +160,34 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
     };
     match request.action.as_ref() {
         "get_network_table" => {
-            //@TODO check name in network table with hashmap contains key function
-            println!("network table request with name: {}", value);
-            send_network_table(request.from, &peer);
+            // checks if key is unique, otherwise send change name request
+            if peer.network_table.contains_key(&value) {
+                let name = format!("{}+{}", &value, "1");
+                send_change_name_request(request.from, peer.get_ip(), name.as_ref());
+            } else {
+                send_network_table(request.from, &peer);
+            }
         }
         "ack_network_table" => {
-            let networkTable = json_string_to_network_table(value);
-            for (key, addr) in networkTable {
+            let network_table = json_string_to_network_table(value);
+            for (key, addr) in network_table {
+                peer.network_table.insert(key, addr);
+            }
+            send_table_to_all_peers(peer);
+        }
+        "update_network_table" => {
+            let new_network_peer = json_string_to_network_table(value);
+            for (key, addr) in new_network_peer {
                 peer.network_table.insert(key, addr);
             }
             dbg!(&peer.network_table);
+        },
+        "change_name" => {
+            peer.network_table.remove(&peer.name);
+            peer.name = value;
+            peer.network_table.insert(peer.name.clone(), peer.ip_address);
+            //send request existing network table
+            send_table_request(&SocketAddr::from_str(&request.from).unwrap(), peer.get_ip(), &peer.name);
         }
         _ => {println!("no valid request");}
     }
