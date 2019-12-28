@@ -197,6 +197,16 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
                 &peer.name,
             );
         }
+        "read" => {
+            match peer.find_file(request.key.as_ref()){
+                Some(value) => {
+                    //TODO schicke das File zurück
+                },
+                None => {
+                    //TODO such das File wo anders
+                }
+            };
+        }
         _ => {
             println!("no valid request");
         }
@@ -214,6 +224,28 @@ pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
         from: target.to_string(),
         action: "write".to_string(),
     };
+    let serialized = match serde_json::to_writer(&stream, &buf) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &buf);
+        }
+    };
+}
+
+pub fn send_read_request(target: SocketAddr, name:&str) {
+    let mut stream = TcpStream::connect("27.0.0.1:34254").unwrap();
+
+    let mut vec: Vec<u8> = Vec::new();
+    vec.push(1);
+    vec.push(0);
+
+    let buf = SendRequest{
+        value: vec,
+        key: name.to_string(),
+        from: target.to_string(),
+        action: "read".to_string(),
+    };
+
     let serialized = match serde_json::to_writer(&stream, &buf) {
         Ok(ser) => ser,
         Err(_e) => {

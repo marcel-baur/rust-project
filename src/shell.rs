@@ -1,6 +1,6 @@
 use crate::constants;
 use crate::network::peer::Peer;
-use crate::network::send_write_request;
+use crate::network::{send_write_request, send_read_request};
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -77,6 +77,15 @@ pub fn handle_user_input(ip: SocketAddr) {
                 //                let ip = peer.get_ip();
                 send_write_request(ip, ("Hello".parse().unwrap(), dummy));
             }
+            Some(&"get") => {
+                if instructions.len() == 2 {
+                    send_read_request(ip, instructions[1]);
+
+                } else {
+                    println!("You need to specify name and filepath. For more information type help.\n");
+                }
+            }
+
             _ => println!("No valid instructions. Try help!\n"),
         }
     }
