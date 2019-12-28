@@ -1,20 +1,23 @@
-use std::io::{Read};
+use std::io::Read;
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
-use std::thread;
 use std::sync::{Arc, Mutex};
-use std::thread::{JoinHandle};
+use std::thread;
+use std::thread::JoinHandle;
 
-pub mod peer;
 mod handshake;
+pub mod peer;
 mod send_request;
 
 extern crate get_if_addrs;
 
-use crate::shell::spawn_shell;
-use crate::network::handshake::{json_string_to_network_table, send_network_table, send_table_request, send_change_name_request, send_table_to_all_peers};
-use crate::network::send_request::SendRequest;
+use crate::network::handshake::{
+    json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
+    send_table_to_all_peers,
+};
 use crate::network::peer::{create_peer, Peer};
+use crate::network::send_request::SendRequest;
+use crate::shell::spawn_shell;
 use std::str::FromStr;
 
 #[cfg(target_os = "macos")]
@@ -45,7 +48,7 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     let this_ipv4 = match local_ipaddress::get() {
         Some(val) => val,
-        None => return Err("Failed to find any network address".to_string())
+        None => return Err("Failed to find any network address".to_string()),
     };
     println!("Local IP Address: {}", this_ipv4);
     let ipv4_port = format!("{}:{}", this_ipv4, port);
@@ -156,7 +159,7 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
     let copy = request.value;
     let value = match String::from_utf8(copy) {
         Ok(val) => val,
-        Err(utf) => return
+        Err(utf) => return,
     };
     match request.action.as_ref() {
         "get_network_table" => {
@@ -181,15 +184,22 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
                 peer.network_table.insert(key, addr);
             }
             dbg!(&peer.network_table);
-        },
+        }
         "change_name" => {
             peer.network_table.remove(&peer.name);
             peer.name = value;
-            peer.network_table.insert(peer.name.clone(), peer.ip_address);
+            peer.network_table
+                .insert(peer.name.clone(), peer.ip_address);
             //send request existing network table
-            send_table_request(&SocketAddr::from_str(&request.from).unwrap(), peer.get_ip(), &peer.name);
+            send_table_request(
+                &SocketAddr::from_str(&request.from).unwrap(),
+                peer.get_ip(),
+                &peer.name,
+            );
         }
-        _ => {println!("no valid request");}
+        _ => {
+            println!("no valid request");
+        }
     }
 }
 

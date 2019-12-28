@@ -33,7 +33,7 @@ fn main() {
                 .index(3),
         )
         .get_matches();
-    let name= matches.value_of("own-name").unwrap();
+    let name = matches.value_of("own-name").unwrap();
     let port = matches.value_of("port").unwrap_or("34521");
     if matches.is_present("ip-address") {
         // TODO: Join existing p2p network on given ip address
@@ -54,7 +54,7 @@ fn main() {
                 return;
             }
         }
-        network::join_network(name, port,addr);
+        network::join_network(name, port, addr);
     } else {
         // TODO: Create new p2p network
         let join_handle = network::startup(name.parse().unwrap(), port.parse().unwrap());

@@ -1,10 +1,10 @@
-use std::string::ToString;
+use crate::network::peer::Peer;
+use crate::network::send_request::SendRequest;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpStream};
 use std::str::FromStr;
-use serde::{Deserialize, Serialize};
-use crate::network::peer::Peer;
-use crate::network::send_request::SendRequest;
+use std::string::ToString;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NetworkInfo {
@@ -32,9 +32,12 @@ pub fn json_string_to_network_table(json_string: String) -> HashMap<String, Sock
 pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> String {
     let mut array = vec![];
     for (key, address) in network_table {
-        array.push(NetworkInfo { name: key.clone(), address: address.clone().to_string() } );
+        array.push(NetworkInfo {
+            name: key.clone(),
+            address: address.clone().to_string(),
+        });
     }
-    serde_json::to_string( &array).unwrap()
+    serde_json::to_string(&array).unwrap()
 }
 
 pub fn send_network_table(target: String, peer: &Peer) {
@@ -53,11 +56,15 @@ pub fn send_network_table(target: String, peer: &Peer) {
     };
 }
 
-pub fn send_network_update_table(target: String, from: String, hashmap: &HashMap<String, SocketAddr>) {
+pub fn send_network_update_table(
+    target: String,
+    from: String,
+    hashmap: &HashMap<String, SocketAddr>,
+) {
     //@TODO if connection error remove from network_table
     let mut stream = match TcpStream::connect(target) {
         Ok(stream) => stream,
-        Err(_) => return
+        Err(_) => return,
     };
     let buf = SendRequest {
         value: network_table_to_json(hashmap).into_bytes(),
@@ -93,8 +100,8 @@ pub fn send_table_to_all_peers(peer: &Peer) {
     let mut hashmap: HashMap<String, SocketAddr> = HashMap::new();
     hashmap.insert(peer.name.to_string(), peer.ip_address);
 
-    let networkTable = peer.network_table.clone();
-    for (key, value) in networkTable {
+    let network_table = peer.network_table.clone();
+    for (key, value) in network_table {
         // just update all other peers
         if key != peer.name {
             send_network_update_table(value.to_string(), peer.ip_address.to_string(), &hashmap);

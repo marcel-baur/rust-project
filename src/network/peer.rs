@@ -1,8 +1,8 @@
-use std::string::ToString;
-use std::net::SocketAddr;
-use std::collections::HashMap;
 use crate::database::Database;
-use crate::network::{get_own_ip_address};
+use crate::network::get_own_ip_address;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::string::ToString;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -61,7 +61,7 @@ impl Peer {
 pub fn create_peer(onw_name: &str, port: &str) -> Result<Peer, String> {
     let peer_socket_addr = match get_own_ip_address(port) {
         Ok(val) => val,
-        Err(error_message) => return Err(error_message)
+        Err(error_message) => return Err(error_message),
     };
     let mut network_table = HashMap::new();
     network_table.insert(onw_name.to_string(), peer_socket_addr);
