@@ -75,7 +75,7 @@ pub fn handle_user_input(ip: SocketAddr) {
                 dummy.push(0);
                 //                let p = peer.lock().unwrap().clone();
                 //                let ip = peer.get_ip();
-                send_write_request(ip, ("Hello".parse().unwrap(), dummy));
+                send_write_request(ip, ("Hello".parse().unwrap(), dummy), true);
             }
             _ => println!("No valid instructions. Try help!\n"),
         }
@@ -117,7 +117,7 @@ pub fn push_music_to_database(
                 //@TODO save to database
                 //                peer.get_db().add_file(name, content);
                 //                peer.store((name.parse().unwrap(), content));
-                send_write_request(addr, (name.to_string(), content));
+                send_write_request(addr, (name.to_string(), content), false);
                 println!("saved to hash map");
                 return Ok(());
             }

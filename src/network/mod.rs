@@ -10,6 +10,8 @@ pub mod peer;
 mod send_request;
 
 extern crate get_if_addrs;
+extern crate rand;
+use rand::Rng;
 
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
@@ -18,6 +20,8 @@ use crate::network::handshake::{
 use crate::network::peer::{create_peer, Peer};
 use crate::network::send_request::SendRequest;
 use crate::shell::spawn_shell;
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::str::FromStr;
 
 #[cfg(target_os = "macos")]
@@ -156,7 +160,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 }
 
 fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
-    let copy = request.value;
+    let copy = request.value.clone();
     let value = match String::from_utf8(copy) {
         Ok(val) => val,
         Err(utf) => return,
@@ -197,22 +201,43 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
                 &peer.name,
             );
         }
+        "write" => {
+            peer.process_store_request((request.key.clone(), request.value.clone()));
+
+            let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
+            match redundant_target {
+                Some(target) => {
+                    send_write_request(target, (request.key, request.value), true);
+                }
+                None => println!("Only peer in network. No redundancy possible"),
+            };
+            // TODO: Send response
+        }
+        "write_redundant" => {
+            peer.process_store_request((request.key, request.value));
+        }
         _ => {
             println!("no valid request");
         }
     }
 }
 
-pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
+pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>), redundant: bool) {
     let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
     let mut vec: Vec<u8> = Vec::new();
     vec.push(1);
     vec.push(0);
+    let mut action;
+    if let true = redundant {
+        action = "write_redundant";
+    } else {
+        action = "write";
+    }
     let buf = SendRequest {
         value: data.1,
         key: data.0,
         from: target.to_string(),
-        action: "write".to_string(),
+        action: action.to_string(),
     };
     let serialized = match serde_json::to_writer(&stream, &buf) {
         Ok(ser) => ser,
@@ -220,4 +245,21 @@ pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
             println!("Failed to serialize SendRequest {:?}", &buf);
         }
     };
+}
+
+fn other_random_target(
+    network_table: &HashMap<String, SocketAddr>,
+    own_ip: &SocketAddr,
+) -> Option<SocketAddr> {
+    if network_table.len() == 1 {
+        return None;
+    }
+    let mut rng = rand::thread_rng();
+    let mut index = rng.gen_range(0, network_table.len());
+    let mut target = network_table.values().skip(index).next().unwrap();
+    while target == own_ip {
+        index = rng.gen_range(0, network_table.len());
+        target = network_table.values().skip(index).next().unwrap();
+    }
+    return Some(*target);
 }
