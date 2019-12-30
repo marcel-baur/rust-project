@@ -158,6 +158,10 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     Ok(())
 }
 
+fn handle_incoming_response(response: Response, peer: &mut Peer) {
+    return;
+}
+
 fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
     let value_clone = request.value.clone();
     //    let copy = request.value;
