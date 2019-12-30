@@ -133,20 +133,19 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         match stream {
             Ok(mut s) => {
                 s.read_to_string(&mut buf).unwrap();
-                //                println!("Buffer: {}", &buf);
                 let deserialized: SendRequest = match serde_json::from_str(&buf) {
                     Ok(val) => val,
                     Err(e) => {
-                        dbg!(e); // missing field `value` at line 1 column 71
-                        let error_message = format!("Could not deserialize {:?}", &buf);
-                        return Err(error_message.to_string());
+                        dbg!(e);
+                        println!("Could not deserialize {:?}", &buf);
+                        continue; // skip this stream
                     }
                 };
                 let mut peer = clone.lock().unwrap();
                 //                dbg!(&deserialized);
                 handle_incoming_requests(deserialized, &mut peer);
                 drop(peer);
-                println!("Done Writing");
+                println!("Request handled.");
                 // TODO: Response, handle duplicate key, redundancy
             }
             Err(_e) => {
@@ -164,6 +163,7 @@ fn handle_incoming_response(response: Response, peer: &mut Peer) {
 
 fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
     let value_clone = request.value.clone();
+    // Copied this to all the places where a network_table request was handled. Caused errors for push_requests
     //    let copy = request.value;
     //    let value = match String::from_utf8(copy) {
     //        Ok(val) => val,
@@ -257,7 +257,6 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
                 }
                 None => println!("Only peer in network. No redundancy possible"),
             };
-            // TODO: Send response, fix address parse error
             dbg!(&request.from);
             match request.from.parse::<SocketAddr>() {
                 Ok(target_address) => {
@@ -290,10 +289,8 @@ pub fn send_write_request(
     let mut stream = TcpStream::connect(target).unwrap();
     let mut action;
     if let true = redundant {
-        println!("Redundant");
         action = "write_redundant";
     } else {
-        println!("Initial");
         action = "write";
     }
     let buf = SendRequest {
