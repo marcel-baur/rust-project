@@ -268,6 +268,9 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
             println!("Redundant write received");
             peer.process_store_request((request.key, value_clone));
         }
+        "write_response" => {
+            println!("Response: Successfully stored key {}", request.key);
+        }
         _ => {
             println!("no valid request");
         }
@@ -322,9 +325,13 @@ fn other_random_target(
 
 pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) {
     let mut stream = TcpStream::connect(target).unwrap();
-    let response = Response {
-        from: origin,
-        message: DataStored { key },
+    let mut value: Vec<u8> = Vec::new();
+    value.push(0);
+    let response = SendRequest {
+        from: origin.to_string(),
+        key,
+        value,
+        action: "write_response".to_string(),
     };
     let serialized = match serde_json::to_writer(&stream, &response) {
         Ok(ser) => ser,
