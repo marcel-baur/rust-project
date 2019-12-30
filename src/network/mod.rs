@@ -7,6 +7,7 @@ use std::thread::JoinHandle;
 
 mod handshake;
 pub mod peer;
+mod response;
 mod send_request;
 
 extern crate get_if_addrs;
@@ -18,6 +19,8 @@ use crate::network::handshake::{
     send_table_to_all_peers,
 };
 use crate::network::peer::{create_peer, Peer};
+use crate::network::response::Message::DataStored;
+use crate::network::response::*;
 use crate::network::send_request::SendRequest;
 use crate::shell::spawn_shell;
 use std::collections::HashMap;
@@ -134,17 +137,13 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                 let deserialized: SendRequest = match serde_json::from_str(&buf) {
                     Ok(val) => val,
                     Err(e) => {
-                        println!("{}", e.to_string());
-                        SendRequest {
-                            key: "key".to_string(),
-                            from: "from".to_string(),
-                            value: Vec::new(),
-                            action: "write".to_string(),
-                        }
+                        dbg!(e); // missing field `value` at line 1 column 71
+                        let error_message = format!("Could not deserialize {:?}", &buf);
+                        return Err(error_message.to_string());
                     }
                 };
                 let mut peer = clone.lock().unwrap();
-                dbg!(&deserialized);
+                //                dbg!(&deserialized);
                 handle_incoming_requests(deserialized, &mut peer);
                 drop(peer);
                 println!("Done Writing");
@@ -160,13 +159,26 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 }
 
 fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
-    let copy = request.value.clone();
-    let value = match String::from_utf8(copy) {
-        Ok(val) => val,
-        Err(utf) => return,
-    };
+    let value_clone = request.value.clone();
+    //    let copy = request.value;
+    //    let value = match String::from_utf8(copy) {
+    //        Ok(val) => val,
+    //        Err(utf) => {
+    //            dbg!(utf);
+    //            return;
+    //        }
+    //    };
+    println!("Handle incoming request {:?}", request.action);
     match request.action.as_ref() {
         "get_network_table" => {
+            let copy = request.value;
+            let value = match String::from_utf8(copy) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
             // checks if key is unique, otherwise send change name request
             if peer.network_table.contains_key(&value) {
                 let name = format!("{}+{}", &value, "1");
@@ -176,6 +188,14 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
             }
         }
         "ack_network_table" => {
+            let copy = request.value;
+            let value = match String::from_utf8(copy) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
             let network_table = json_string_to_network_table(value);
             for (key, addr) in network_table {
                 peer.network_table.insert(key, addr);
@@ -183,6 +203,14 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
             send_table_to_all_peers(peer);
         }
         "update_network_table" => {
+            let copy = request.value;
+            let value = match String::from_utf8(copy) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
             let new_network_peer = json_string_to_network_table(value);
             for (key, addr) in new_network_peer {
                 peer.network_table.insert(key, addr);
@@ -190,6 +218,14 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
             dbg!(&peer.network_table);
         }
         "change_name" => {
+            let copy = request.value;
+            let value = match String::from_utf8(copy) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
             peer.network_table.remove(&peer.name);
             peer.name = value;
             peer.network_table
@@ -202,19 +238,35 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
             );
         }
         "write" => {
-            peer.process_store_request((request.key.clone(), request.value.clone()));
+            peer.process_store_request((request.key.clone(), value_clone.clone()));
 
             let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
+            dbg!(redundant_target);
             match redundant_target {
                 Some(target) => {
-                    send_write_request(target, (request.key, request.value), true);
+                    send_write_request(
+                        target,
+                        *peer.get_ip(),
+                        (request.key.clone(), value_clone.clone()),
+                        true,
+                    );
                 }
                 None => println!("Only peer in network. No redundancy possible"),
             };
-            // TODO: Send response
+            // TODO: Send response, fix address parse error
+            dbg!(&request.from);
+            match request.from.parse::<SocketAddr>() {
+                Ok(target_address) => {
+                    send_write_response(target_address, *peer.get_ip(), request.key.clone());
+                }
+                Err(e) => {
+                    dbg!(e);
+                }
+            }
         }
         "write_redundant" => {
-            peer.process_store_request((request.key, request.value));
+            println!("Redundant write received");
+            peer.process_store_request((request.key, value_clone));
         }
         _ => {
             println!("no valid request");
@@ -222,21 +274,25 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
     }
 }
 
-pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>), redundant: bool) {
-    let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
-    let mut vec: Vec<u8> = Vec::new();
-    vec.push(1);
-    vec.push(0);
+pub fn send_write_request(
+    target: SocketAddr,
+    origin: SocketAddr,
+    data: (String, Vec<u8>),
+    redundant: bool,
+) {
+    let mut stream = TcpStream::connect(target).unwrap();
     let mut action;
     if let true = redundant {
+        println!("Redundant");
         action = "write_redundant";
     } else {
+        println!("Initial");
         action = "write";
     }
     let buf = SendRequest {
         value: data.1,
         key: data.0,
-        from: target.to_string(),
+        from: origin.to_string(), // TODO: IP vom sender, nicht vom ziel
         action: action.to_string(),
     };
     let serialized = match serde_json::to_writer(&stream, &buf) {
@@ -262,4 +318,18 @@ fn other_random_target(
         target = network_table.values().skip(index).next().unwrap();
     }
     return Some(*target);
+}
+
+pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) {
+    let mut stream = TcpStream::connect(target).unwrap();
+    let response = Response {
+        from: origin,
+        message: DataStored { key },
+    };
+    let serialized = match serde_json::to_writer(&stream, &response) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize Response {:?}", &response);
+        }
+    };
 }
