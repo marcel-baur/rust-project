@@ -6,6 +6,7 @@ use std::thread;
 use std::thread::JoinHandle;
 
 mod handshake;
+mod notification;
 pub mod peer;
 mod response;
 mod send_request;
@@ -18,6 +19,7 @@ use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers,
 };
+use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
 use crate::network::response::Message::DataStored;
 use crate::network::response::*;
@@ -133,7 +135,15 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         match stream {
             Ok(mut s) => {
                 s.read_to_string(&mut buf).unwrap();
-                let deserialized: SendRequest = match serde_json::from_str(&buf) {
+                //                let deserialized: SendRequest = match serde_json::from_str(&buf) {
+                //                    Ok(val) => val,
+                //                    Err(e) => {
+                //                        dbg!(e);
+                //                        println!("Could not deserialize {:?}", &buf);
+                //                        continue; // skip this stream
+                //                    }
+                //                };
+                let des: Notification = match serde_json::from_str(&buf) {
                     Ok(val) => val,
                     Err(e) => {
                         dbg!(e);
@@ -143,7 +153,8 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                 };
                 let mut peer = clone.lock().unwrap();
                 //                dbg!(&deserialized);
-                handle_incoming_requests(deserialized, &mut peer);
+                handle_notification(des, &mut peer);
+                //                handle_incoming_requests(deserialized, &mut peer);
                 drop(peer);
                 println!("Request handled.");
                 // TODO: Response, handle duplicate key, redundancy
@@ -159,6 +170,94 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 
 fn handle_incoming_response(response: Response, peer: &mut Peer) {
     return;
+}
+
+fn handle_notification(notification: Notification, peer: &mut Peer) {
+    match notification.content {
+        Content::PushToDB {
+            key,
+            value,
+            action,
+            from,
+        } => {
+            peer.process_store_request((key.clone(), value.clone()));
+            let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
+            dbg!(redundant_target);
+            match redundant_target {
+                Some(target) => {
+                    send_write_request(target, *peer.get_ip(), (key.clone(), value.clone()), true);
+                }
+                None => println!("Only peer in network. No redundancy possible"),
+            };
+            dbg!(&from);
+            match from.parse::<SocketAddr>() {
+                Ok(target_address) => {
+                    send_write_response(target_address, *peer.get_ip(), key.clone());
+                }
+                Err(e) => {
+                    dbg!(e);
+                }
+            }
+        }
+        Content::RedundantPushToDB {
+            key,
+            value,
+            action,
+            from,
+        } => {
+            peer.process_store_request((key.clone(), value.clone()));
+        }
+        Content::ChangePeerName { value, from } => {
+            peer.network_table.remove(&peer.name);
+            peer.name = value;
+            peer.network_table
+                .insert(peer.name.clone(), peer.ip_address);
+            //send request existing network table
+            send_table_request(
+                &SocketAddr::from_str(&from.to_string()).unwrap(),
+                peer.get_ip(),
+                &peer.name,
+            );
+        }
+        Content::SendNetworkTable { value, from } => {
+            let table = match String::from_utf8(value) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
+            let network_table = json_string_to_network_table(table);
+            for (key, addr) in network_table {
+                peer.network_table.insert(key, addr);
+            }
+            send_table_to_all_peers(peer);
+        }
+        Content::SendNetworkUpdateTable { value, from } => {
+            let table = match String::from_utf8(value) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
+            let new_network_peer = json_string_to_network_table(table);
+            for (key, addr) in new_network_peer {
+                peer.network_table.insert(key, addr);
+            }
+            dbg!(&peer.network_table);
+        }
+        Content::RequestForTable { value, from } => {
+            // checks if key is unique, otherwise send change name request
+            if peer.network_table.contains_key(&value) {
+                let name = format!("{}+{}", &value, "1");
+                send_change_name_request(from.to_string(), peer.get_ip(), name.as_ref());
+            } else {
+                send_network_table(from.to_string(), &peer);
+            }
+        }
+        Content::Response { from, message } => {}
+    }
 }
 
 fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
@@ -294,15 +393,24 @@ pub fn send_write_request(
         action = "write";
     }
     let buf = SendRequest {
-        value: data.1,
-        key: data.0,
+        value: data.1.clone(),
+        key: data.0.clone(),
         from: origin.to_string(), // TODO: IP vom sender, nicht vom ziel
         action: action.to_string(),
     };
-    let serialized = match serde_json::to_writer(&stream, &buf) {
+    let not = Notification {
+        content: Content::PushToDB {
+            key: data.0,
+            value: data.1,
+            from: origin.to_string(),
+            action: action.to_string(),
+        },
+        from: origin,
+    };
+    let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
+            println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
 }
@@ -330,14 +438,21 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) 
     value.push(0);
     let response = SendRequest {
         from: origin.to_string(),
-        key,
+        key: key.clone(),
         value,
         action: "write_response".to_string(),
     };
-    let serialized = match serde_json::to_writer(&stream, &response) {
+    let not = Notification {
+        content: Content::Response {
+            from: origin,
+            message: Message::DataStored { key },
+        },
+        from: origin,
+    };
+    let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize Response {:?}", &response);
+            println!("Failed to serialize Response {:?}", &not);
         }
     };
 }
