@@ -1,6 +1,6 @@
 use crate::constants;
 use crate::network::peer::Peer;
-use crate::network::{send_write_request, send_read_request};
+use crate::network::{send_read_request, send_write_request};
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -80,9 +80,10 @@ pub fn handle_user_input(ip: SocketAddr) {
             Some(&"get") => {
                 if instructions.len() == 2 {
                     send_read_request(ip, instructions[1]);
-
                 } else {
-                    println!("You need to specify name and filepath. For more information type help.\n");
+                    println!(
+                        "You need to specify name and filepath. For more information type help.\n"
+                    );
                 }
             }
 
@@ -93,12 +94,12 @@ pub fn handle_user_input(ip: SocketAddr) {
 
 pub fn show_help_instructions() {
     let info = "\nHelp Menu:\n\n\
-        Use following instructions: \n\n\
-        push [mp3 name] [direction to mp3] - add mp3 to database\n\
-        get [mp3 name] - get mp3 file from database\n\
-        stream [mp3 name] - get mp3 stream from database\n\
-        remove [mp3 name] - deletes mp3 file from database\n\n\
-        ";
+                Use following instructions: \n\n\
+                push [mp3 name] [direction to mp3] - add mp3 to database\n\
+                get [mp3 name] - get mp3 file from database\n\
+                stream [mp3 name] - get mp3 stream from database\n\
+                remove [mp3 name] - deletes mp3 file from database\n\n\
+                ";
     print!("{}", info);
 }
 

@@ -198,15 +198,20 @@ fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
             );
         }
         "read" => {
-            match peer.find_file(request.key.as_ref()){
-                Some(value) => {
-                    //TODO schicke das File zurück
-                },
-                None => {
-                    //TODO such das File wo anders
-                }
-            };
+            for (_key, value) in &peer.network_table {
+                read_file_exist(*value, request.key.as_ref());
+            }
         }
+        "exist" => {
+            let exist = peer.does_file_exist(request.key.as_ref());
+            if exist == true {
+                send_exist_response(
+                    request.from.parse::<SocketAddr>().unwrap(),
+                    request.key.as_ref(),
+                );
+            }
+        }
+        "found_file" => {}
         _ => {
             println!("no valid request");
         }
@@ -232,18 +237,62 @@ pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
     };
 }
 
-pub fn send_read_request(target: SocketAddr, name:&str) {
+pub fn send_read_request(target: SocketAddr, name: &str) {
     let mut stream = TcpStream::connect("27.0.0.1:34254").unwrap();
 
     let mut vec: Vec<u8> = Vec::new();
     vec.push(1);
     vec.push(0);
 
-    let buf = SendRequest{
+    let buf = SendRequest {
         value: vec,
         key: name.to_string(),
         from: target.to_string(),
         action: "read".to_string(),
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &buf) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &buf);
+        }
+    };
+}
+
+pub fn read_file_exist(target: SocketAddr, name: &str) {
+    let mut stream = TcpStream::connect(target).unwrap();
+
+    let mut vec: Vec<u8> = Vec::new();
+    vec.push(1);
+    vec.push(0);
+
+    let buf = SendRequest {
+        value: vec,
+        key: name.to_string(),
+        from: target.to_string(),
+        action: "exist".to_string(),
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &buf) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &buf);
+        }
+    };
+}
+
+pub fn send_exist_response(target: SocketAddr, name: &str) {
+    let mut stream = TcpStream::connect(target).unwrap();
+
+    let mut vec: Vec<u8> = Vec::new();
+    vec.push(1);
+    vec.push(0);
+
+    let buf = SendRequest {
+        value: vec,
+        key: name.to_string(),
+        from: target.to_string(),
+        action: "found_file".to_string(),
     };
 
     let serialized = match serde_json::to_writer(&stream, &buf) {

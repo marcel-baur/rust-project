@@ -50,8 +50,15 @@ impl Peer {
         self.database.data.insert(data.0, data.1);
     }
 
-    pub fn find_file(&self, name:&str) -> Option<&Vec<u8>> {
+    pub fn find_file(&self, name: &str) -> Option<&Vec<u8>> {
         self.database.data.get(name)
+    }
+
+    pub fn does_file_exist(&self, name: &str) -> bool {
+        match self.database.data.get(name) {
+            Some(_t) => true,
+            None => false,
+        }
     }
 }
 
