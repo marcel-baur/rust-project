@@ -1,6 +1,7 @@
 use crate::constants;
 use crate::network::peer::Peer;
-use crate::network::{send_read_request, send_write_request};
+use crate::network::{send_read_request, send_write_request, send_delete_peer_request};
+use std::process;
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -85,6 +86,13 @@ pub fn handle_user_input(ip: SocketAddr) {
                         "You need to specify name and filepath. For more information type help.\n"
                     );
                 }
+            },
+            Some(&"exit") => {
+                println!("You are leaving the network.");
+                send_delete_peer_request(ip);
+                process::exit(1);
+                //TODO: stop steams, exit befehl erst nach erfolgreichem löschen aus anderen Table
+
             }
 
             _ => println!("No valid instructions. Try help!\n"),
@@ -98,7 +106,8 @@ pub fn show_help_instructions() {
                 push [mp3 name] [direction to mp3] - add mp3 to database\n\
                 get [mp3 name] - get mp3 file from database\n\
                 stream [mp3 name] - get mp3 stream from database\n\
-                remove [mp3 name] - deletes mp3 file from database\n\n\
+                remove [mp3 name] - deletes mp3 file from database\n\
+                exit - exit network and leave program\n\n
                 ";
     print!("{}", info);
 }
