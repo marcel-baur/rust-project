@@ -379,3 +379,43 @@ pub fn read_file_exist(target: SocketAddr, name: &str) {
 pub fn send_exist_response(target: SocketAddr, name: &str) {
     //let mut stream = TcpStream::connect(target).unwrap();
 }
+
+pub fn send_delete_peer_request(target: SocketAddr) {
+//    let mut stream = TcpStream::connect(target).unwrap();
+//
+//    let mut vec: Vec<u8> = Vec::new();
+//    vec.push(0);
+//    vec.push(1);
+//
+//    let buf = SendRequest {
+//        value: vec,
+//        key: target.to_string(),
+//        from: target.to_string(),
+//        action: "delete".to_string(),
+//    };
+//
+//    let serialized = match serde_json::to_writer(&stream, &buf) {
+//        Ok(ser) => ser,
+//        Err(_e) => {
+//            println!("Failed to serialize SendRequest {:?}", &buf);
+//        }
+//    };
+}
+
+
+//"delete" => {
+//for (_key, value) in &peer.network_table {
+//if value != peer.get_ip() {
+//update_table_after_delete(*value, *peer.get_ip(), &peer.name);
+//}
+//}
+//}
+//"update_deleted" => {
+//if peer.network_table.contains_key(&value) {
+//peer.network_table.remove(&value);
+//}
+//}
+//"found_file" => {}
+//_ => {
+//println!("no valid request");
+//}
