@@ -26,6 +26,7 @@ use crate::shell::spawn_shell;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
+use crate::network::notification::Content::FindFile;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -253,6 +254,20 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             } else {
                 send_network_table(from.to_string(), &peer);
             }
+        },
+        Content::FindFile { key} => {
+            for (_key, value) in &peer.network_table {
+                read_file_exist(*value, &key);
+            }
+        },
+        Content::ExistFile {key, from} => {
+            let exist = peer.does_file_exist(key.as_ref());
+            if exist == true {
+                send_exist_response(
+                    from,
+                    key.as_ref(),
+                );
+            }
         }
         Content::Response { from, message } => {}
     }
@@ -322,4 +337,45 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) 
             println!("Failed to serialize Response {:?}", &not);
         }
     };
+}
+
+pub fn send_read_request(target: SocketAddr, name: &str) {
+    let mut stream = TcpStream::connect(target).unwrap();
+
+    let not = Notification {
+        content: Content::FindFile {
+            key: name.to_string(),
+        },
+        from: target
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+pub fn read_file_exist(target: SocketAddr, name: &str) {
+    let mut stream = TcpStream::connect(target).unwrap();
+
+    let not = Notification {
+        content: Content::ExistFile {
+            key: name.to_string(),
+            from: target,
+        },
+        from: target,
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+pub fn send_exist_response(target: SocketAddr, name: &str) {
+    //let mut stream = TcpStream::connect(target).unwrap();
 }

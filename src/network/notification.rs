@@ -43,4 +43,11 @@ pub enum Content {
         value: String,
         from: SocketAddr,
     },
+    FindFile {
+        key: String,
+    },
+    ExistFile {
+        key: String,
+        from: SocketAddr,
+    }
 }
