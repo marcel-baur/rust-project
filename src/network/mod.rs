@@ -6,19 +6,27 @@ use std::thread;
 use std::thread::JoinHandle;
 
 mod handshake;
+mod notification;
 pub mod peer;
-mod send_request;
+mod response;
 
 extern crate get_if_addrs;
+extern crate rand;
+use rand::Rng;
 
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
 };
+use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
-use crate::network::send_request::SendRequest;
+use crate::network::response::Message::DataStored;
+use crate::network::response::*;
 use crate::shell::spawn_shell;
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::str::FromStr;
+use crate::network::notification::Content::FindFile;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -126,24 +134,28 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         match stream {
             Ok(mut s) => {
                 s.read_to_string(&mut buf).unwrap();
-                //                println!("Buffer: {}", &buf);
-                let deserialized: SendRequest = match serde_json::from_str(&buf) {
+                //                let deserialized: SendRequest = match serde_json::from_str(&buf) {
+                //                    Ok(val) => val,
+                //                    Err(e) => {
+                //                        dbg!(e);
+                //                        println!("Could not deserialize {:?}", &buf);
+                //                        continue; // skip this stream
+                //                    }
+                //                };
+                let des: Notification = match serde_json::from_str(&buf) {
                     Ok(val) => val,
                     Err(e) => {
-                        println!("{}", e.to_string());
-                        SendRequest {
-                            key: "key".to_string(),
-                            from: "from".to_string(),
-                            value: Vec::new(),
-                            action: "write".to_string(),
-                        }
+                        dbg!(e);
+                        println!("Could not deserialize {:?}", &buf);
+                        continue; // skip this stream
                     }
                 };
                 let mut peer = clone.lock().unwrap();
-                dbg!(&deserialized);
-                handle_incoming_requests(deserialized, &mut peer);
+                //                dbg!(&deserialized);
+                handle_notification(des, &mut peer);
+                //                handle_incoming_requests(deserialized, &mut peer);
                 drop(peer);
-                println!("Done Writing");
+                println!("Request handled.");
                 // TODO: Response, handle duplicate key, redundancy
             }
             Err(_e) => {
@@ -155,118 +167,192 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     Ok(())
 }
 
-fn handle_incoming_requests(request: SendRequest, peer: &mut Peer) {
-    let copy = request.value;
-    let value = match String::from_utf8(copy) {
-        Ok(val) => val,
-        Err(utf) => return,
-    };
-    match request.action.as_ref() {
-        "get_network_table" => {
-            // checks if key is unique, otherwise send change name request
-            if peer.network_table.contains_key(&value) {
-                let name = format!("{}+{}", &value, "1");
-                send_change_name_request(request.from, peer.get_ip(), name.as_ref());
-            } else {
-                send_network_table(request.from, &peer);
+fn handle_incoming_response(response: Response, peer: &mut Peer) {
+    return;
+}
+
+fn handle_notification(notification: Notification, peer: &mut Peer) {
+    match notification.content {
+        Content::PushToDB {
+            key,
+            value,
+            action,
+            from,
+        } => {
+            peer.process_store_request((key.clone(), value.clone()));
+            let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
+            dbg!(redundant_target);
+            match redundant_target {
+                Some(target) => {
+                    send_write_request(target, *peer.get_ip(), (key.clone(), value.clone()), true);
+                }
+                None => println!("Only peer in network. No redundancy possible"),
+            };
+            dbg!(&from);
+            match from.parse::<SocketAddr>() {
+                Ok(target_address) => {
+                    send_write_response(target_address, *peer.get_ip(), key.clone());
+                }
+                Err(e) => {
+                    dbg!(e);
+                }
             }
         }
-        "ack_network_table" => {
-            let network_table = json_string_to_network_table(value);
-            for (key, addr) in network_table {
-                peer.network_table.insert(key, addr);
-            }
-            send_table_to_all_peers(peer);
+        Content::RedundantPushToDB {
+            key,
+            value,
+            action,
+            from,
+        } => {
+            peer.process_store_request((key.clone(), value.clone()));
         }
-        "update_network_table" => {
-            let new_network_peer = json_string_to_network_table(value);
-            for (key, addr) in new_network_peer {
-                peer.network_table.insert(key, addr);
-            }
-            dbg!(&peer.network_table);
-        }
-        "change_name" => {
+        Content::ChangePeerName { value, from } => {
             peer.network_table.remove(&peer.name);
             peer.name = value;
             peer.network_table
                 .insert(peer.name.clone(), peer.ip_address);
             //send request existing network table
             send_table_request(
-                &SocketAddr::from_str(&request.from).unwrap(),
+                &SocketAddr::from_str(&from.to_string()).unwrap(),
                 peer.get_ip(),
                 &peer.name,
             );
         }
-        "read" => {
-            for (_key, value) in &peer.network_table {
-                read_file_exist(*value, request.key.as_ref());
+        Content::SendNetworkTable { value, from } => {
+            let table = match String::from_utf8(value) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
+            let network_table = json_string_to_network_table(table);
+            for (key, addr) in network_table {
+                peer.network_table.insert(key, addr);
             }
+            send_table_to_all_peers(peer);
         }
-        "exist" => {
-            let exist = peer.does_file_exist(request.key.as_ref());
+        Content::SendNetworkUpdateTable { value, from } => {
+            let table = match String::from_utf8(value) {
+                Ok(val) => val,
+                Err(utf) => {
+                    dbg!(utf);
+                    return;
+                }
+            };
+            let new_network_peer = json_string_to_network_table(table);
+            for (key, addr) in new_network_peer {
+                peer.network_table.insert(key, addr);
+            }
+            dbg!(&peer.network_table);
+        }
+        Content::RequestForTable { value, from } => {
+            // checks if key is unique, otherwise send change name request
+            if peer.network_table.contains_key(&value) {
+                let name = format!("{}+{}", &value, "1");
+                send_change_name_request(from.to_string(), peer.get_ip(), name.as_ref());
+            } else {
+                send_network_table(from.to_string(), &peer);
+            }
+        },
+        Content::FindFile { key} => {
+            for (_key, value) in &peer.network_table {
+                read_file_exist(*value, &key);
+            }
+        },
+        Content::ExistFile {key, from} => {
+            let exist = peer.does_file_exist(key.as_ref());
             if exist == true {
                 send_exist_response(
-                    request.from.parse::<SocketAddr>().unwrap(),
-                    request.key.as_ref(),
+                    from,
+                    key.as_ref(),
                 );
             }
         }
-        "delete" => {
-            for (_key, value) in &peer.network_table {
-                if value != peer.get_ip() {
-                    update_table_after_delete(*value, *peer.get_ip(), &peer.name);
-                }
-            }
-        }
-        "update_deleted" => {
-            if peer.network_table.contains_key(&value) {
-                peer.network_table.remove(&value);
-            }
-        }
-        "found_file" => {}
-        _ => {
-            println!("no valid request");
-        }
+        Content::Response { from, message } => {}
     }
 }
 
-pub fn send_write_request(target: SocketAddr, data: (String, Vec<u8>)) {
-    let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
-    let mut vec: Vec<u8> = Vec::new();
-    vec.push(1);
-    vec.push(0);
-    let buf = SendRequest {
-        value: data.1,
-        key: data.0,
-        from: target.to_string(),
-        action: "write".to_string(),
+pub fn send_write_request(
+    target: SocketAddr,
+    origin: SocketAddr,
+    data: (String, Vec<u8>),
+    redundant: bool,
+) {
+    let mut stream = TcpStream::connect(target).unwrap();
+    let mut action;
+    if let true = redundant {
+        action = "write_redundant";
+    } else {
+        action = "write";
+    }
+    let not = Notification {
+        content: Content::PushToDB {
+            key: data.0,
+            value: data.1,
+            from: origin.to_string(),
+            action: action.to_string(),
+        },
+        from: origin,
     };
-    let serialized = match serde_json::to_writer(&stream, &buf) {
+    let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+fn other_random_target(
+    network_table: &HashMap<String, SocketAddr>,
+    own_ip: &SocketAddr,
+) -> Option<SocketAddr> {
+    if network_table.len() == 1 {
+        return None;
+    }
+    let mut rng = rand::thread_rng();
+    let mut index = rng.gen_range(0, network_table.len());
+    let mut target = network_table.values().skip(index).next().unwrap();
+    while target == own_ip {
+        index = rng.gen_range(0, network_table.len());
+        target = network_table.values().skip(index).next().unwrap();
+    }
+    return Some(*target);
+}
+
+pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) {
+    let mut stream = TcpStream::connect(target).unwrap();
+    let mut value: Vec<u8> = Vec::new();
+    value.push(0);
+    let not = Notification {
+        content: Content::Response {
+            from: origin,
+            message: Message::DataStored { key },
+        },
+        from: origin,
+    };
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize Response {:?}", &not);
         }
     };
 }
 
 pub fn send_read_request(target: SocketAddr, name: &str) {
-    let mut stream = TcpStream::connect("27.0.0.1:34254").unwrap();
+    let mut stream = TcpStream::connect(target).unwrap();
 
-    let mut vec: Vec<u8> = Vec::new();
-    vec.push(1);
-    vec.push(0);
-
-    let buf = SendRequest {
-        value: vec,
-        key: name.to_string(),
-        from: target.to_string(),
-        action: "read".to_string(),
+    let not = Notification {
+        content: Content::FindFile {
+            key: name.to_string(),
+        },
+        from: target
     };
 
-    let serialized = match serde_json::to_writer(&stream, &buf) {
+    let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
+            println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
 }
@@ -274,66 +360,22 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
 pub fn read_file_exist(target: SocketAddr, name: &str) {
     let mut stream = TcpStream::connect(target).unwrap();
 
-    let mut vec: Vec<u8> = Vec::new();
-    vec.push(1);
-    vec.push(0);
-
-    let buf = SendRequest {
-        value: vec,
-        key: name.to_string(),
-        from: target.to_string(),
-        action: "exist".to_string(),
+    let not = Notification {
+        content: Content::ExistFile {
+            key: name.to_string(),
+            from: target,
+        },
+        from: target,
     };
 
-    let serialized = match serde_json::to_writer(&stream, &buf) {
+    let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
+            println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
 }
 
 pub fn send_exist_response(target: SocketAddr, name: &str) {
-    let mut stream = TcpStream::connect(target).unwrap();
-
-    let mut vec: Vec<u8> = Vec::new();
-    vec.push(1);
-    vec.push(0);
-
-    let buf = SendRequest {
-        value: vec,
-        key: name.to_string(),
-        from: target.to_string(),
-        action: "found_file".to_string(),
-    };
-
-    let serialized = match serde_json::to_writer(&stream, &buf) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
-        }
-    };
+    //let mut stream = TcpStream::connect(target).unwrap();
 }
-
-pub fn send_delete_peer_request(target: SocketAddr) {
-    let mut stream = TcpStream::connect(target).unwrap();
-
-    let mut vec: Vec<u8> = Vec::new();
-    vec.push(0);
-    vec.push(1);
-
-    let buf = SendRequest {
-        value: vec,
-        key: target.to_string(),
-        from: target.to_string(),
-        action: "delete".to_string(),
-    };
-
-    let serialized = match serde_json::to_writer(&stream, &buf) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
-        }
-    };
-}
-

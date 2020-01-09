@@ -1,5 +1,6 @@
+use crate::network::notification;
+use crate::network::notification::*;
 use crate::network::peer::Peer;
-use crate::network::send_request::SendRequest;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpStream};
@@ -42,16 +43,17 @@ pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> Str
 
 pub fn send_network_table(target: String, peer: &Peer) {
     let mut stream = TcpStream::connect(target).unwrap();
-    let buf = SendRequest {
-        value: network_table_to_json(&peer.network_table).into_bytes(),
-        key: "network_table".to_string(),
-        from: peer.ip_address.to_string(),
-        action: "ack_network_table".to_string(),
+    let not = Notification {
+        content: Content::SendNetworkTable {
+            value: network_table_to_json(&peer.network_table).into_bytes(),
+            from: peer.ip_address,
+        },
+        from: peer.ip_address,
     };
-    match serde_json::to_writer(&stream, &buf) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
+            println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
 }
@@ -66,32 +68,34 @@ pub fn send_network_update_table(
         Ok(stream) => stream,
         Err(_) => return,
     };
-    let buf = SendRequest {
-        value: network_table_to_json(hashmap).into_bytes(),
-        key: "add".to_string(),
-        from: from.to_string(),
-        action: "update_network_table".to_string(),
+    let not = Notification {
+        content: Content::SendNetworkUpdateTable {
+            value: network_table_to_json(hashmap).into_bytes(),
+            from: from.parse::<SocketAddr>().unwrap(), // TODO change attribute to SocketAddr after review
+        },
+        from: from.parse::<SocketAddr>().unwrap(),
     };
-    match serde_json::to_writer(&stream, &buf) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &buf);
+            println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
 }
 
 pub fn send_change_name_request(target: String, from: &SocketAddr, name: &str) {
     let mut stream = TcpStream::connect(target).unwrap();
-    let buf = SendRequest {
-        value: name.as_bytes().to_vec(),
-        from: from.to_string(),
-        key: "name".to_string(),
-        action: "change_name".to_string(),
+    let not = Notification {
+        content: Content::ChangePeerName {
+            value: name.to_string(),
+            from: *from,
+        },
+        from: *from,
     };
-    let serialized = match serde_json::to_writer(&stream, &buf) {
+    let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SimpleRequest {:?}", &buf);
+            println!("Failed to serialize SimpleRequest {:?}", &not);
         }
     };
 }
@@ -119,16 +123,17 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
             return;
         }
     };
-    let buf = SendRequest {
-        value: name.as_bytes().to_vec(),
-        from: from.to_string(),
-        key: "name".to_string(),
-        action: "get_network_table".to_string(),
+    let not = Notification {
+        content: Content::RequestForTable {
+            value: name.to_string(),
+            from: *from,
+        },
+        from: *from,
     };
-    let serialized = match serde_json::to_writer(&stream, &buf) {
+    let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
-            println!("Failed to serialize SimpleRequest {:?}", &buf);
+            println!("Failed to serialize SimpleRequest {:?}", &not);
         }
     };
 }

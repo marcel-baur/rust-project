@@ -32,10 +32,10 @@ impl Peer {
         }
     }
 
-    pub fn store(self, data: (String, Vec<u8>)) {
+    pub fn store(&self, data: (String, Vec<u8>)) {
         let k = data.0;
         let v = data.1;
-        self.database.add_file(&k, v);
+        //        self.database.add_file(&k, v);
     }
 
     pub fn get_ip(&self) -> &SocketAddr {
