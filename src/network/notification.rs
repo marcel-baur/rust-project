@@ -1,5 +1,4 @@
 use crate::network::response::Message;
-use crate::network::send_request::SendRequest;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -9,6 +8,7 @@ pub struct Notification {
     pub content: Content,
     pub from: SocketAddr,
 }
+
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Content {
     PushToDB {
