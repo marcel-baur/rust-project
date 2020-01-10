@@ -4,6 +4,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
+use std::process;
 
 mod handshake;
 mod notification;
@@ -26,7 +27,7 @@ use crate::shell::spawn_shell;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
-use crate::network::notification::Content::FindFile;
+use crate::network::notification::Content::{FindFile, ExitPeer};
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -269,7 +270,21 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 );
             }
         }
-        Content::Response { from, message } => {}
+        Content::Response { from, message } => {},
+        Content::ExitPeer { addr } => {
+            for (_key, value) in &peer.network_table {
+                if *value != addr {
+                    update_table_after_delete(*value, addr, &peer.name);
+                }
+            }
+            process::exit(0);
+        },
+        Content::DeleteFromNetwork {name, from} => {
+            if peer.network_table.contains_key(&name) {
+                peer.network_table.remove(&name);
+                dbg!(&peer.network_table);
+            }
+        }
     }
 }
 
@@ -322,8 +337,7 @@ fn other_random_target(
 
 pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) {
     let mut stream = TcpStream::connect(target).unwrap();
-    let mut value: Vec<u8> = Vec::new();
-    value.push(0);
+
     let not = Notification {
         content: Content::Response {
             from: origin,
@@ -381,41 +395,19 @@ pub fn send_exist_response(target: SocketAddr, name: &str) {
 }
 
 pub fn send_delete_peer_request(target: SocketAddr) {
-//    let mut stream = TcpStream::connect(target).unwrap();
-//
-//    let mut vec: Vec<u8> = Vec::new();
-//    vec.push(0);
-//    vec.push(1);
-//
-//    let buf = SendRequest {
-//        value: vec,
-//        key: target.to_string(),
-//        from: target.to_string(),
-//        action: "delete".to_string(),
-//    };
-//
-//    let serialized = match serde_json::to_writer(&stream, &buf) {
-//        Ok(ser) => ser,
-//        Err(_e) => {
-//            println!("Failed to serialize SendRequest {:?}", &buf);
-//        }
-//    };
+    let mut stream = TcpStream::connect(target).unwrap();
+
+    let not = Notification {
+        content: Content::ExitPeer {
+            addr: target,
+        },
+        from: target
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
 }
-
-
-//"delete" => {
-//for (_key, value) in &peer.network_table {
-//if value != peer.get_ip() {
-//update_table_after_delete(*value, *peer.get_ip(), &peer.name);
-//}
-//}
-//}
-//"update_deleted" => {
-//if peer.network_table.contains_key(&value) {
-//peer.network_table.remove(&value);
-//}
-//}
-//"found_file" => {}
-//_ => {
-//println!("no valid request");
-//}

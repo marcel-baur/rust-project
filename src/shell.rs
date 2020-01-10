@@ -1,7 +1,6 @@
 use crate::constants;
 use crate::network::peer::Peer;
 use crate::network::{send_read_request, send_write_request, send_delete_peer_request};
-use std::process;
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -82,8 +81,7 @@ pub fn handle_user_input(ip: SocketAddr) {
             Some(&"exit") => {
                 println!("You are leaving the network.");
                 send_delete_peer_request(ip);
-                process::exit(1);
-                //TODO: stop steams, exit befehl erst nach erfolgreichem löschen aus anderen Table
+                //TODO: stop steams
 
             }
 

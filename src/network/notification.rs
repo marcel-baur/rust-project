@@ -49,5 +49,12 @@ pub enum Content {
     ExistFile {
         key: String,
         from: SocketAddr,
+    },
+    ExitPeer {
+        addr: SocketAddr,
+    },
+    DeleteFromNetwork {
+        name: String,
+        from: SocketAddr,
     }
 }

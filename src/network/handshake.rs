@@ -139,30 +139,27 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
 }
 
 pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &str) {
-//    let mut stream = match TcpStream::connect(target) {
-//        Ok(stream) => stream,
-//        Err(e) => {
-//            return;
-//        }
-//    };
-//
-//    let mut vec: Vec<u8> = Vec::new();
-//    vec.push(0);
-//    vec.push(1);
-//
-//    let buf = SendRequest {
-//        value: name.as_bytes().to_vec(),
-//        key: name.to_string(),
-//        from: from.to_string(),
-//        action: "update_deleted".to_string(),
-//    };
-//
-//    let serialized = match serde_json::to_writer(&stream, &buf) {
-//        Ok(ser) => ser,
-//        Err(_e) => {
-//            println!("Failed to serialize SendRequest {:?}", &buf);
-//        }
-//    };
+    let mut stream = match TcpStream::connect(target) {
+        Ok(stream) => stream,
+        Err(e) => {
+            return;
+        }
+    };
+
+    let not = Notification {
+        content: Content::DeleteFromNetwork {
+            name: name.to_string(),
+            from: target
+        },
+        from
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
 }
 
 
