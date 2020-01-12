@@ -1,6 +1,6 @@
 use crate::constants;
 use crate::network::peer::Peer;
-use crate::network::{send_read_request, send_write_request, send_delete_peer_request};
+use crate::network::{send_delete_peer_request, send_read_request, send_write_request};
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -77,12 +77,11 @@ pub fn handle_user_input(ip: SocketAddr) {
                         "You need to specify name and filepath. For more information type help.\n"
                     );
                 }
-            },
+            }
             Some(&"exit") => {
                 println!("You are leaving the network.");
                 send_delete_peer_request(ip);
                 //TODO: stop steams
-
             }
 
             _ => println!("No valid instructions. Try help!\n"),

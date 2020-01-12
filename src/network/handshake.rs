@@ -149,9 +149,9 @@ pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &st
     let not = Notification {
         content: Content::DeleteFromNetwork {
             name: name.to_string(),
-            from: target
+            from: target,
         },
-        from
+        from,
     };
 
     let serialized = match serde_json::to_writer(&stream, &not) {
@@ -161,5 +161,3 @@ pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &st
         }
     };
 }
-
-

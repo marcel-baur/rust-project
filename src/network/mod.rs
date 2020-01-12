@@ -1,10 +1,10 @@
 use std::io::Read;
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
+use std::process;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::process;
 
 mod handshake;
 mod notification;
@@ -19,6 +19,7 @@ use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
 };
+use crate::network::notification::Content::{ExitPeer, FindFile};
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
 use crate::network::response::Message::DataStored;
@@ -27,7 +28,7 @@ use crate::shell::spawn_shell;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
-use crate::network::notification::Content::{FindFile, ExitPeer};
+use std::time::SystemTime;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -255,22 +256,20 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             } else {
                 send_network_table(from.to_string(), &peer);
             }
-        },
-        Content::FindFile { key} => {
+        }
+        Content::FindFile { key } => {
+            let id = SystemTime::now();
+            peer.add_new_request(&id, &key);
+
             for (_key, value) in &peer.network_table {
-                read_file_exist(*value, &key);
-            }
-        },
-        Content::ExistFile {key, from} => {
-            let exist = peer.does_file_exist(key.as_ref());
-            if exist == true {
-                send_exist_response(
-                    from,
-                    key.as_ref(),
-                );
+                read_file_exist(*value, &key, id.clone());
             }
         }
-        Content::Response { from, message } => {},
+        Content::ExistFile { id, key, from } => {
+            let exist = peer.does_file_exist(key.as_ref());
+            send_exist_response(from, key.as_ref(), exist);
+        }
+        Content::Response { from, message } => {}
         Content::ExitPeer { addr } => {
             for (_key, value) in &peer.network_table {
                 if *value != addr {
@@ -278,13 +277,14 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
             process::exit(0);
-        },
-        Content::DeleteFromNetwork {name, from} => {
+        }
+        Content::DeleteFromNetwork { name, from } => {
             if peer.network_table.contains_key(&name) {
                 peer.network_table.remove(&name);
                 dbg!(&peer.network_table);
             }
         }
+        Content::ExistFileResponse { key, from, exist } => {}
     }
 }
 
@@ -354,13 +354,14 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) 
 }
 
 pub fn send_read_request(target: SocketAddr, name: &str) {
+    /// Communicate to the listener that we want to find the location of a given file
     let mut stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::FindFile {
             key: name.to_string(),
         },
-        from: target
+        from: target,
     };
 
     let serialized = match serde_json::to_writer(&stream, &not) {
@@ -371,11 +372,13 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
     };
 }
 
-pub fn read_file_exist(target: SocketAddr, name: &str) {
+pub fn read_file_exist(target: SocketAddr, name: &str, id: SystemTime) {
+    /// Sends a request to the other peers to check if they have the wanted file
     let mut stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::ExistFile {
+            id,
             key: name.to_string(),
             from: target,
         },
@@ -390,7 +393,7 @@ pub fn read_file_exist(target: SocketAddr, name: &str) {
     };
 }
 
-pub fn send_exist_response(target: SocketAddr, name: &str) {
+pub fn send_exist_response(target: SocketAddr, name: &str, exist: bool) {
     //let mut stream = TcpStream::connect(target).unwrap();
 }
 
@@ -398,10 +401,8 @@ pub fn send_delete_peer_request(target: SocketAddr) {
     let mut stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
-        content: Content::ExitPeer {
-            addr: target,
-        },
-        from: target
+        content: Content::ExitPeer { addr: target },
+        from: target,
     };
 
     let serialized = match serde_json::to_writer(&stream, &not) {

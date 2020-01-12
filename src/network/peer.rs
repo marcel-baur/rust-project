@@ -3,6 +3,7 @@ use crate::network::get_own_ip_address;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
+use std::time::SystemTime;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -11,6 +12,7 @@ pub struct Peer {
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
     database: Database,
+    pub open_request_table: HashMap<SystemTime, String>,
 }
 
 impl Peer {
@@ -23,12 +25,14 @@ impl Peer {
         ip_address: SocketAddr,
         onw_name: &str,
         network_table: HashMap<String, SocketAddr>,
+        open_request_table: HashMap<SystemTime, String>,
     ) -> Peer {
         Peer {
             name: onw_name.to_string(),
             ip_address,
             network_table,
             database: Database::new(),
+            open_request_table,
         }
     }
 
@@ -60,6 +64,14 @@ impl Peer {
             None => false,
         }
     }
+
+    pub fn add_new_request(&mut self, time: &SystemTime, content: &str) {
+        self.open_request_table.insert(*time, content.to_string());
+    }
+
+    pub fn delete_handled_request(&mut self, time: &SystemTime) {
+        self.open_request_table.remove(time);
+    }
 }
 
 /// Function to create a new network
@@ -76,6 +88,12 @@ pub fn create_peer(onw_name: &str, port: &str) -> Result<Peer, String> {
     };
     let mut network_table = HashMap::new();
     network_table.insert(onw_name.to_string(), peer_socket_addr);
-    let peer = Peer::create(peer_socket_addr, onw_name, network_table);
+    let mut open_request_table = HashMap::new();
+    let peer = Peer::create(
+        peer_socket_addr,
+        onw_name,
+        network_table,
+        open_request_table,
+    );
     Ok(peer)
 }
