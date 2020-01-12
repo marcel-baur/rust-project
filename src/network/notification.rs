@@ -15,13 +15,11 @@ pub enum Content {
     PushToDB {
         key: String,
         value: Vec<u8>,
-        action: String,
         from: String,
     },
     RedundantPushToDB {
         key: String,
         value: Vec<u8>,
-        action: String,
         from: String,
     },
     Response {

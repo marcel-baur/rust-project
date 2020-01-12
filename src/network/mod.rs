@@ -178,7 +178,6 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::PushToDB {
             key,
             value,
-            action,
             from,
         } => {
             peer.process_store_request((key.clone(), value.clone()));
@@ -203,7 +202,6 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::RedundantPushToDB {
             key,
             value,
-            action,
             from,
         } => {
             peer.process_store_request((key.clone(), value.clone()));
@@ -298,24 +296,38 @@ pub fn send_write_request(
     let mut action;
     if let true = redundant {
         action = "write_redundant";
+        let not = Notification {
+            content: Content::PushToDB {
+                key: data.0,
+                value: data.1,
+                from: origin.to_string(),
+            },
+            from: origin,
+        };
+        let serialized = match serde_json::to_writer(&stream, &not) {
+            Ok(ser) => ser,
+            Err(_e) => {
+                println!("Failed to serialize SendRequest {:?}", &not);
+            }
+        };
     } else {
         action = "write";
+        let not = Notification {
+            content: Content::RedundantPushToDB {
+                key: data.0,
+                value: data.1,
+                from: origin.to_string(),
+            },
+            from: origin,
+        };
+        let serialized = match serde_json::to_writer(&stream, &not) {
+            Ok(ser) => ser,
+            Err(_e) => {
+                println!("Failed to serialize SendRequest {:?}", &not);
+            }
+        };
     }
-    let not = Notification {
-        content: Content::PushToDB {
-            key: data.0,
-            value: data.1,
-            from: origin.to_string(),
-            action: action.to_string(),
-        },
-        from: origin,
-    };
-    let serialized = match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+
 }
 
 fn other_random_target(
