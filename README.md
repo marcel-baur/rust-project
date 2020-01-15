@@ -1,8 +1,25 @@
 # Rust Project Group C
 
-A distributed key-value database storing audio files for sharing and streaming music
+A distributed key-value database storing audio files for sharing and streaming music.
 
-## How to build project
+
+
+Our database is distributed in an interconnected peer to peer network. Storage resources are shared between peers. Every user that
+wants to be part of the network to access files must also provide storage to the database.
+
+The graphic illustrates the structure of the network, which fully meshed.
+This is optimal for smaller communities that want to privately share their music through a decentralised system.
+
+![kvd-rust](https://user-images.githubusercontent.com/12140441/72470038-8f9f3880-37e0-11ea-8175-ed0e9f52fc50.png)
+
+One instance of the program is visualized by the dotted rectangle. The software itself is split between the database, which handles instructions from the
+user and listens to updates from the network. The user interaction, which currently happens in a shell,
+is decoupled from the database thread and could be exchanged with a GUI.
+
+Users will be able to choose what to do with the music by either downloading it to their drive or streaming it through the network.
+
+
+## How to build the project
 
 If you want create a new peer network use the following command:
 
