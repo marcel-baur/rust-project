@@ -7,7 +7,7 @@ A distributed key-value database storing audio files for sharing and streaming m
 Our database is distributed in an interconnected peer to peer network. Storage resources are shared between peers. Every user that
 wants to be part of the network to access files must also provide storage to the database.
 
-The graphic illustrates the structure of the network, which fully meshed.
+The graphic illustrates the structure of the network, which is fully meshed.
 This is optimal for smaller communities that want to privately share their music through a decentralised system.
 
 ![kvd-rust](https://user-images.githubusercontent.com/12140441/72470038-8f9f3880-37e0-11ea-8175-ed0e9f52fc50.png)
