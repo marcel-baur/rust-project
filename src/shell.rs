@@ -1,6 +1,9 @@
+use prettytable::format;
+extern crate colored;
 use crate::constants;
 use crate::network::peer::Peer;
 use crate::network::{send_delete_peer_request, send_read_request, send_write_request};
+use colored::*;
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -13,6 +16,7 @@ use std::{io, thread};
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
     let i_clone = interaction_in_progress.clone();
+    let arc_clone = arc.clone();
     // Use the peer clone, drop the original alloc of the peer
     let peer = arc.lock().unwrap();
     let ip = *peer.get_ip();
@@ -20,17 +24,22 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let _handle = thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
+            let peer = arc_clone.lock().unwrap();
+            let peer_clone = peer.clone();
+            drop(peer);
             i_clone.store(true, Ordering::SeqCst);
-            handle_user_input(ip);
+            handle_user_input(&peer_clone);
             i_clone.store(false, Ordering::SeqCst);
         })
         .unwrap();
 
     loop {
-        if !interaction_in_progress.load(Ordering::SeqCst) {
-            println!("Interaction Possible");
-            // show_db_status(&peer_clone_write);
-        }
+        let peer = arc.lock().unwrap();
+        let peer_clone = peer.clone();
+        drop(peer);
+        println!("Interaction Possible");
+        print_peer_status(&peer_clone);
+        // show_db_status(&peer_clone_write);
         thread::sleep(constants::THREAD_SLEEP_DURATION);
     }
 }
@@ -44,7 +53,7 @@ pub fn show_db_status(peer: Peer) {
     }
 }
 
-pub fn handle_user_input(ip: SocketAddr) {
+pub fn handle_user_input(peer: &Peer) {
     loop {
         let buffer = &mut String::new();
         stdin().read_line(buffer).unwrap();
@@ -62,7 +71,7 @@ pub fn handle_user_input(ip: SocketAddr) {
                 if instructions.len() == 3 {
                     //                let mutex = *peer.lock().unwrap();
                     //                push_music_to_database(instructions[1], instructions[2], mutex);
-                    push_music_to_database(instructions[1], instructions[2], ip);
+                    push_music_to_database(instructions[1], instructions[2], peer.ip_address);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -71,7 +80,7 @@ pub fn handle_user_input(ip: SocketAddr) {
             }
             Some(&"get") => {
                 if instructions.len() == 2 {
-                    send_read_request(ip, instructions[1]);
+                    send_read_request(peer.ip_address, instructions[1]);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -80,7 +89,7 @@ pub fn handle_user_input(ip: SocketAddr) {
             }
             Some(&"exit") => {
                 println!("You are leaving the network.");
-                send_delete_peer_request(ip);
+                send_delete_peer_request(peer.ip_address);
                 //TODO: stop steams
             }
 
@@ -139,3 +148,26 @@ pub fn push_music_to_database(
     }
     return Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"));
 }
+
+fn print_peer_status(peer: &Peer) {
+    let nwt = peer.network_table.clone();
+    let mut other_peers = table!(["Name".italic().yellow(), "SocketAddr".italic().yellow()]);
+
+    for (name, addr) in nwt {
+        other_peers.add_row(row![name, addr.to_string()]);
+    }
+    other_peers.set_format(*format::consts::FORMAT_BORDERS_ONLY);
+    print!(
+        "\n\n{}\n{}",
+        "Current members in the network"
+            .to_string()
+            .black()
+            .on_white(),
+        other_peers
+    );
+}
+
+/// Print the current status of the database
+/// # Arguments:
+/// * `addr` - `SocketAddr` of the local listener thread
+fn print_db_status(addr: SocketAddr) {}

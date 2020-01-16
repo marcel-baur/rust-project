@@ -175,11 +175,7 @@ fn handle_incoming_response(response: Response, peer: &mut Peer) {
 
 fn handle_notification(notification: Notification, peer: &mut Peer) {
     match notification.content {
-        Content::PushToDB {
-            key,
-            value,
-            from,
-        } => {
+        Content::PushToDB { key, value, from } => {
             peer.process_store_request((key.clone(), value.clone()));
             let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
             dbg!(redundant_target);
@@ -199,11 +195,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
         }
-        Content::RedundantPushToDB {
-            key,
-            value,
-            from,
-        } => {
+        Content::RedundantPushToDB { key, value, from } => {
             peer.process_store_request((key.clone(), value.clone()));
         }
         Content::ChangePeerName { value, from } => {
@@ -327,7 +319,6 @@ pub fn send_write_request(
             }
         };
     }
-
 }
 
 fn other_random_target(
