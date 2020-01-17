@@ -289,7 +289,7 @@ pub fn send_write_request(
     if let true = redundant {
         action = "write_redundant";
         let not = Notification {
-            content: Content::PushToDB {
+            content: Content::RedundantPushToDB {
                 key: data.0,
                 value: data.1,
                 from: origin.to_string(),
@@ -305,7 +305,7 @@ pub fn send_write_request(
     } else {
         action = "write";
         let not = Notification {
-            content: Content::RedundantPushToDB {
+            content: Content::PushToDB {
                 key: data.0,
                 value: data.1,
                 from: origin.to_string(),
