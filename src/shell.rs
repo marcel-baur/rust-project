@@ -17,6 +17,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
     let i_clone = interaction_in_progress.clone();
     let arc_clone = arc.clone();
+    let arc_clone2 = arc.clone();
     // Use the peer clone, drop the original alloc of the peer
     let peer = arc.lock().unwrap();
     let ip = *peer.get_ip();
@@ -24,11 +25,12 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let _handle = thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
+
             let peer = arc_clone.lock().unwrap();
             let peer_clone = peer.clone();
             drop(peer);
             i_clone.store(true, Ordering::SeqCst);
-            handle_user_input(&peer_clone);
+            handle_user_input(&arc_clone2);
             i_clone.store(false, Ordering::SeqCst);
         })
         .unwrap();
@@ -53,8 +55,11 @@ pub fn show_db_status(peer: Peer) {
     }
 }
 
-pub fn handle_user_input(peer: &Peer) {
+pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
     loop {
+        let peer = arc.lock().unwrap();
+        let peer_clone = peer.clone();
+        drop(peer);
         let buffer = &mut String::new();
         stdin().read_line(buffer).unwrap();
         buffer.trim_end();
@@ -71,7 +76,7 @@ pub fn handle_user_input(peer: &Peer) {
                 if instructions.len() == 3 {
                     //                let mutex = *peer.lock().unwrap();
                     //                push_music_to_database(instructions[1], instructions[2], mutex);
-                    push_music_to_database(instructions[1], instructions[2], peer.ip_address);
+                    push_music_to_database(instructions[1], instructions[2], peer_clone.ip_address);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -80,7 +85,7 @@ pub fn handle_user_input(peer: &Peer) {
             }
             Some(&"get") => {
                 if instructions.len() == 2 {
-                    send_read_request(peer.ip_address, instructions[1]);
+                    send_read_request(peer_clone.ip_address, instructions[1]);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -89,8 +94,11 @@ pub fn handle_user_input(peer: &Peer) {
             }
             Some(&"exit") => {
                 println!("You are leaving the network.");
-                send_delete_peer_request(peer.ip_address);
+                send_delete_peer_request(peer_clone.ip_address);
                 //TODO: stop steams
+            }
+            Some(&"status") => {
+                print_db_status(&peer_clone);
             }
 
             _ => println!("No valid instructions. Try help!\n"),
@@ -170,4 +178,16 @@ fn print_peer_status(peer: &Peer) {
 /// Print the current status of the database
 /// # Arguments:
 /// * `addr` - `SocketAddr` of the local listener thread
-fn print_db_status(addr: SocketAddr) {}
+fn print_db_status(peer: &Peer) {
+    let db = peer.get_db().get_data();
+    let mut local_data = table!(["Key".italic().green(), "File Info".italic().green()]);
+    for (k, v) in db {
+        local_data.add_row(row![k, v.len()]);
+    }
+    local_data.set_format(*format::consts::FORMAT_BORDERS_ONLY);
+    print!(
+        "\n\n{}\n{}",
+        "Current state of local database".to_string(),
+        local_data
+    );
+}
