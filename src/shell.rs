@@ -6,12 +6,16 @@ use crate::network::{send_delete_peer_request, send_read_request, send_write_req
 use colored::*;
 use std::error::Error;
 use std::fs;
-use std::io::{stdin, ErrorKind};
+use std::io::{stdin, ErrorKind, Read};
 use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
+
+use std::io::BufReader;
+use rodio::Source;
+use std::fs::File;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -38,8 +42,8 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
         let peer = arc.lock().unwrap();
         let peer_clone = peer.clone();
         drop(peer);
-        println!("Interaction Possible");
-        print_peer_status(&peer_clone);
+        //println!("Interaction Possible");
+        // print_peer_status(&peer_clone);
         // show_db_status(&peer_clone_write);
         thread::sleep(constants::THREAD_SLEEP_DURATION);
     }
@@ -99,10 +103,26 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             Some(&"status") => {
                 print_local_db_status(&peer_clone);
             }
+            Some(&"play") => {
+                play_music(&peer_clone, instructions[1]);
+            }
 
             _ => println!("No valid instructions. Try help!\n"),
         }
     }
+}
+/// plays audio when mp3 is in database otherwise sends request to find file
+/// # Arguments:
+///
+/// * `name` - String including mp3 name (key in our database)
+///
+fn play_music(peer: &Peer, name: &str) {
+    let device = rodio::default_output_device().unwrap();
+    fs::write("file/tmp.mp3",peer.get_db().data.get(name).unwrap());
+    let file = std::fs::File::open("file/tmp.mp3").unwrap();
+    let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
+    rodio::play_raw(&device, source.convert_samples());
+    fs::remove_file("file/tmp.mp3");
 }
 
 pub fn show_help_instructions() {
@@ -112,6 +132,7 @@ pub fn show_help_instructions() {
                 get [mp3 name] - get mp3 file from database\n\
                 stream [mp3 name] - get mp3 stream from database\n\
                 remove [mp3 name] - deletes mp3 file from database\n\
+                play [mp3 name] - playes the audio of mp3 file\n\
                 exit - exit network and leave program\n\n
                 ";
     print!("{}", info);
@@ -155,6 +176,9 @@ pub fn push_music_to_database(
     }
     return Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"));
 }
+
+
+
 
 fn print_peer_status(peer: &Peer) {
     let nwt = peer.network_table.clone();
