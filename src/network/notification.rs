@@ -62,4 +62,12 @@ pub enum Content {
         from: SocketAddr,
         exist: bool,
     },
+    StatusRequest {
+        from: SocketAddr
+    },
+    SelfStatusRequest,
+    StatusResponse {
+        files: Vec<String>,
+        from: SocketAddr
+    }
 }

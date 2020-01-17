@@ -24,7 +24,7 @@ use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
 use crate::network::response::Message::DataStored;
 use crate::network::response::*;
-use crate::shell::spawn_shell;
+use crate::shell::{spawn_shell, print_external_files};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
@@ -270,6 +270,21 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         }
         Content::ExistFileResponse { key, from, exist } => {}
+        Content::SelfStatusRequest {} => {
+            for (_name, addr) in &peer.network_table {
+                send_status_request(*addr, *peer.get_ip());
+            }
+        },
+        Content::StatusRequest {from} => {
+            let mut res: Vec<String> = Vec::new();
+            for (k, _v) in &peer.get_db().data {
+                res.push(k.to_string());
+            }
+            send_local_file_status(from, res, *peer.get_ip());
+        },
+        Content::StatusResponse {from, files} => {
+            print_external_files(files);
+        }
     }
 }
 
@@ -401,6 +416,60 @@ pub fn send_delete_peer_request(target: SocketAddr) {
     let not = Notification {
         content: Content::ExitPeer { addr: target },
         from: target,
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+pub fn send_self_status_request(target: SocketAddr) {
+    let mut stream = TcpStream::connect(target).unwrap();
+
+    let not = Notification {
+        content: Content::SelfStatusRequest {
+
+        },
+        from: target
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+fn send_status_request(target: SocketAddr, from: SocketAddr) {
+    let mut stream = TcpStream::connect(target).unwrap();
+
+    let not = Notification {
+        content: Content::StatusRequest {
+            from,
+        },
+        from
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+fn send_local_file_status(target: SocketAddr, files: Vec<String>, from: SocketAddr) {
+    let mut stream = TcpStream::connect(target).unwrap();
+    let not = Notification {
+        content: Content::StatusResponse {
+            files,
+            from,
+        },
+        from
     };
 
     let serialized = match serde_json::to_writer(&stream, &not) {

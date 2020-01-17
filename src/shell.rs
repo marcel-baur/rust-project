@@ -97,7 +97,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 //TODO: stop steams
             }
             Some(&"status") => {
-                print_db_status(&peer_clone);
+                print_local_db_status(&peer_clone);
             }
 
             _ => println!("No valid instructions. Try help!\n"),
@@ -174,10 +174,10 @@ fn print_peer_status(peer: &Peer) {
     );
 }
 
-/// Print the current status of the database
+/// Print the current status of the local database
 /// # Arguments:
-/// * `addr` - `SocketAddr` of the local listener thread
-fn print_db_status(peer: &Peer) {
+/// * `peer` - the local `Peer`
+fn print_local_db_status(peer: &Peer) {
     let db = peer.get_db().get_data();
     let mut local_data = table!(["Key".italic().green(), "File Info".italic().green()]);
     for (k, v) in db {
@@ -189,4 +189,15 @@ fn print_db_status(peer: &Peer) {
         "Current state of local database".to_string(),
         local_data
     );
+}
+
+/// Print the name of all existing files in the database
+/// # Arguments
+/// * `peer` - the local `Peer`
+fn print_existing_files(peer: &Peer) {
+
+}
+
+pub fn print_external_files(files: Vec<String>) {
+    println!("TODO");
 }
