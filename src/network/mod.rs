@@ -130,7 +130,6 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     let listener = TcpListener::bind(&listen_ip).unwrap();
     println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
-        println!("Received");
         let mut buf = String::new();
         //        dbg!(&stream);
         match stream {
@@ -178,14 +177,12 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::PushToDB { key, value, from } => {
             peer.process_store_request((key.clone(), value.clone()));
             let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
-            dbg!(redundant_target);
             match redundant_target {
                 Some(target) => {
                     send_write_request(target, *peer.get_ip(), (key.clone(), value.clone()), true);
                 }
                 None => println!("Only peer in network. No redundancy possible"),
             };
-            dbg!(&from);
             match from.parse::<SocketAddr>() {
                 Ok(target_address) => {
                     send_write_response(target_address, *peer.get_ip(), key.clone());
@@ -236,7 +233,6 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             for (key, addr) in new_network_peer {
                 peer.network_table.insert(key, addr);
             }
-            dbg!(&peer.network_table);
         }
         Content::RequestForTable { value, from } => {
             // checks if key is unique, otherwise send change name request
@@ -271,7 +267,6 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::DeleteFromNetwork { name, from } => {
             if peer.network_table.contains_key(&name) {
                 peer.network_table.remove(&name);
-                dbg!(&peer.network_table);
             }
         }
         Content::ExistFileResponse { key, from, exist } => {}

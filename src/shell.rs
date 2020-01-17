@@ -25,7 +25,6 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let _handle = thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
-
             let peer = arc_clone.lock().unwrap();
             let peer_clone = peer.clone();
             drop(peer);
