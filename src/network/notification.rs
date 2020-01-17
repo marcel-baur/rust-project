@@ -2,6 +2,7 @@ use crate::network::response::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Notification {
@@ -14,13 +15,11 @@ pub enum Content {
     PushToDB {
         key: String,
         value: Vec<u8>,
-        action: String,
         from: String,
     },
     RedundantPushToDB {
         key: String,
         value: Vec<u8>,
-        action: String,
         from: String,
     },
     Response {
@@ -47,7 +46,28 @@ pub enum Content {
         key: String,
     },
     ExistFile {
+        id: SystemTime,
         key: String,
         from: SocketAddr,
+    },
+    ExitPeer {
+        addr: SocketAddr,
+    },
+    DeleteFromNetwork {
+        name: String,
+        from: SocketAddr,
+    },
+    ExistFileResponse {
+        key: String,
+        from: SocketAddr,
+        exist: bool,
+    },
+    StatusRequest {
+        from: SocketAddr
+    },
+    SelfStatusRequest,
+    StatusResponse {
+        files: Vec<String>,
+        from: SocketAddr
     }
 }

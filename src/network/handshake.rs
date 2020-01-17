@@ -137,3 +137,27 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
         }
     };
 }
+
+pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &str) {
+    let mut stream = match TcpStream::connect(target) {
+        Ok(stream) => stream,
+        Err(e) => {
+            return;
+        }
+    };
+
+    let not = Notification {
+        content: Content::DeleteFromNetwork {
+            name: name.to_string(),
+            from: target,
+        },
+        from,
+    };
+
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}

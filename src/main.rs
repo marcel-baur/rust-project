@@ -1,4 +1,6 @@
 extern crate clap;
+#[macro_use]
+extern crate prettytable;
 
 use clap::{App, Arg};
 use std::net::SocketAddr;
