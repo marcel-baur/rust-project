@@ -105,7 +105,10 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 print_local_db_status(&arc);
             }
             Some(&"play") => {
-                play_music(&peer_clone, instructions[1]);
+                match play_music(&peer_clone, instructions[1]) {
+                    Ok(_) => println!("{}", "Music is playing"),
+                    Err(e) => println!("{}", e)
+                };
             }
 
             _ => println!("No valid instructions. Try help!\n"),
@@ -117,13 +120,31 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
 ///
 /// * `name` - String including mp3 name (key in our database)
 ///
-fn play_music(peer: &Peer, name: &str) {
-    let device = rodio::default_output_device().unwrap();
-    fs::write("file/tmp.mp3", peer.get_db().data.get(name).unwrap());
-    let file = std::fs::File::open("file/tmp.mp3").unwrap();
-    let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
+fn play_music(peer: &Peer, name: &str) -> Result<(), String> {
+    let device = match rodio::default_output_device() {
+        Some(device) => device,
+        None => return Err("No output device found".to_string()),
+    };
+    let soundData = match peer.get_db().data.get(name) {
+        Some(data) => data,
+        None => return Err("song not found in database".to_string()),
+    };
+    match fs::write("file/tmp.mp3", soundData) {
+        _ => {},
+        Err(e) => return Err("could not save file to disk".to_string()),
+    };
+    let file = match std::fs::File::open("file/tmp.mp3") {
+        Ok(file) => file,
+        Err(e) => return Err("could not read file from disk".to_string()),
+    };
+    let source = match rodio::Decoder::new(BufReader::new(file)) {
+        Ok(decodedSource) => decodedSource,
+        Err(e) => return Err("file could not be decoded. is it mp3?".to_string()),
+    };
+    //@TODO use sink here to control audio, i.e. pause, stop
     rodio::play_raw(&device, source.convert_samples());
     fs::remove_file("file/tmp.mp3");
+    Ok(())
 }
 
 pub fn show_help_instructions() {
