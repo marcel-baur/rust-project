@@ -63,11 +63,11 @@ pub enum Content {
         exist: bool,
     },
     StatusRequest {
-        from: SocketAddr
+        from: SocketAddr,
     },
     SelfStatusRequest,
     StatusResponse {
         files: Vec<String>,
-        from: SocketAddr
-    }
+        from: SocketAddr,
+    },
 }

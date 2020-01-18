@@ -13,9 +13,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
 
-use std::io::BufReader;
 use rodio::Source;
 use std::fs::File;
+use std::io::BufReader;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -101,7 +101,8 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 //TODO: stop steams
             }
             Some(&"status") => {
-                print_local_db_status(&peer_clone);
+                print_peer_status(&arc);
+                print_local_db_status(&arc);
             }
             Some(&"play") => {
                 play_music(&peer_clone, instructions[1]);
@@ -118,7 +119,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
 ///
 fn play_music(peer: &Peer, name: &str) {
     let device = rodio::default_output_device().unwrap();
-    fs::write("file/tmp.mp3",peer.get_db().data.get(name).unwrap());
+    fs::write("file/tmp.mp3", peer.get_db().data.get(name).unwrap());
     let file = std::fs::File::open("file/tmp.mp3").unwrap();
     let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
     rodio::play_raw(&device, source.convert_samples());
@@ -132,7 +133,7 @@ pub fn show_help_instructions() {
                 get [mp3 name] - get mp3 file from database\n\
                 stream [mp3 name] - get mp3 stream from database\n\
                 remove [mp3 name] - deletes mp3 file from database\n\
-                play [mp3 name] - playes the audio of mp3 file\n\
+                play [mp3 name] - plays the audio of mp3 file\n\
                 exit - exit network and leave program\n\n
                 ";
     print!("{}", info);
@@ -177,11 +178,11 @@ pub fn push_music_to_database(
     return Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"));
 }
 
-
-
-
-fn print_peer_status(peer: &Peer) {
-    let nwt = peer.network_table.clone();
+fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
+    let peer = arc.lock().unwrap();
+    let peer_clone = peer.clone();
+    drop(peer);
+    let nwt = peer_clone.network_table.clone();
     let mut other_peers = table!(["Name".italic().yellow(), "SocketAddr".italic().yellow()]);
 
     for (name, addr) in nwt {
@@ -201,8 +202,11 @@ fn print_peer_status(peer: &Peer) {
 /// Print the current status of the local database
 /// # Arguments:
 /// * `peer` - the local `Peer`
-fn print_local_db_status(peer: &Peer) {
-    let db = peer.get_db().get_data();
+fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
+    let peer = arc.lock().unwrap();
+    let peer_clone = peer.clone();
+    drop(peer);
+    let db = peer_clone.get_db().get_data();
     let mut local_data = table!(["Key".italic().green(), "File Info".italic().green()]);
     for (k, v) in db {
         local_data.add_row(row![k, v.len()]);
@@ -218,9 +222,7 @@ fn print_local_db_status(peer: &Peer) {
 /// Print the name of all existing files in the database
 /// # Arguments
 /// * `peer` - the local `Peer`
-fn print_existing_files(peer: &Peer) {
-
-}
+fn print_existing_files(peer: &Peer) {}
 
 pub fn print_external_files(files: Vec<String>) {
     println!("TODO");
