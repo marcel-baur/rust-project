@@ -2,7 +2,7 @@ use prettytable::format;
 extern crate colored;
 use crate::constants;
 use crate::network::peer::Peer;
-use crate::network::{send_delete_peer_request, send_read_request, send_write_request};
+use crate::network::{send_delete_peer_request, send_read_request, send_write_request, send_play_request};
 use colored::*;
 use std::error::Error;
 use std::fs;
@@ -12,10 +12,6 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
-
-use rodio::Source;
-use std::fs::File;
-use std::io::BufReader;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -105,50 +101,12 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 print_local_db_status(&arc);
             }
             Some(&"play") => {
-                match play_music(&peer_clone, instructions[1]) {
-                    Ok(_) => println!("{}", "Music is playing"),
-                    Err(e) => println!("{}", e)
-                };
+                send_play_request(instructions[1], peer_clone.ip_address);
             }
 
             _ => println!("No valid instructions. Try help!\n"),
         }
     }
-}
-/// plays audio when mp3 is in database otherwise sends request to find file
-/// # Arguments:
-///
-/// * `name` - String including mp3 name (key in our database)
-///
-fn play_music(peer: &Peer, name: &str) -> Result<(), String> {
-    let device = match rodio::default_output_device() {
-        Some(device) => device,
-        None => return Err("No output device found".to_string()),
-    };
-    // we play sound when it is in our own database, otherwise we ask for the location
-    let soundData = match peer.get_db().data.get(name) {
-        Some(data) => data,
-        None => {
-            send_read_request(peer.ip_address, name);
-            return Err("File not in Database, send_request sent".to_string());
-        }
-    };
-    match fs::write("file/tmp.mp3", soundData) {
-        _ => {},
-        Err(e) => return Err("could not save file to disk".to_string()),
-    };
-    let file = match std::fs::File::open("file/tmp.mp3") {
-        Ok(file) => file,
-        Err(e) => return Err("could not read file from disk".to_string()),
-    };
-    let source = match rodio::Decoder::new(BufReader::new(file)) {
-        Ok(decodedSource) => decodedSource,
-        Err(e) => return Err("file could not be decoded. is it mp3?".to_string()),
-    };
-    //@TODO use sink here to control audio, i.e. pause, stop
-    rodio::play_raw(&device, source.convert_samples());
-    fs::remove_file("file/tmp.mp3");
-    Ok(())
 }
 
 pub fn show_help_instructions() {

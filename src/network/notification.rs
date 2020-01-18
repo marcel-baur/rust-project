@@ -68,4 +68,7 @@ pub enum Content {
     StatusResponse {
         files: Vec<String>,
     },
+    PlayAudioRequest {
+        name: String,
+    }
 }

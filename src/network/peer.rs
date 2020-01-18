@@ -12,6 +12,7 @@ pub struct Peer {
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
     database: Database,
+    pub waitingToPlay: bool,
     pub open_request_table: HashMap<SystemTime, String>,
 }
 
@@ -32,6 +33,8 @@ impl Peer {
             ip_address,
             network_table,
             database: Database::new(),
+            //@TODO refactor this! we need a kind of request list
+            waitingToPlay: false,
             open_request_table,
         }
     }
@@ -75,6 +78,10 @@ impl Peer {
 
     pub fn delete_handled_request(&mut self, time: &SystemTime) {
         self.open_request_table.remove(time);
+    }
+
+    pub fn setWaitingToPlay(&mut self, waiting: bool) {
+        self.waitingToPlay = waiting;
     }
 }
 

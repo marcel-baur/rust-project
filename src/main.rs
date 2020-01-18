@@ -9,6 +9,7 @@ mod constants;
 mod database;
 mod network;
 mod shell;
+mod audio;
 
 fn main() {
     let matches = App::new("music_p2p")

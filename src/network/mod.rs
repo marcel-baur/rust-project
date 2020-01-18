@@ -10,6 +10,7 @@ mod handshake;
 mod notification;
 pub mod peer;
 mod response;
+mod music_exchange;
 
 extern crate get_if_addrs;
 extern crate rand;
@@ -19,6 +20,7 @@ use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
 };
+use crate::network::music_exchange::{send_get_file_reponse, read_file_exist, send_exist_response, send_file_request};
 use crate::network::notification::Content::{ExitPeer, FindFile};
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
@@ -29,6 +31,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
 use std::time::SystemTime;
+use crate::audio::{play_music, play_music_by_vec};
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -247,6 +250,8 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         }
         Content::FindFile { key } => {
             // @TODO check if file is in database first
+            // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
+            // @TODO in this case we need to remove the request?
             let id = SystemTime::now();
             peer.add_new_request(&id, &key);
 
@@ -260,21 +265,6 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             let exist = peer.does_file_exist(key.as_ref());
             if exist {
                 send_exist_response(sender, peer.ip_address,key.as_ref(), id);
-            }
-        }
-        Content::Response { from, message } => {
-        }
-        Content::ExitPeer { addr } => {
-            for (_key, value) in &peer.network_table {
-                if *value != addr {
-                    update_table_after_delete(*value, addr, &peer.name);
-                }
-            }
-            process::exit(0);
-        }
-        Content::DeleteFromNetwork { name } => {
-            if peer.network_table.contains_key(&name) {
-                peer.network_table.remove(&name);
             }
         }
         Content::ExistFileResponse { key, id } => {
@@ -292,10 +282,30 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                     //@TODO error handling}
                 }
             }
-        },
+        }
         Content::GetFileResponse { key, value} => {
             //save to tmp and play audio
-        },
+            if peer.waitingToPlay {
+                peer.waitingToPlay = false;
+                play_music_by_vec(&value);
+            }
+            //Download mp3 file
+        }
+        Content::Response { from, message } => {
+        }
+        Content::ExitPeer { addr } => {
+            for (_key, value) in &peer.network_table {
+                if *value != addr {
+                    update_table_after_delete(*value, addr, &peer.name);
+                }
+            }
+            process::exit(0);
+        }
+        Content::DeleteFromNetwork { name } => {
+            if peer.network_table.contains_key(&name) {
+                peer.network_table.remove(&name);
+            }
+        }
         Content::SelfStatusRequest {} => {
             for (_name, addr) in &peer.network_table {
                 send_status_request(*addr, *peer.get_ip());
@@ -310,6 +320,14 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         }
         Content::StatusResponse { files } => {
             print_external_files(files);
+        }
+        Content::PlayAudioRequest { name } => {
+            match play_music(peer, name.as_str()) {
+                Ok(_) => {},
+                Err(e) => {
+                    println!("{}", e);
+                }
+            }
         }
     }
 }
@@ -411,77 +429,6 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
     };
 }
 
-pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
-    /// Sends a request to the other peers to check if they have the wanted file
-    let mut stream = TcpStream::connect(target).unwrap();
-
-    let not = Notification {
-        content: Content::ExistFile {
-            id,
-            key: name.to_string(),
-        },
-        from,
-    };
-
-    let serialized = match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
-}
-
-pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
-    let mut stream = TcpStream::connect(target).unwrap();
-    let not = Notification {
-        content: Content::GetFile {
-            key: name.to_string(),
-        },
-        from,
-    };
-    let serialized = match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
-}
-
-fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, value: Vec<u8>) {
-    let mut stream = TcpStream::connect(target).unwrap();
-    let not = Notification {
-        content: Content::GetFileResponse {
-            key: key.to_string(),
-            value,
-        },
-        from,
-    };
-    let serialized = match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
-}
-
-pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
-    println!("hier sende ich, dass ich das file habe");
-    let mut stream = TcpStream::connect(target).unwrap();
-    let not = Notification {
-        content: Content::ExistFileResponse {
-            key: name.to_string(),
-            id,
-        },
-        from,
-    };
-    let serialized = match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
-}
-
 pub fn send_delete_peer_request(target: SocketAddr) {
     let mut stream = TcpStream::connect(target).unwrap();
 
@@ -537,6 +484,22 @@ fn send_local_file_status(target: SocketAddr, files: Vec<String>, from: SocketAd
         from,
     };
 
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+pub fn send_play_request(name: &str, from: SocketAddr) {
+    let mut stream = TcpStream::connect(from).unwrap();
+    let not = Notification {
+        content: Content::PlayAudioRequest {
+            name: name.to_string(),
+        },
+        from,
+    };
     let serialized = match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
