@@ -174,6 +174,7 @@ fn handle_incoming_response(response: Response, peer: &mut Peer) {
 
 fn handle_notification(notification: Notification, peer: &mut Peer) {
     //dbg!(&notification);
+    let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
             peer.process_store_request((key.clone(), value.clone()));
@@ -250,16 +251,19 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             peer.add_new_request(&id, &key);
 
             for (_key, value) in &peer.network_table {
-                if value != &peer.ip_address {
+                if _key != &peer.name {
                     read_file_exist(*value, peer.ip_address, &key, id.clone());
                 }
             }
         }
         Content::ExistFile { id, key, from } => {
             let exist = peer.does_file_exist(key.as_ref());
-            send_exist_response(from, key.as_ref(), exist);
+            if exist {
+                send_exist_response(from, peer.ip_address,key.as_ref(), id);
+            }
         }
-        Content::Response { from, message } => {}
+        Content::Response { from, message } => {
+        }
         Content::ExitPeer { addr } => {
             for (_key, value) in &peer.network_table {
                 if *value != addr {
@@ -273,7 +277,25 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 peer.network_table.remove(&name);
             }
         }
-        Content::ExistFileResponse { key, from, exist } => {}
+        Content::ExistFileResponse { key, id, from } => {
+            //Check if peer request is still active. when true remove it
+            if peer.check_request_still_active(&id) {
+                //@TODO maybe create new request?
+                peer.delete_handled_request(&id);
+                send_file_request(from, peer.ip_address, key.as_ref());
+            }
+        }
+        Content::GetFile { key } => {
+            match peer.find_file(key.as_ref()) {
+                Some(music) => send_get_file_reponse(sender, peer.ip_address, key.as_ref(), music.clone()),
+                None => {
+                    //@TODO error handling}
+                }
+            }
+        },
+        Content::GetFileResponse { key, value} => {
+            //save to tmp and play audio
+        },
         Content::SelfStatusRequest {} => {
             for (_name, addr) in &peer.network_table {
                 send_status_request(*addr, *peer.get_ip());
@@ -410,9 +432,56 @@ pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: Sys
     };
 }
 
-pub fn send_exist_response(target: SocketAddr, name: &str, exist: bool) {
-    //let mut stream = TcpStream::connect(target).unwrap();
-    println!("hier sende ich, dass ich das file habe: {}", exist);
+pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
+    let mut stream = TcpStream::connect(target).unwrap();
+    let not = Notification {
+        content: Content::GetFile {
+            key: name.to_string(),
+        },
+        from,
+    };
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, value: Vec<u8>) {
+    let mut stream = TcpStream::connect(target).unwrap();
+    let not = Notification {
+        content: Content::GetFileResponse {
+            key: key.to_string(),
+            value,
+        },
+        from,
+    };
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
+    println!("hier sende ich, dass ich das file habe");
+    let mut stream = TcpStream::connect(target).unwrap();
+    let not = Notification {
+        content: Content::ExistFileResponse {
+            key: name.to_string(),
+            id,
+            from,
+        },
+        from,
+    };
+    let serialized = match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
 }
 
 pub fn send_delete_peer_request(target: SocketAddr) {

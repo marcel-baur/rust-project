@@ -45,6 +45,13 @@ pub enum Content {
     FindFile {
         key: String,
     },
+    GetFile {
+        key: String,
+    },
+    GetFileResponse {
+        key: String,
+        value: Vec<u8>,
+    },
     ExistFile {
         id: SystemTime,
         key: String,
@@ -59,8 +66,8 @@ pub enum Content {
     },
     ExistFileResponse {
         key: String,
-        from: SocketAddr,
-        exist: bool,
+        id: SystemTime,
+        from: SocketAddr
     },
     StatusRequest {
         from: SocketAddr,
