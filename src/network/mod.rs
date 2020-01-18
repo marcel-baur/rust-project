@@ -197,19 +197,19 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::RedundantPushToDB { key, value, from } => {
             peer.process_store_request((key.clone(), value.clone()));
         }
-        Content::ChangePeerName { value, from } => {
+        Content::ChangePeerName { value } => {
             peer.network_table.remove(&peer.name);
             peer.name = value;
             peer.network_table
                 .insert(peer.name.clone(), peer.ip_address);
             //send request existing network table
             send_table_request(
-                &SocketAddr::from_str(&from.to_string()).unwrap(),
+                &SocketAddr::from_str(&sender.to_string()).unwrap(),
                 peer.get_ip(),
                 &peer.name,
             );
         }
-        Content::SendNetworkTable { value, from } => {
+        Content::SendNetworkTable { value } => {
             let table = match String::from_utf8(value) {
                 Ok(val) => val,
                 Err(utf) => {
@@ -223,7 +223,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
             send_table_to_all_peers(peer);
         }
-        Content::SendNetworkUpdateTable { value, from } => {
+        Content::SendNetworkUpdateTable { value } => {
             let table = match String::from_utf8(value) {
                 Ok(val) => val,
                 Err(utf) => {
@@ -236,13 +236,13 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 peer.network_table.insert(key, addr);
             }
         }
-        Content::RequestForTable { value, from } => {
+        Content::RequestForTable { value } => {
             // checks if key is unique, otherwise send change name request
             if peer.network_table.contains_key(&value) {
                 let name = format!("{}+{}", &value, "1");
-                send_change_name_request(from.to_string(), peer.get_ip(), name.as_ref());
+                send_change_name_request(sender.to_string(), peer.get_ip(), name.as_ref());
             } else {
-                send_network_table(from.to_string(), &peer);
+                send_network_table(sender.to_string(), &peer);
             }
         }
         Content::FindFile { key } => {
@@ -256,10 +256,10 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
         }
-        Content::ExistFile { id, key, from } => {
+        Content::ExistFile { id, key } => {
             let exist = peer.does_file_exist(key.as_ref());
             if exist {
-                send_exist_response(from, peer.ip_address,key.as_ref(), id);
+                send_exist_response(sender, peer.ip_address,key.as_ref(), id);
             }
         }
         Content::Response { from, message } => {
@@ -272,17 +272,17 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
             process::exit(0);
         }
-        Content::DeleteFromNetwork { name, from } => {
+        Content::DeleteFromNetwork { name } => {
             if peer.network_table.contains_key(&name) {
                 peer.network_table.remove(&name);
             }
         }
-        Content::ExistFileResponse { key, id, from } => {
+        Content::ExistFileResponse { key, id } => {
             //Check if peer request is still active. when true remove it
             if peer.check_request_still_active(&id) {
                 //@TODO maybe create new request?
                 peer.delete_handled_request(&id);
-                send_file_request(from, peer.ip_address, key.as_ref());
+                send_file_request(sender, peer.ip_address, key.as_ref());
             }
         }
         Content::GetFile { key } => {
@@ -301,14 +301,14 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 send_status_request(*addr, *peer.get_ip());
             }
         }
-        Content::StatusRequest { from } => {
+        Content::StatusRequest { } => {
             let mut res: Vec<String> = Vec::new();
             for (k, _v) in &peer.get_db().data {
                 res.push(k.to_string());
             }
-            send_local_file_status(from, res, *peer.get_ip());
+            send_local_file_status(sender, res, *peer.get_ip());
         }
-        Content::StatusResponse { from, files } => {
+        Content::StatusResponse { files } => {
             print_external_files(files);
         }
     }
@@ -419,7 +419,6 @@ pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: Sys
         content: Content::ExistFile {
             id,
             key: name.to_string(),
-            from,
         },
         from,
     };
@@ -472,7 +471,6 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
         content: Content::ExistFileResponse {
             key: name.to_string(),
             id,
-            from,
         },
         from,
     };
@@ -520,7 +518,7 @@ fn send_status_request(target: SocketAddr, from: SocketAddr) {
     let mut stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
-        content: Content::StatusRequest { from },
+        content: Content::StatusRequest{ },
         from,
     };
 
@@ -535,7 +533,7 @@ fn send_status_request(target: SocketAddr, from: SocketAddr) {
 fn send_local_file_status(target: SocketAddr, files: Vec<String>, from: SocketAddr) {
     let mut stream = TcpStream::connect(target).unwrap();
     let not = Notification {
-        content: Content::StatusResponse { files, from },
+        content: Content::StatusResponse { files },
         from,
     };
 

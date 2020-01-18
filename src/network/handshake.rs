@@ -46,7 +46,6 @@ pub fn send_network_table(target: String, peer: &Peer) {
     let not = Notification {
         content: Content::SendNetworkTable {
             value: network_table_to_json(&peer.network_table).into_bytes(),
-            from: peer.ip_address,
         },
         from: peer.ip_address,
     };
@@ -71,7 +70,6 @@ pub fn send_network_update_table(
     let not = Notification {
         content: Content::SendNetworkUpdateTable {
             value: network_table_to_json(hashmap).into_bytes(),
-            from: from.parse::<SocketAddr>().unwrap(), // TODO change attribute to SocketAddr after review
         },
         from: from.parse::<SocketAddr>().unwrap(),
     };
@@ -88,7 +86,6 @@ pub fn send_change_name_request(target: String, from: &SocketAddr, name: &str) {
     let not = Notification {
         content: Content::ChangePeerName {
             value: name.to_string(),
-            from: *from,
         },
         from: *from,
     };
@@ -126,7 +123,6 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
     let not = Notification {
         content: Content::RequestForTable {
             value: name.to_string(),
-            from: *from,
         },
         from: *from,
     };
@@ -149,7 +145,6 @@ pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &st
     let not = Notification {
         content: Content::DeleteFromNetwork {
             name: name.to_string(),
-            from: target,
         },
         from,
     };

@@ -28,19 +28,15 @@ pub enum Content {
     },
     ChangePeerName {
         value: String,
-        from: SocketAddr,
     },
     SendNetworkTable {
         value: Vec<u8>,
-        from: SocketAddr,
     },
     SendNetworkUpdateTable {
         value: Vec<u8>,
-        from: SocketAddr,
     },
     RequestForTable {
         value: String,
-        from: SocketAddr,
     },
     FindFile {
         key: String,
@@ -55,26 +51,21 @@ pub enum Content {
     ExistFile {
         id: SystemTime,
         key: String,
-        from: SocketAddr,
     },
     ExitPeer {
         addr: SocketAddr,
     },
     DeleteFromNetwork {
         name: String,
-        from: SocketAddr,
     },
     ExistFileResponse {
         key: String,
         id: SystemTime,
-        from: SocketAddr
     },
     StatusRequest {
-        from: SocketAddr,
     },
     SelfStatusRequest,
     StatusResponse {
         files: Vec<String>,
-        from: SocketAddr,
     },
 }
