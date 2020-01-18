@@ -155,3 +155,5 @@ Cargo.lock
 
 # mp3 files
 /file/
+
+gui-app/target
