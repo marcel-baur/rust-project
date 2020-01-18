@@ -125,9 +125,13 @@ fn play_music(peer: &Peer, name: &str) -> Result<(), String> {
         Some(device) => device,
         None => return Err("No output device found".to_string()),
     };
+    // we play sound when it is in our own database, otherwise we ask for the location
     let soundData = match peer.get_db().data.get(name) {
         Some(data) => data,
-        None => return Err("song not found in database".to_string()),
+        None => {
+            send_read_request(peer.ip_address, name);
+            return Err("File not in Database, send_request sent".to_string());
+        }
     };
     match fs::write("file/tmp.mp3", soundData) {
         _ => {},

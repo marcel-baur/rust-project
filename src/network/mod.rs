@@ -173,6 +173,7 @@ fn handle_incoming_response(response: Response, peer: &mut Peer) {
 }
 
 fn handle_notification(notification: Notification, peer: &mut Peer) {
+    //dbg!(&notification);
     match notification.content {
         Content::PushToDB { key, value, from } => {
             peer.process_store_request((key.clone(), value.clone()));
@@ -244,11 +245,14 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         }
         Content::FindFile { key } => {
+            // @TODO check if file is in database first
             let id = SystemTime::now();
             peer.add_new_request(&id, &key);
 
             for (_key, value) in &peer.network_table {
-                read_file_exist(*value, &key, id.clone());
+                if value != &peer.ip_address {
+                    read_file_exist(*value, peer.ip_address, &key, id.clone());
+                }
             }
         }
         Content::ExistFile { id, key, from } => {
@@ -385,7 +389,7 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
     };
 }
 
-pub fn read_file_exist(target: SocketAddr, name: &str, id: SystemTime) {
+pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
     /// Sends a request to the other peers to check if they have the wanted file
     let mut stream = TcpStream::connect(target).unwrap();
 
@@ -393,9 +397,9 @@ pub fn read_file_exist(target: SocketAddr, name: &str, id: SystemTime) {
         content: Content::ExistFile {
             id,
             key: name.to_string(),
-            from: target,
+            from,
         },
-        from: target,
+        from,
     };
 
     let serialized = match serde_json::to_writer(&stream, &not) {
@@ -408,6 +412,7 @@ pub fn read_file_exist(target: SocketAddr, name: &str, id: SystemTime) {
 
 pub fn send_exist_response(target: SocketAddr, name: &str, exist: bool) {
     //let mut stream = TcpStream::connect(target).unwrap();
+    println!("hier sende ich, dass ich das file habe: {}", exist);
 }
 
 pub fn send_delete_peer_request(target: SocketAddr) {
