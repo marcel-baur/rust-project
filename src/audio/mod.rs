@@ -31,7 +31,7 @@ pub fn play_music_by_vec(music: &Vec<u8>) -> Result<(), String> {
         None => return Err("No output device found".to_string()),
     };
     match fs::write("file/tmp.mp3", music) {
-        _ => {}
+        Ok(_) => {}
         Err(e) => return Err("could not save file to disk".to_string()),
     };
     let file = match std::fs::File::open("file/tmp.mp3") {
@@ -39,11 +39,16 @@ pub fn play_music_by_vec(music: &Vec<u8>) -> Result<(), String> {
         Err(e) => return Err("could not read file from disk".to_string()),
     };
     let source = match rodio::Decoder::new(BufReader::new(file)) {
-        Ok(decodedSource) => decodedSource,
+        Ok(decoded_source) => decoded_source,
         Err(e) => return Err("file could not be decoded. is it mp3?".to_string()),
     };
     //@TODO use sink here to control audio, i.e. pause, stop
     rodio::play_raw(&device, source.convert_samples());
-    fs::remove_file("file/tmp.mp3");
-    Ok(())
+    match fs::remove_file("file/tmp.mp3") {
+        Ok(_) => return Ok(()),
+        Err(e) => {
+            return Err("Could not delete file from disk".to_string());
+        } //TODO review},
+    };
+    //    Ok(())
 }

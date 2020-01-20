@@ -64,7 +64,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
         drop(peer);
         let buffer = &mut String::new();
         stdin().read_line(buffer).unwrap();
-        buffer.trim_end();
+        let _ = buffer.trim_end();
         let mut buffer_iter = buffer.split_whitespace();
         let instructions: Vec<&str> = buffer_iter.collect();
         match instructions.first() {
@@ -78,7 +78,16 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 if instructions.len() == 3 {
                     //                let mutex = *peer.lock().unwrap();
                     //                push_music_to_database(instructions[1], instructions[2], mutex);
-                    push_music_to_database(instructions[1], instructions[2], peer_clone.ip_address);
+                    match push_music_to_database(
+                        instructions[1],
+                        instructions[2],
+                        peer_clone.ip_address,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            eprintln!("Failed to push {} to database", instructions[1]);
+                        }
+                    };
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -169,7 +178,7 @@ fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
     let peer = arc.lock().unwrap();
     let peer_clone = peer.clone();
     drop(peer);
-    let nwt = peer_clone.network_table.clone();
+    let nwt = peer_clone.network_table;
     let mut other_peers = table!(["Name".italic().yellow(), "SocketAddr".italic().yellow()]);
 
     for (name, addr) in nwt {
@@ -213,7 +222,7 @@ fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
     let peer = arc.lock().unwrap();
     let peer_clone = peer.clone();
     drop(peer);
-    for (_k, v) in &peer_clone.network_table {
+    for v in peer_clone.network_table.values() {
         if *v == *peer_clone.get_ip() {
             continue;
         }

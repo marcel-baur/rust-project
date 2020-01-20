@@ -84,14 +84,24 @@ pub fn startup(name: String, port: String) -> JoinHandle<()> {
             let listener = thread::Builder::new()
                 .name("TCPListener".to_string())
                 .spawn(move || {
-                    listen_tcp(peer_arc_clone_listen);
+                    match listen_tcp(peer_arc_clone_listen) {
+                        Ok(_) => {}
+                        Err(_) => {
+                            eprintln!("Failed to spawn listener");
+                        }
+                    };
                 })
                 .unwrap();
             let peer_arc_clone_interact = peer_arc.clone();
             let interact = thread::Builder::new()
                 .name("Interact".to_string())
                 .spawn(move || {
-                    spawn_shell(peer_arc_clone_interact);
+                    match spawn_shell(peer_arc_clone_interact) {
+                        Ok(_) => {}
+                        Err(_) => {
+                            eprintln!("Failed to spawn shell");
+                        }
+                    };
                 })
                 .unwrap();
             listener.join().expect_err("Could not join Listener");
@@ -109,7 +119,12 @@ pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Resul
     let listener = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            listen_tcp(peer_arc_clone_listen);
+            match listen_tcp(peer_arc_clone_listen) {
+                Ok(_) => {}
+                Err(_) => {
+                    eprintln!("Failed to spawn listener");
+                }
+            };
         })
         .unwrap();
     let peer_arc_clone_interact = peer_arc.clone();
@@ -121,7 +136,12 @@ pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Resul
         .name("Interact".to_string())
         .spawn(move || {
             //spawn shell
-            spawn_shell(peer_arc_clone_interact);
+            match spawn_shell(peer_arc_clone_interact) {
+                Ok(_) => {}
+                Err(_) => {
+                    eprintln!("Failed to spawn shell");
+                }
+            };
         })
         .unwrap();
     listener.join().expect_err("Could not join Listener");
@@ -200,7 +220,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         }
         Content::RedundantPushToDB { key, value, from } => {
-            peer.process_store_request((key.clone(), value.clone()));
+            peer.process_store_request((key, value));
         }
         Content::ChangePeerName { value } => {
             peer.network_table.remove(&peer.name);
@@ -291,13 +311,18 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             //save to tmp and play audio
             if peer.waiting_to_play {
                 peer.waiting_to_play = false;
-                play_music_by_vec(&value);
+                match play_music_by_vec(&value) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        eprintln!("Failed to play music");
+                    }
+                };
             }
             //Download mp3 file
         }
         Content::Response { from, message } => {}
         Content::ExitPeer { addr } => {
-            for (_key, value) in &peer.network_table {
+            for value in peer.network_table.values() {
                 if *value != addr {
                     update_table_after_delete(*value, addr, &peer.name);
                 }
@@ -310,13 +335,13 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         }
         Content::SelfStatusRequest {} => {
-            for (_name, addr) in &peer.network_table {
+            for addr in peer.network_table.values() {
                 send_status_request(*addr, *peer.get_ip());
             }
         }
         Content::StatusRequest {} => {
             let mut res: Vec<String> = Vec::new();
-            for (k, _v) in &peer.get_db().data {
+            for k in peer.get_db().data.keys() {
                 res.push(k.to_string());
             }
             let peer_name = &peer.name;
@@ -352,7 +377,7 @@ pub fn send_write_request(
             },
             from: origin,
         };
-        let serialized = match serde_json::to_writer(&stream, &not) {
+        match serde_json::to_writer(&stream, &not) {
             Ok(ser) => ser,
             Err(_e) => {
                 println!("Failed to serialize SendRequest {:?}", &not);
@@ -368,7 +393,7 @@ pub fn send_write_request(
             },
             from: origin,
         };
-        let serialized = match serde_json::to_writer(&stream, &not) {
+        match serde_json::to_writer(&stream, &not) {
             Ok(ser) => ser,
             Err(_e) => {
                 println!("Failed to serialize SendRequest {:?}", &not);
@@ -404,7 +429,7 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) 
         },
         from: origin,
     };
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize Response {:?}", &not);
@@ -423,7 +448,7 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
         from: target,
     };
 
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -439,7 +464,7 @@ pub fn send_delete_peer_request(target: SocketAddr) {
         from: target,
     };
 
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -455,7 +480,7 @@ pub fn send_self_status_request(target: SocketAddr) {
         from: target,
     };
 
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -471,7 +496,7 @@ pub fn send_status_request(target: SocketAddr, from: SocketAddr) {
         from,
     };
 
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -494,7 +519,7 @@ fn send_local_file_status(
         from,
     };
 
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -510,7 +535,7 @@ pub fn send_play_request(name: &str, from: SocketAddr) {
         },
         from,
     };
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);

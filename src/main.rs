@@ -57,7 +57,12 @@ fn main() {
                 return;
             }
         }
-        network::join_network(name, port, addr);
+        match network::join_network(name, port, addr) {
+            Ok(_) => {}
+            Err(_) => {
+                eprintln!("Could not join network");
+            }
+        };
     } else {
         // TODO: Create new p2p network
         let join_handle = network::startup(name.parse().unwrap(), port.parse().unwrap());
