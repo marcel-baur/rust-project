@@ -1,5 +1,5 @@
-use std::net::{SocketAddr, TcpStream};
 use crate::network::notification::{Content, Notification};
+use std::net::{SocketAddr, TcpStream};
 use std::time::SystemTime;
 
 /// Sends a request to the other peers to check if they have the wanted file

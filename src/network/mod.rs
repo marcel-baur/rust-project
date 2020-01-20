@@ -7,20 +7,23 @@ use std::thread;
 use std::thread::JoinHandle;
 
 mod handshake;
+mod music_exchange;
 mod notification;
 pub mod peer;
 mod response;
-mod music_exchange;
 
 extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
+use crate::audio::{play_music, play_music_by_vec};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
 };
-use crate::network::music_exchange::{send_get_file_reponse, read_file_exist, send_exist_response, send_file_request};
+use crate::network::music_exchange::{
+    read_file_exist, send_exist_response, send_file_request, send_get_file_reponse,
+};
 use crate::network::notification::Content::{ExitPeer, FindFile};
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
@@ -31,7 +34,6 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
 use std::time::SystemTime;
-use crate::audio::{play_music, play_music_by_vec};
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -264,7 +266,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::ExistFile { id, key } => {
             let exist = peer.does_file_exist(key.as_ref());
             if exist {
-                send_exist_response(sender, peer.ip_address,key.as_ref(), id);
+                send_exist_response(sender, peer.ip_address, key.as_ref(), id);
             }
         }
         Content::ExistFileResponse { key, id } => {
@@ -277,22 +279,23 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         }
         Content::GetFile { key } => {
             match peer.find_file(key.as_ref()) {
-                Some(music) => send_get_file_reponse(sender, peer.ip_address, key.as_ref(), music.clone()),
+                Some(music) => {
+                    send_get_file_reponse(sender, peer.ip_address, key.as_ref(), music.clone())
+                }
                 None => {
                     //@TODO error handling}
                 }
             }
         }
-        Content::GetFileResponse { key, value} => {
+        Content::GetFileResponse { key, value } => {
             //save to tmp and play audio
-            if peer.waitingToPlay {
-                peer.waitingToPlay = false;
+            if peer.waiting_to_play {
+                peer.waiting_to_play = false;
                 play_music_by_vec(&value);
             }
             //Download mp3 file
         }
-        Content::Response { from, message } => {
-        }
+        Content::Response { from, message } => {}
         Content::ExitPeer { addr } => {
             for (_key, value) in &peer.network_table {
                 if *value != addr {
@@ -311,24 +314,23 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 send_status_request(*addr, *peer.get_ip());
             }
         }
-        Content::StatusRequest { } => {
+        Content::StatusRequest {} => {
             let mut res: Vec<String> = Vec::new();
             for (k, _v) in &peer.get_db().data {
                 res.push(k.to_string());
             }
-            send_local_file_status(sender, res, *peer.get_ip());
+            let peer_name = &peer.name;
+            send_local_file_status(sender, res, *peer.get_ip(), peer_name.to_string());
         }
-        Content::StatusResponse { files } => {
-            print_external_files(files);
+        Content::StatusResponse { files, name } => {
+            print_external_files(files, name);
         }
-        Content::PlayAudioRequest { name } => {
-            match play_music(peer, name.as_str()) {
-                Ok(_) => {},
-                Err(e) => {
-                    println!("{}", e);
-                }
+        Content::PlayAudioRequest { name } => match play_music(peer, name.as_str()) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
             }
-        }
+        },
     }
 }
 
@@ -461,11 +463,11 @@ pub fn send_self_status_request(target: SocketAddr) {
     };
 }
 
-fn send_status_request(target: SocketAddr, from: SocketAddr) {
+pub fn send_status_request(target: SocketAddr, from: SocketAddr) {
     let mut stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
-        content: Content::StatusRequest{ },
+        content: Content::StatusRequest {},
         from,
     };
 
@@ -477,10 +479,18 @@ fn send_status_request(target: SocketAddr, from: SocketAddr) {
     };
 }
 
-fn send_local_file_status(target: SocketAddr, files: Vec<String>, from: SocketAddr) {
+fn send_local_file_status(
+    target: SocketAddr,
+    files: Vec<String>,
+    from: SocketAddr,
+    peer_name: String,
+) {
     let mut stream = TcpStream::connect(target).unwrap();
     let not = Notification {
-        content: Content::StatusResponse { files },
+        content: Content::StatusResponse {
+            files,
+            name: peer_name,
+        },
         from,
     };
 

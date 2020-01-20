@@ -1,10 +1,10 @@
-use std::string::ToString;
-use rodio::Source;
-use std::fs::File;
-use std::io::BufReader;
 use crate::network::peer::Peer;
 use crate::network::send_read_request;
+use rodio::Source;
 use std::fs;
+use std::fs::File;
+use std::io::BufReader;
+use std::string::ToString;
 use std::time::SystemTime;
 
 /// plays audio when mp3 is in database otherwise sends request to find file
@@ -14,15 +14,15 @@ use std::time::SystemTime;
 ///
 pub fn play_music(peer: &mut Peer, name: &str) -> Result<(), String> {
     // we play sound when it is in our own database, otherwise we ask for the location
-    let soundData = match peer.get_db().data.get(name) {
+    let sound_data = match peer.get_db().data.get(name) {
         Some(data) => data,
         None => {
-            peer.setWaitingToPlay(true);
+            peer.set_waiting_to_play(true);
             send_read_request(peer.ip_address, name);
             return Err("File not in Database, send_request sent".to_string());
         }
     };
-    play_music_by_vec(soundData)
+    play_music_by_vec(sound_data)
 }
 
 pub fn play_music_by_vec(music: &Vec<u8>) -> Result<(), String> {
@@ -31,7 +31,7 @@ pub fn play_music_by_vec(music: &Vec<u8>) -> Result<(), String> {
         None => return Err("No output device found".to_string()),
     };
     match fs::write("file/tmp.mp3", music) {
-        _ => {},
+        _ => {}
         Err(e) => return Err("could not save file to disk".to_string()),
     };
     let file = match std::fs::File::open("file/tmp.mp3") {

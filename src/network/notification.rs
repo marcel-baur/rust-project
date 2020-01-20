@@ -62,13 +62,13 @@ pub enum Content {
         key: String,
         id: SystemTime,
     },
-    StatusRequest {
-    },
+    StatusRequest {},
     SelfStatusRequest,
     StatusResponse {
         files: Vec<String>,
+        name: String,
     },
     PlayAudioRequest {
         name: String,
-    }
+    },
 }

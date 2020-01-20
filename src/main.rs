@@ -5,11 +5,11 @@ extern crate prettytable;
 use clap::{App, Arg};
 use std::net::SocketAddr;
 
+mod audio;
 mod constants;
 mod database;
 mod network;
 mod shell;
-mod audio;
 
 fn main() {
     let matches = App::new("music_p2p")

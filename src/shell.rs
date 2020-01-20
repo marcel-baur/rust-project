@@ -2,7 +2,10 @@ use prettytable::format;
 extern crate colored;
 use crate::constants;
 use crate::network::peer::Peer;
-use crate::network::{send_delete_peer_request, send_read_request, send_write_request, send_play_request};
+use crate::network::{
+    send_delete_peer_request, send_play_request, send_read_request, send_status_request,
+    send_write_request,
+};
 use colored::*;
 use std::error::Error;
 use std::fs;
@@ -99,6 +102,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             Some(&"status") => {
                 print_peer_status(&arc);
                 print_local_db_status(&arc);
+                print_existing_files(&arc);
             }
             Some(&"play") => {
                 send_play_request(instructions[1], peer_clone.ip_address);
@@ -172,7 +176,7 @@ fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
         other_peers.add_row(row![name, addr.to_string()]);
     }
     other_peers.set_format(*format::consts::FORMAT_BORDERS_ONLY);
-    print!(
+    println!(
         "\n\n{}\n{}",
         "Current members in the network"
             .to_string()
@@ -205,8 +209,32 @@ fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
 /// Print the name of all existing files in the database
 /// # Arguments
 /// * `peer` - the local `Peer`
-fn print_existing_files(peer: &Peer) {}
+fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
+    let peer = arc.lock().unwrap();
+    let peer_clone = peer.clone();
+    drop(peer);
+    for (_k, v) in &peer_clone.network_table {
+        if *v == *peer_clone.get_ip() {
+            continue;
+        }
+        send_status_request(*v, *peer_clone.get_ip());
+    }
+}
 
-pub fn print_external_files(files: Vec<String>) {
-    println!("TODO");
+/// Print the name of all files from another peer
+/// # Arguments
+/// * `files` - `Vec<String>` of filenames from another peer
+/// * `peer_name` - the name of the peer that holds the files
+pub fn print_external_files(files: Vec<String>, peer_name: String) {
+    let mut table = table!(["Key".italic().green()]);
+    for k in files {
+        table.add_row(row![k]);
+    }
+    table.set_format(*format::consts::FORMAT_BORDERS_ONLY);
+    let text = format!(
+        "{} {}",
+        "Files stored in peer ".to_string().black().on_white(),
+        peer_name
+    );
+    println!("\n\n{}\n{}", text, table);
 }

@@ -12,7 +12,7 @@ pub struct Peer {
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
     database: Database,
-    pub waitingToPlay: bool,
+    pub waiting_to_play: bool,
     pub open_request_table: HashMap<SystemTime, String>,
 }
 
@@ -34,7 +34,7 @@ impl Peer {
             network_table,
             database: Database::new(),
             //@TODO refactor this! we need a kind of request list
-            waitingToPlay: false,
+            waiting_to_play: false,
             open_request_table,
         }
     }
@@ -80,8 +80,8 @@ impl Peer {
         self.open_request_table.remove(time);
     }
 
-    pub fn setWaitingToPlay(&mut self, waiting: bool) {
-        self.waitingToPlay = waiting;
+    pub fn set_waiting_to_play(&mut self, waiting: bool) {
+        self.waiting_to_play = waiting;
     }
 }
 
