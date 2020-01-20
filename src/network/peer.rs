@@ -39,18 +39,12 @@ impl Peer {
         }
     }
 
-    pub fn store(&self, data: (String, Vec<u8>)) {
-        let k = data.0;
-        let v = data.1;
-        //        self.database.add_file(&k, v);
-    }
-
     pub fn get_ip(&self) -> &SocketAddr {
-        return &self.ip_address;
+        &self.ip_address
     }
 
     pub fn get_db(&self) -> &Database {
-        return &self.database;
+        &self.database
     }
 
     pub fn process_store_request(&mut self, data: (String, Vec<u8>)) {
@@ -73,7 +67,7 @@ impl Peer {
     }
 
     pub fn check_request_still_active(&self, time: &SystemTime) -> bool {
-        return self.open_request_table.contains_key(time);
+        self.open_request_table.contains_key(time)
     }
 
     pub fn delete_handled_request(&mut self, time: &SystemTime) {

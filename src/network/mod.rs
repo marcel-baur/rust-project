@@ -24,14 +24,11 @@ use crate::network::handshake::{
 use crate::network::music_exchange::{
     read_file_exist, send_exist_response, send_file_request, send_get_file_reponse,
 };
-use crate::network::notification::Content::{ExitPeer, FindFile};
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
-use crate::network::response::Message::DataStored;
 use crate::network::response::*;
 use crate::shell::{print_external_files, spawn_shell};
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::str::FromStr;
 use std::time::SystemTime;
 
@@ -53,7 +50,7 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     let ipv4_port = format!("{}:{}", this_ipv4, port);
     let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
         Ok(val) => val,
-        Err(e) => return Err("Could not parse ip address to SocketAddr".to_string()),
+        Err(_e) => return Err("Could not parse ip address to SocketAddr".to_string()),
     };
     Ok(peer_socket_addr)
 }
@@ -111,8 +108,8 @@ pub fn startup(name: String, port: String) -> JoinHandle<()> {
 }
 
 pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Result<(), String> {
-    let peer = create_peer(own_name, port.as_ref()).unwrap();
-    let own_addr = peer.ip_address.clone();
+    let peer = create_peer(own_name, port).unwrap();
+    let own_addr = peer.ip_address;
     let peer_arc = Arc::new(Mutex::new(peer));
     let peer_arc_clone_listen = peer_arc.clone();
 
@@ -193,10 +190,6 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     Ok(())
 }
 
-fn handle_incoming_response(response: Response, peer: &mut Peer) {
-    return;
-}
-
 fn handle_notification(notification: Notification, peer: &mut Peer) {
     //dbg!(&notification);
     let sender = notification.from;
@@ -219,7 +212,11 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
         }
-        Content::RedundantPushToDB { key, value, from } => {
+        Content::RedundantPushToDB {
+            key,
+            value,
+            ..
+        } => {
             peer.process_store_request((key, value));
         }
         Content::ChangePeerName { value } => {
@@ -307,7 +304,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
         }
-        Content::GetFileResponse { key, value } => {
+        Content::GetFileResponse { value, .. } => {
             //save to tmp and play audio
             if peer.waiting_to_play {
                 peer.waiting_to_play = false;
@@ -320,7 +317,9 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
             //Download mp3 file
         }
-        Content::Response { from, message } => {}
+        Content::Response { .. } => {
+
+        }
         Content::ExitPeer { addr } => {
             for value in peer.network_table.values() {
                 if *value != addr {
@@ -365,10 +364,8 @@ pub fn send_write_request(
     data: (String, Vec<u8>),
     redundant: bool,
 ) {
-    let mut stream = TcpStream::connect(target).unwrap();
-    let mut action;
+    let stream = TcpStream::connect(target).unwrap();
     if let true = redundant {
-        action = "write_redundant";
         let not = Notification {
             content: Content::RedundantPushToDB {
                 key: data.0,
@@ -384,7 +381,6 @@ pub fn send_write_request(
             }
         };
     } else {
-        action = "write";
         let not = Notification {
             content: Content::PushToDB {
                 key: data.0,
@@ -416,11 +412,11 @@ fn other_random_target(
         index = rng.gen_range(0, network_table.len());
         target = network_table.values().skip(index).next().unwrap();
     }
-    return Some(*target);
+    Some(*target)
 }
 
 pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::Response {
@@ -439,7 +435,7 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) 
 
 pub fn send_read_request(target: SocketAddr, name: &str) {
     /// Communicate to the listener that we want to find the location of a given file
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::FindFile {
@@ -457,7 +453,7 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
 }
 
 pub fn send_delete_peer_request(target: SocketAddr) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::ExitPeer { addr: target },
@@ -473,7 +469,7 @@ pub fn send_delete_peer_request(target: SocketAddr) {
 }
 
 pub fn send_self_status_request(target: SocketAddr) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::SelfStatusRequest {},
@@ -489,7 +485,7 @@ pub fn send_self_status_request(target: SocketAddr) {
 }
 
 pub fn send_status_request(target: SocketAddr, from: SocketAddr) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::StatusRequest {},
@@ -510,7 +506,7 @@ fn send_local_file_status(
     from: SocketAddr,
     peer_name: String,
 ) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
     let not = Notification {
         content: Content::StatusResponse {
             files,
@@ -528,7 +524,7 @@ fn send_local_file_status(
 }
 
 pub fn send_play_request(name: &str, from: SocketAddr) {
-    let mut stream = TcpStream::connect(from).unwrap();
+    let stream = TcpStream::connect(from).unwrap();
     let not = Notification {
         content: Content::PlayAudioRequest {
             name: name.to_string(),

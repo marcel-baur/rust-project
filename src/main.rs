@@ -46,7 +46,7 @@ fn main() {
                 dbg!(ip);
                 addr = match ip.parse::<SocketAddr>() {
                     Ok(socket_addr) => socket_addr,
-                    Err(e) => {
+                    Err(_) => {
                         println!("Could not parse ip address of remote Peer");
                         return;
                     }

@@ -4,7 +4,7 @@ use std::time::SystemTime;
 
 /// Sends a request to the other peers to check if they have the wanted file
 pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
 
     let not = Notification {
         content: Content::ExistFile {
@@ -14,7 +14,7 @@ pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: Sys
         from,
     };
 
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -24,7 +24,7 @@ pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: Sys
 
 /// Sends a response (to ExistFile Request) to let one peer know to have a requested file
 pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
     let not = Notification {
         content: Content::ExistFileResponse {
             key: name.to_string(),
@@ -32,7 +32,7 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
         },
         from,
     };
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -42,14 +42,14 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
 
 /// Sends a request (as a response of ExistFileResponse Request) to get a certain file
 pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
     let not = Notification {
         content: Content::GetFile {
             key: name.to_string(),
         },
         from,
     };
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);
@@ -59,7 +59,7 @@ pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
 
 /// Sends a response to a GetFile Request containing the music data
 pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, value: Vec<u8>) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
     let not = Notification {
         content: Content::GetFileResponse {
             key: key.to_string(),
@@ -67,7 +67,7 @@ pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, va
         },
         from,
     };
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SendRequest {:?}", &not);

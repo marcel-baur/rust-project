@@ -9,7 +9,7 @@ use crate::network::{
 use colored::*;
 use std::error::Error;
 use std::fs;
-use std::io::{stdin, ErrorKind, Read};
+use std::io::{stdin, ErrorKind};
 use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -23,13 +23,11 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let arc_clone2 = arc.clone();
     // Use the peer clone, drop the original alloc of the peer
     let peer = arc.lock().unwrap();
-    let ip = *peer.get_ip();
     drop(peer);
     let _handle = thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
             let peer = arc_clone.lock().unwrap();
-            let peer_clone = peer.clone();
             drop(peer);
             i_clone.store(true, Ordering::SeqCst);
             handle_user_input(&arc_clone2);
@@ -48,15 +46,6 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     }
 }
 
-pub fn show_db_status(peer: Peer) {
-    //println!("Current state of local database");
-    // TODO: Print current keys of db
-    println!("Show");
-    for k in peer.get_db().get_data() {
-        println!("{:?}", k);
-    }
-}
-
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
     loop {
         let peer = arc.lock().unwrap();
@@ -65,7 +54,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
         let buffer = &mut String::new();
         stdin().read_line(buffer).unwrap();
         let _ = buffer.trim_end();
-        let mut buffer_iter = buffer.split_whitespace();
+        let buffer_iter = buffer.split_whitespace();
         let instructions: Vec<&str> = buffer_iter.collect();
         match instructions.first() {
             Some(&"h") => {
@@ -84,7 +73,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                         peer_clone.ip_address,
                     ) {
                         Ok(_) => {}
-                        Err(e) => {
+                        Err(_e) => {
                             eprintln!("Failed to push {} to database", instructions[1]);
                         }
                     };
@@ -171,7 +160,7 @@ pub fn push_music_to_database(
     } else {
         println!("The file could not be found at this path: {:?}", path);
     }
-    return Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"));
+    Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"))
 }
 
 fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
