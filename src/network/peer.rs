@@ -77,6 +77,15 @@ impl Peer {
     pub fn set_waiting_to_play(&mut self, waiting: bool) {
         self.waiting_to_play = waiting;
     }
+
+    pub fn find_peer_by_ip(&self, addr: &SocketAddr) -> Option<&String> {
+        for (n, ip) in &self.network_table {
+            if addr == ip {
+                Some(n);
+            }
+        }
+        None
+    }
 }
 
 /// Function to create a new network

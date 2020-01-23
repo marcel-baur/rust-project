@@ -212,11 +212,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
         }
-        Content::RedundantPushToDB {
-            key,
-            value,
-            ..
-        } => {
+        Content::RedundantPushToDB { key, value, .. } => {
             peer.process_store_request((key, value));
         }
         Content::ChangePeerName { value } => {
@@ -317,9 +313,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
             //Download mp3 file
         }
-        Content::Response { .. } => {
-
-        }
+        Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
             for value in peer.network_table.values() {
                 if *value != addr {
@@ -364,7 +358,13 @@ pub fn send_write_request(
     data: (String, Vec<u8>),
     redundant: bool,
 ) {
-    let stream = TcpStream::connect(target).unwrap();
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target);
+            return;
+        }
+    };
     if let true = redundant {
         let not = Notification {
             content: Content::RedundantPushToDB {
@@ -416,7 +416,13 @@ fn other_random_target(
 }
 
 pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) {
-    let stream = TcpStream::connect(target).unwrap();
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target);
+            return;
+        }
+    };
 
     let not = Notification {
         content: Content::Response {
@@ -435,7 +441,13 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String) 
 
 pub fn send_read_request(target: SocketAddr, name: &str) {
     /// Communicate to the listener that we want to find the location of a given file
-    let stream = TcpStream::connect(target).unwrap();
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target);
+            return;
+        }
+    };
 
     let not = Notification {
         content: Content::FindFile {
@@ -453,7 +465,13 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
 }
 
 pub fn send_delete_peer_request(target: SocketAddr) {
-    let stream = TcpStream::connect(target).unwrap();
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target);
+            return;
+        }
+    };
 
     let not = Notification {
         content: Content::ExitPeer { addr: target },
@@ -469,7 +487,13 @@ pub fn send_delete_peer_request(target: SocketAddr) {
 }
 
 pub fn send_self_status_request(target: SocketAddr) {
-    let stream = TcpStream::connect(target).unwrap();
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target);
+            return;
+        }
+    };
 
     let not = Notification {
         content: Content::SelfStatusRequest {},
@@ -485,7 +509,13 @@ pub fn send_self_status_request(target: SocketAddr) {
 }
 
 pub fn send_status_request(target: SocketAddr, from: SocketAddr) {
-    let stream = TcpStream::connect(target).unwrap();
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target);
+            return;
+        }
+    };
 
     let not = Notification {
         content: Content::StatusRequest {},
@@ -506,7 +536,13 @@ fn send_local_file_status(
     from: SocketAddr,
     peer_name: String,
 ) {
-    let stream = TcpStream::connect(target).unwrap();
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target);
+            return;
+        }
+    };
     let not = Notification {
         content: Content::StatusResponse {
             files,
@@ -524,7 +560,13 @@ fn send_local_file_status(
 }
 
 pub fn send_play_request(name: &str, from: SocketAddr) {
-    let stream = TcpStream::connect(from).unwrap();
+    let stream = match TcpStream::connect(from) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(from);
+            return;
+        }
+    };
     let not = Notification {
         content: Content::PlayAudioRequest {
             name: name.to_string(),
@@ -537,4 +579,9 @@ pub fn send_play_request(name: &str, from: SocketAddr) {
             println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
+}
+
+fn handle_lost_connection(addr: SocketAddr) {
+    // TODO: Find the name of the peer that dropped, send notification to all other remaining peers, manage load
+    println!("TODO");
 }
