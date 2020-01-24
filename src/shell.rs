@@ -48,8 +48,8 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
     loop {
-        let peer = arc.lock().unwrap();
-        let peer_clone = peer.clone();
+        let mut peer = arc.lock().unwrap();
+        let mut peer_clone = peer.clone();
         drop(peer);
         let buffer = &mut String::new();
         stdin().read_line(buffer).unwrap();
@@ -71,6 +71,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                         instructions[1],
                         instructions[2],
                         peer_clone.ip_address,
+                        &mut peer_clone,
                     ) {
                         Ok(_) => {}
                         Err(_e) => {
@@ -137,6 +138,7 @@ pub fn push_music_to_database(
     name: &str,
     file_path: &str,
     addr: SocketAddr,
+    peer: &mut Peer,
 ) -> Result<(), io::Error> {
     // get mp3 file
     let path = Path::new(file_path);
@@ -148,7 +150,7 @@ pub fn push_music_to_database(
                 //@TODO save to database
                 //                peer.get_db().add_file(name, content);
                 //                peer.store((name.parse().unwrap(), content));
-                send_write_request(addr, addr, (name.to_string(), content), false);
+                send_write_request(addr, addr, (name.to_string(), content), false, peer);
                 println!("saved to hash map");
                 return Ok(());
             }
@@ -208,14 +210,15 @@ fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
 /// # Arguments
 /// * `peer` - the local `Peer`
 fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
-    let peer = arc.lock().unwrap();
-    let peer_clone = peer.clone();
+    let mut peer = arc.lock().unwrap();
+    let mut peer_clone = peer.clone();
+    let mut peer_clone2 = peer.clone();
     drop(peer);
     for v in peer_clone.network_table.values() {
         if *v == *peer_clone.get_ip() {
             continue;
         }
-        send_status_request(*v, *peer_clone.get_ip());
+        send_status_request(*v, *peer_clone.get_ip(), &mut peer_clone2);
     }
 }
 
