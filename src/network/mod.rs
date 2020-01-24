@@ -421,12 +421,8 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         },
         Content::DroppedPeer { addr } => {
-            println!("Peer at {:?} was dropped",addr);
-            let tmp = peer.network_table.clone();
-            let dropped = tmp.iter().filter(|&(_, &v)| v == addr).map(|(k, _)| k);
-            for k in dropped {
-                peer.network_table.remove_entry(k);
-            }
+            println!("Peer at {:?} was dropped", addr);
+            peer.drop_peer_by_ip(&addr);
         }
         Content::Heartbeat => {}
     }
