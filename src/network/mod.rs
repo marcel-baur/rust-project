@@ -17,6 +17,7 @@ extern crate rand;
 use rand::Rng;
 
 use crate::audio::{play_music, play_music_by_vec};
+use crate::constants::HEARTBEAT_SLEEP_DURATION;
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
@@ -101,8 +102,19 @@ pub fn startup(name: String, port: String) -> JoinHandle<()> {
                     };
                 })
                 .unwrap();
+            let peer_arc_clone_heartbeat = peer_arc.clone();
+            let heartbeat = thread::Builder::new()
+                .name("Heartbeat".to_string())
+                .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        eprintln!("Failed to spawn shell");
+                    }
+                })
+                .unwrap();
             listener.join().expect_err("Could not join Listener");
             interact.join().expect_err("Could not join Interact");
+            heartbeat.join().expect_err("Could not join Heartbeat");
         })
         .unwrap()
 }
@@ -125,6 +137,7 @@ pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Resul
         })
         .unwrap();
     let peer_arc_clone_interact = peer_arc.clone();
+    let peer_arc_clone_heartbeat = peer_arc.clone();
 
     //send request existing network table
     send_table_request(&ip_address, &own_addr, own_name);
@@ -141,8 +154,18 @@ pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Resul
             };
         })
         .unwrap();
+    let heartbeat = thread::Builder::new()
+        .name("Heartbeat".to_string())
+        .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
+            Ok(_) => {}
+            Err(_) => {
+                eprintln!("Failed to spawn shell");
+            }
+        })
+        .unwrap();
     listener.join().expect_err("Could not join Listener");
     interact.join().expect_err("Could not join Interact");
+    heartbeat.join().expect_err("Could not join Heartbeat");
     Ok(())
 }
 
@@ -188,6 +211,35 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         };
     }
     Ok(())
+}
+
+fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
+    loop {
+        thread::sleep(HEARTBEAT_SLEEP_DURATION);
+        let peer = arc.lock().unwrap();
+        let peer_clone = peer.clone();
+        drop(peer);
+        let network_size = peer_clone.network_table.len();
+        if network_size == 1 {
+            continue;
+        } else if network_size < 4 {
+            send_heartbeat(&peer_clone.network_table)
+        } else {
+            // TODO: send to n < network_size targets
+        }
+    }
+    Ok(())
+}
+
+fn send_heartbeat(table: &HashMap<String, SocketAddr>) {
+    for (_k, addr) in table {
+        match TcpStream::connect(addr) {
+            Ok(_) => {}
+            Err(_e) => {
+                handle_lost_connection(*addr);
+            }
+        }
+    }
 }
 
 fn handle_notification(notification: Notification, peer: &mut Peer) {
