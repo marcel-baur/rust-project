@@ -78,13 +78,12 @@ impl Peer {
         self.waiting_to_play = waiting;
     }
 
-    pub fn find_peer_by_ip(&self, addr: &SocketAddr) -> Option<&String> {
-        for (n, ip) in &self.network_table {
-            if addr == ip {
-                Some(n);
-            }
+    pub fn drop_peer_by_ip(&mut self, addr: &SocketAddr) {
+        let tmp = self.network_table.clone();
+        let dropped = tmp.iter().filter(|&(_, &v)| v == *addr).map(|(k, _)| k);
+        for k in dropped {
+            self.network_table.remove_entry(k);
         }
-        None
     }
 }
 
