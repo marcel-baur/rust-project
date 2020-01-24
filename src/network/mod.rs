@@ -234,12 +234,23 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 fn send_heartbeat(peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
     for (_k, addr) in &peer.network_table {
-        match TcpStream::connect(addr) {
-            Ok(_) => {}
+        let stream = match TcpStream::connect(addr) {
+            Ok(s) => s,
             Err(_e) => {
                 handle_lost_connection(*addr, &mut cloned_peer);
+                return;
             }
-        }
+        };
+        let not = Notification {
+            content: Content::Heartbeat,
+            from: *peer.get_ip()
+        };
+        match serde_json::to_writer(&stream, &not) {
+            Ok(ser) => ser,
+            Err(_e) => {
+                println!("Failed to serialize SendRequest {:?}", &not);
+            }
+        };
     }
 }
 
@@ -411,6 +422,9 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         },
         Content::DroppedPeer { addr } => {
             peer.find_peer_by_ip(&addr);
+        },
+        Content::Heartbeat => {
+
         }
     }
 }
