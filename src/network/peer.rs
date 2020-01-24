@@ -3,6 +3,7 @@ use crate::network::get_own_ip_address;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
+use std::time::SystemTime;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -11,6 +12,8 @@ pub struct Peer {
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
     database: Database,
+    pub waiting_to_play: bool,
+    pub open_request_table: HashMap<SystemTime, String>,
 }
 
 impl Peer {
@@ -23,27 +26,25 @@ impl Peer {
         ip_address: SocketAddr,
         onw_name: &str,
         network_table: HashMap<String, SocketAddr>,
+        open_request_table: HashMap<SystemTime, String>,
     ) -> Peer {
         Peer {
             name: onw_name.to_string(),
             ip_address,
             network_table,
             database: Database::new(),
+            //@TODO refactor this! we need a kind of request list
+            waiting_to_play: false,
+            open_request_table,
         }
     }
 
-    pub fn store(&self, data: (String, Vec<u8>)) {
-        let k = data.0;
-        let v = data.1;
-        //        self.database.add_file(&k, v);
-    }
-
     pub fn get_ip(&self) -> &SocketAddr {
-        return &self.ip_address;
+        &self.ip_address
     }
 
     pub fn get_db(&self) -> &Database {
-        return &self.database;
+        &self.database
     }
 
     pub fn process_store_request(&mut self, data: (String, Vec<u8>)) {
@@ -59,6 +60,31 @@ impl Peer {
             Some(_t) => true,
             None => false,
         }
+    }
+
+    pub fn add_new_request(&mut self, time: &SystemTime, content: &str) {
+        self.open_request_table.insert(*time, content.to_string());
+    }
+
+    pub fn check_request_still_active(&self, time: &SystemTime) -> bool {
+        self.open_request_table.contains_key(time)
+    }
+
+    pub fn delete_handled_request(&mut self, time: &SystemTime) {
+        self.open_request_table.remove(time);
+    }
+
+    pub fn set_waiting_to_play(&mut self, waiting: bool) {
+        self.waiting_to_play = waiting;
+    }
+
+    pub fn find_peer_by_ip(&self, addr: &SocketAddr) -> Option<&String> {
+        for (n, ip) in &self.network_table {
+            if addr == ip {
+                Some(n);
+            }
+        }
+        None
     }
 }
 
@@ -76,6 +102,12 @@ pub fn create_peer(onw_name: &str, port: &str) -> Result<Peer, String> {
     };
     let mut network_table = HashMap::new();
     network_table.insert(onw_name.to_string(), peer_socket_addr);
-    let peer = Peer::create(peer_socket_addr, onw_name, network_table);
+    let mut open_request_table = HashMap::new();
+    let peer = Peer::create(
+        peer_socket_addr,
+        onw_name,
+        network_table,
+        open_request_table,
+    );
     Ok(peer)
 }

@@ -1,8 +1,11 @@
 extern crate clap;
+#[macro_use]
+extern crate prettytable;
 
 use clap::{App, Arg};
 use std::net::SocketAddr;
 
+mod audio;
 mod constants;
 mod database;
 mod network;
@@ -43,7 +46,7 @@ fn main() {
                 dbg!(ip);
                 addr = match ip.parse::<SocketAddr>() {
                     Ok(socket_addr) => socket_addr,
-                    Err(e) => {
+                    Err(_) => {
                         println!("Could not parse ip address of remote Peer");
                         return;
                     }
@@ -54,7 +57,12 @@ fn main() {
                 return;
             }
         }
-        network::join_network(name, port, addr);
+        match network::join_network(name, port, addr) {
+            Ok(_) => {}
+            Err(_) => {
+                eprintln!("Could not join network");
+            }
+        };
     } else {
         // TODO: Create new p2p network
         let join_handle = network::startup(name.parse().unwrap(), port.parse().unwrap());

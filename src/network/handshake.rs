@@ -1,4 +1,3 @@
-use crate::network::notification;
 use crate::network::notification::*;
 use crate::network::peer::Peer;
 use serde::{Deserialize, Serialize};
@@ -16,7 +15,7 @@ pub struct NetworkInfo {
 pub fn json_string_to_network_table(json_string: String) -> HashMap<String, SocketAddr> {
     let info_array: Vec<NetworkInfo> = match serde_json::from_str(json_string.as_str()) {
         Ok(val) => val,
-        Err(e) => {
+        Err(_e) => {
             println!("no parcing hashmap");
             return HashMap::new();
         }
@@ -42,11 +41,10 @@ pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> Str
 }
 
 pub fn send_network_table(target: String, peer: &Peer) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
     let not = Notification {
         content: Content::SendNetworkTable {
             value: network_table_to_json(&peer.network_table).into_bytes(),
-            from: peer.ip_address,
         },
         from: peer.ip_address,
     };
@@ -64,14 +62,13 @@ pub fn send_network_update_table(
     hashmap: &HashMap<String, SocketAddr>,
 ) {
     //@TODO if connection error remove from network_table
-    let mut stream = match TcpStream::connect(target) {
+    let stream = match TcpStream::connect(target) {
         Ok(stream) => stream,
         Err(_) => return,
     };
     let not = Notification {
         content: Content::SendNetworkUpdateTable {
             value: network_table_to_json(hashmap).into_bytes(),
-            from: from.parse::<SocketAddr>().unwrap(), // TODO change attribute to SocketAddr after review
         },
         from: from.parse::<SocketAddr>().unwrap(),
     };
@@ -84,15 +81,14 @@ pub fn send_network_update_table(
 }
 
 pub fn send_change_name_request(target: String, from: &SocketAddr, name: &str) {
-    let mut stream = TcpStream::connect(target).unwrap();
+    let stream = TcpStream::connect(target).unwrap();
     let not = Notification {
         content: Content::ChangePeerName {
             value: name.to_string(),
-            from: *from,
         },
         from: *from,
     };
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SimpleRequest {:?}", &not);
@@ -115,7 +111,7 @@ pub fn send_table_to_all_peers(peer: &Peer) {
 
 //request to get hashmap table
 pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
-    let mut stream = match TcpStream::connect(target) {
+    let stream = match TcpStream::connect(target) {
         Ok(stream) => stream,
         Err(e) => {
             //@TODO this means ip-address is not right! add proper error handling
@@ -126,14 +122,37 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
     let not = Notification {
         content: Content::RequestForTable {
             value: name.to_string(),
-            from: *from,
         },
         from: *from,
     };
-    let serialized = match serde_json::to_writer(&stream, &not) {
+    match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
         Err(_e) => {
             println!("Failed to serialize SimpleRequest {:?}", &not);
+        }
+    };
+}
+
+pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &str) {
+    let stream = match TcpStream::connect(target) {
+        Ok(stream) => stream,
+        Err(e) => {
+            dbg!(e);
+            return;
+        }
+    };
+
+    let not = Notification {
+        content: Content::DeleteFromNetwork {
+            name: name.to_string(),
+        },
+        from,
+    };
+
+    match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
 }
