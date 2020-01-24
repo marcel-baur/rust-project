@@ -243,7 +243,7 @@ fn send_heartbeat(peer: &mut Peer) {
         };
         let not = Notification {
             content: Content::Heartbeat,
-            from: *peer.get_ip()
+            from: *peer.get_ip(),
         };
         match serde_json::to_writer(&stream, &not) {
             Ok(ser) => ser,
@@ -421,11 +421,14 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         },
         Content::DroppedPeer { addr } => {
-            peer.find_peer_by_ip(&addr);
-        },
-        Content::Heartbeat => {
-
+            println!("Peer at {:?} was dropped",addr);
+            let tmp = peer.network_table.clone();
+            let dropped = tmp.iter().filter(|&(_, &v)| v == addr).map(|(k, _)| k);
+            for k in dropped {
+                peer.network_table.remove_entry(k);
+            }
         }
+        Content::Heartbeat => {}
     }
 }
 
@@ -657,13 +660,14 @@ pub fn send_play_request(name: &str, from: SocketAddr) {
 }
 
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
-    peer.find_peer_by_ip(&addr);
+    //    peer.drop_peer_by_ip(&addr);
     let mut cloned_peer = peer.clone();
     // TODO: Send notification to other peers that this peer was dropped
     for (_, other_addr) in &peer.network_table {
-        send_dropped_peer_notification(*other_addr, addr, &mut cloned_peer)
+        if *other_addr != addr {
+            send_dropped_peer_notification(*other_addr, addr, &mut cloned_peer)
+        }
     }
-    println!("TODO");
 }
 
 fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, peer: &mut Peer) {

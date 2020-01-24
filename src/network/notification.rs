@@ -73,5 +73,5 @@ pub enum Content {
     DroppedPeer {
         addr: SocketAddr,
     },
-    Heartbeat
+    Heartbeat,
 }
