@@ -70,4 +70,7 @@ pub enum Content {
     PlayAudioRequest {
         name: String,
     },
+    DroppedPeer {
+        addr: SocketAddr,
+    },
 }
