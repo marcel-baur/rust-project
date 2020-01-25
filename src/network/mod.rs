@@ -158,7 +158,6 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                 handle_notification(des, &mut peer);
                 //                handle_incoming_requests(deserialized, &mut peer);
                 drop(peer);
-                println!("Request handled.");
                 // TODO: Response, handle duplicate key, redundancy
             }
             Err(_e) => {
