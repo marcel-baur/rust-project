@@ -101,7 +101,7 @@ pub fn create_peer(onw_name: &str, port: &str) -> Result<Peer, String> {
     };
     let mut network_table = HashMap::new();
     network_table.insert(onw_name.to_string(), peer_socket_addr);
-    let mut open_request_table = HashMap::new();
+    let open_request_table = HashMap::new();
     let peer = Peer::create(
         peer_socket_addr,
         onw_name,

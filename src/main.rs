@@ -64,6 +64,11 @@ fn main() {
             }
         };
     } else {
-        network::startup(name, port, None);
+        match network::startup(name, port, None) {
+            Ok(_) => {}
+            Err(_) => {
+                eprintln!("Could not join network");
+            }
+        };
     }
 }

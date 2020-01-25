@@ -24,7 +24,7 @@ pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: Sys
 
 /// Sends a response (to ExistFile Request) to let one peer know to have a requested file
 pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
-    let stream = match TcpStream::connect(target){
+    let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
             eprintln!("Failed to connect to {:?}", target);
@@ -48,7 +48,7 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
 
 /// Sends a request (as a response of ExistFileResponse Request) to get a certain file
 pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
-    let stream = match TcpStream::connect(target){
+    let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
             eprintln!("Failed to connect to {:?}", target);
@@ -71,7 +71,7 @@ pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
 
 /// Sends a response to a GetFile Request containing the music data
 pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, value: Vec<u8>) {
-    let stream = match TcpStream::connect(target){
+    let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
             eprintln!("Failed to connect to {:?}", target);

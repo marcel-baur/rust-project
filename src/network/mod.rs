@@ -4,7 +4,6 @@ use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::thread::JoinHandle;
 
 mod handshake;
 mod music_exchange;
@@ -72,7 +71,6 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     Ok(peer_socket_addr)
 }
 
-
 pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Result<(), String> {
     let peer = create_peer(own_name, port).unwrap();
     let own_addr = peer.ip_address;
@@ -95,8 +93,12 @@ pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Re
 
     //send request existing network table
     match ip_address {
-        Some(ip) => {send_table_request(&ip, &own_addr, own_name);}
-        None => {}
+        Some(ip) => {
+            send_table_request(&ip, &own_addr, own_name);
+        }
+        None => {
+            println!("Ip address is empty");
+        }
     }
 
     let interact = thread::Builder::new()
@@ -164,7 +166,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     loop {
         thread::sleep(HEARTBEAT_SLEEP_DURATION);
-        let mut peer = arc.lock().unwrap();
+        let peer = arc.lock().unwrap();
         let mut peer_clone = peer.clone();
         drop(peer);
         let network_size = peer_clone.network_table.len();
@@ -174,12 +176,11 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
             send_heartbeat(&mut peer_clone);
         }
     }
-    Ok(())
 }
 
 fn send_heartbeat(peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
-    for (_k, addr) in &peer.network_table {
+    for addr in peer.network_table.values() {
         let stream = match TcpStream::connect(addr) {
             Ok(s) => s,
             Err(_e) => {
@@ -287,7 +288,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
 
             for (_key, value) in &peer.network_table {
                 if _key != &peer.name {
-                    read_file_exist(*value, peer.ip_address, &key, id.clone());
+                    read_file_exist(*value, peer.ip_address, &key, id);
                 }
             }
         }
@@ -312,6 +313,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
                 None => {
                     //@TODO error handling}
+                    println!("TODO!");
                 }
             }
         }
@@ -429,10 +431,10 @@ fn other_random_target(
     }
     let mut rng = rand::thread_rng();
     let mut index = rng.gen_range(0, network_table.len());
-    let mut target = network_table.values().skip(index).next().unwrap();
+    let mut target = network_table.values().nth(index).unwrap();
     while target == own_ip {
         index = rng.gen_range(0, network_table.len());
-        target = network_table.values().skip(index).next().unwrap();
+        target = network_table.values().nth(index).unwrap();
     }
     Some(*target)
 }
@@ -461,8 +463,8 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
     };
 }
 
+/// Communicate to the listener that we want to find the location of a given file
 pub fn send_read_request(target: SocketAddr, name: &str) {
-    /// Communicate to the listener that we want to find the location of a given file
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -495,28 +497,6 @@ pub fn send_delete_peer_request(target: SocketAddr) {
 
     let not = Notification {
         content: Content::ExitPeer { addr: target },
-        from: target,
-    };
-
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
-}
-
-pub fn send_self_status_request(target: SocketAddr, peer: &mut Peer) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            handle_lost_connection(target, peer);
-            return;
-        }
-    };
-
-    let not = Notification {
-        content: Content::SelfStatusRequest {},
         from: target,
     };
 
@@ -604,7 +584,7 @@ fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
     //    peer.drop_peer_by_ip(&addr);
     let mut cloned_peer = peer.clone();
     // TODO: Send notification to other peers that this peer was dropped
-    for (_, other_addr) in &peer.network_table {
+    for other_addr in peer.network_table.values() {
         if *other_addr != addr {
             send_dropped_peer_notification(*other_addr, addr, &mut cloned_peer)
         }
