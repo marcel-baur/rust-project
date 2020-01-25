@@ -137,14 +137,6 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         match stream {
             Ok(mut s) => {
                 s.read_to_string(&mut buf).unwrap();
-                //                let deserialized: SendRequest = match serde_json::from_str(&buf) {
-                //                    Ok(val) => val,
-                //                    Err(e) => {
-                //                        dbg!(e);
-                //                        println!("Could not deserialize {:?}", &buf);
-                //                        continue; // skip this stream
-                //                    }
-                //                };
                 let des: Notification = match serde_json::from_str(&buf) {
                     Ok(val) => val,
                     Err(e) => {
@@ -212,7 +204,6 @@ fn send_heartbeat(peer: &mut Peer) {
 }
 
 fn handle_notification(notification: Notification, peer: &mut Peer) {
-    //dbg!(&notification);
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
