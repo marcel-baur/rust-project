@@ -72,54 +72,8 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     Ok(peer_socket_addr)
 }
 
-pub fn startup(name: String, port: String) -> JoinHandle<()> {
-    let concurrent_thread = thread::Builder::new().name("ConThread".to_string());
-    concurrent_thread
-        .spawn(move || {
-            let peer = create_peer(name.as_ref(), port.as_ref()).unwrap();
-            let peer_arc = Arc::new(Mutex::new(peer));
-            let peer_arc_clone_listen = peer_arc.clone();
-            let listener = thread::Builder::new()
-                .name("TCPListener".to_string())
-                .spawn(move || {
-                    match listen_tcp(peer_arc_clone_listen) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            eprintln!("Failed to spawn listener");
-                        }
-                    };
-                })
-                .unwrap();
-            let peer_arc_clone_interact = peer_arc.clone();
-            let interact = thread::Builder::new()
-                .name("Interact".to_string())
-                .spawn(move || {
-                    match spawn_shell(peer_arc_clone_interact) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            eprintln!("Failed to spawn shell");
-                        }
-                    };
-                })
-                .unwrap();
-            let peer_arc_clone_heartbeat = peer_arc.clone();
-            let heartbeat = thread::Builder::new()
-                .name("Heartbeat".to_string())
-                .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        eprintln!("Failed to spawn shell");
-                    }
-                })
-                .unwrap();
-            listener.join().expect_err("Could not join Listener");
-            interact.join().expect_err("Could not join Interact");
-            heartbeat.join().expect_err("Could not join Heartbeat");
-        })
-        .unwrap()
-}
 
-pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Result<(), String> {
+pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Result<(), String> {
     let peer = create_peer(own_name, port).unwrap();
     let own_addr = peer.ip_address;
     let peer_arc = Arc::new(Mutex::new(peer));
@@ -140,7 +94,10 @@ pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Resul
     let peer_arc_clone_heartbeat = peer_arc.clone();
 
     //send request existing network table
-    send_table_request(&ip_address, &own_addr, own_name);
+    match ip_address {
+        Some(ip) => {send_table_request(&ip, &own_addr, own_name);}
+        None => {}
+    }
 
     let interact = thread::Builder::new()
         .name("Interact".to_string())
