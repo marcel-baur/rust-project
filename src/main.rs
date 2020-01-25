@@ -57,15 +57,18 @@ fn main() {
                 return;
             }
         }
-        match network::join_network(name, port, addr) {
+        match network::startup(name, port, Some(addr)) {
             Ok(_) => {}
             Err(_) => {
                 eprintln!("Could not join network");
             }
         };
     } else {
-        // TODO: Create new p2p network
-        let join_handle = network::startup(name.parse().unwrap(), port.parse().unwrap());
-        join_handle.join().expect_err("Could not spawn peer");
+        match network::startup(name, port, None) {
+            Ok(_) => {}
+            Err(_) => {
+                eprintln!("Could not join network");
+            }
+        };
     }
 }

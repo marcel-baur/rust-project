@@ -4,7 +4,6 @@ use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::thread::JoinHandle;
 
 mod handshake;
 mod music_exchange;
@@ -72,54 +71,7 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     Ok(peer_socket_addr)
 }
 
-pub fn startup(name: String, port: String) -> JoinHandle<()> {
-    let concurrent_thread = thread::Builder::new().name("ConThread".to_string());
-    concurrent_thread
-        .spawn(move || {
-            let peer = create_peer(name.as_ref(), port.as_ref()).unwrap();
-            let peer_arc = Arc::new(Mutex::new(peer));
-            let peer_arc_clone_listen = peer_arc.clone();
-            let listener = thread::Builder::new()
-                .name("TCPListener".to_string())
-                .spawn(move || {
-                    match listen_tcp(peer_arc_clone_listen) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            eprintln!("Failed to spawn listener");
-                        }
-                    };
-                })
-                .unwrap();
-            let peer_arc_clone_interact = peer_arc.clone();
-            let interact = thread::Builder::new()
-                .name("Interact".to_string())
-                .spawn(move || {
-                    match spawn_shell(peer_arc_clone_interact) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            eprintln!("Failed to spawn shell");
-                        }
-                    };
-                })
-                .unwrap();
-            let peer_arc_clone_heartbeat = peer_arc.clone();
-            let heartbeat = thread::Builder::new()
-                .name("Heartbeat".to_string())
-                .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        eprintln!("Failed to spawn shell");
-                    }
-                })
-                .unwrap();
-            listener.join().expect_err("Could not join Listener");
-            interact.join().expect_err("Could not join Interact");
-            heartbeat.join().expect_err("Could not join Heartbeat");
-        })
-        .unwrap()
-}
-
-pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Result<(), String> {
+pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Result<(), String> {
     let peer = create_peer(own_name, port).unwrap();
     let own_addr = peer.ip_address;
     let peer_arc = Arc::new(Mutex::new(peer));
@@ -140,7 +92,14 @@ pub fn join_network(own_name: &str, port: &str, ip_address: SocketAddr) -> Resul
     let peer_arc_clone_heartbeat = peer_arc.clone();
 
     //send request existing network table
-    send_table_request(&ip_address, &own_addr, own_name);
+    match ip_address {
+        Some(ip) => {
+            send_table_request(&ip, &own_addr, own_name);
+        }
+        None => {
+            println!("Ip address is empty");
+        }
+    }
 
     let interact = thread::Builder::new()
         .name("Interact".to_string())
@@ -180,14 +139,6 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         match stream {
             Ok(mut s) => {
                 s.read_to_string(&mut buf).unwrap();
-                //                let deserialized: SendRequest = match serde_json::from_str(&buf) {
-                //                    Ok(val) => val,
-                //                    Err(e) => {
-                //                        dbg!(e);
-                //                        println!("Could not deserialize {:?}", &buf);
-                //                        continue; // skip this stream
-                //                    }
-                //                };
                 let des: Notification = match serde_json::from_str(&buf) {
                     Ok(val) => val,
                     Err(e) => {
@@ -201,7 +152,6 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                 handle_notification(des, &mut peer);
                 //                handle_incoming_requests(deserialized, &mut peer);
                 drop(peer);
-                println!("Request handled.");
                 // TODO: Response, handle duplicate key, redundancy
             }
             Err(_e) => {
@@ -216,24 +166,21 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     loop {
         thread::sleep(HEARTBEAT_SLEEP_DURATION);
-        let mut peer = arc.lock().unwrap();
+        let peer = arc.lock().unwrap();
         let mut peer_clone = peer.clone();
         drop(peer);
         let network_size = peer_clone.network_table.len();
         if network_size == 1 {
             continue;
-        } else if network_size < 4 {
-            send_heartbeat(&mut peer_clone)
         } else {
-            // TODO: send to n < network_size targets
+            send_heartbeat(&mut peer_clone);
         }
     }
-    Ok(())
 }
 
 fn send_heartbeat(peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
-    for (_k, addr) in &peer.network_table {
+    for addr in peer.network_table.values() {
         let stream = match TcpStream::connect(addr) {
             Ok(s) => s,
             Err(_e) => {
@@ -255,7 +202,6 @@ fn send_heartbeat(peer: &mut Peer) {
 }
 
 fn handle_notification(notification: Notification, peer: &mut Peer) {
-    //dbg!(&notification);
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
@@ -342,7 +288,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
 
             for (_key, value) in &peer.network_table {
                 if _key != &peer.name {
-                    read_file_exist(*value, peer.ip_address, &key, id.clone());
+                    read_file_exist(*value, peer.ip_address, &key, id);
                 }
             }
         }
@@ -367,6 +313,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
                 None => {
                     //@TODO error handling}
+                    println!("TODO!");
                 }
             }
         }
@@ -484,10 +431,10 @@ fn other_random_target(
     }
     let mut rng = rand::thread_rng();
     let mut index = rng.gen_range(0, network_table.len());
-    let mut target = network_table.values().skip(index).next().unwrap();
+    let mut target = network_table.values().nth(index).unwrap();
     while target == own_ip {
         index = rng.gen_range(0, network_table.len());
-        target = network_table.values().skip(index).next().unwrap();
+        target = network_table.values().nth(index).unwrap();
     }
     Some(*target)
 }
@@ -516,8 +463,8 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
     };
 }
 
+/// Communicate to the listener that we want to find the location of a given file
 pub fn send_read_request(target: SocketAddr, name: &str) {
-    /// Communicate to the listener that we want to find the location of a given file
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -550,28 +497,6 @@ pub fn send_delete_peer_request(target: SocketAddr) {
 
     let not = Notification {
         content: Content::ExitPeer { addr: target },
-        from: target,
-    };
-
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
-}
-
-pub fn send_self_status_request(target: SocketAddr, peer: &mut Peer) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            handle_lost_connection(target, peer);
-            return;
-        }
-    };
-
-    let not = Notification {
-        content: Content::SelfStatusRequest {},
         from: target,
     };
 
@@ -659,7 +584,7 @@ fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
     //    peer.drop_peer_by_ip(&addr);
     let mut cloned_peer = peer.clone();
     // TODO: Send notification to other peers that this peer was dropped
-    for (_, other_addr) in &peer.network_table {
+    for other_addr in peer.network_table.values() {
         if *other_addr != addr {
             send_dropped_peer_notification(*other_addr, addr, &mut cloned_peer)
         }

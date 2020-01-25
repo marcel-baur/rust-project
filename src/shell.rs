@@ -39,16 +39,13 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
         let peer = arc.lock().unwrap();
         let peer_clone = peer.clone();
         drop(peer);
-        //println!("Interaction Possible");
-        // print_peer_status(&peer_clone);
-        // show_db_status(&peer_clone_write);
         thread::sleep(constants::THREAD_SLEEP_DURATION);
     }
 }
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
     loop {
-        let mut peer = arc.lock().unwrap();
+        let peer = arc.lock().unwrap();
         let mut peer_clone = peer.clone();
         drop(peer);
         let buffer = &mut String::new();
@@ -210,8 +207,8 @@ fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
 /// # Arguments
 /// * `peer` - the local `Peer`
 fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
-    let mut peer = arc.lock().unwrap();
-    let mut peer_clone = peer.clone();
+    let peer = arc.lock().unwrap();
+    let peer_clone = peer.clone();
     let mut peer_clone2 = peer.clone();
     drop(peer);
     for v in peer_clone.network_table.values() {
