@@ -86,6 +86,16 @@ impl Peer {
         }
     }
 
+    pub fn get_all_socketaddr_from_peers(&self) -> Vec<SocketAddr>{
+        let values = self.network_table.values();
+        let mut addresses = Vec::new();
+        for val in values{
+            addresses.push(*val);
+        }
+        addresses.sort_by(|a, b|a.port().cmp(&b.port()));
+        return addresses;
+    }
+
     pub fn get_heartbeat_successors(&mut self)-> Vec<SocketAddr> {
         let values = self.network_table.values();
         let mut addresses = Vec::new();
