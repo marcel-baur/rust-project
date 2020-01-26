@@ -86,27 +86,29 @@ impl Peer {
         }
     }
 
-    pub fn get_all_socketaddr_from_peers(&self) -> Vec<SocketAddr>{
+    /// return the values of the network_table as a vector
+    pub fn get_all_socketaddr_from_peers(&self) -> Vec<SocketAddr> {
         let values = self.network_table.values();
         let mut addresses = Vec::new();
-        for val in values{
+        for val in values {
             addresses.push(*val);
         }
-        addresses.sort_by(|a, b|a.port().cmp(&b.port()));
+        addresses.sort_by(|a, b| a.port().cmp(&b.port()));
         return addresses;
     }
 
-    pub fn get_heartbeat_successors(&mut self)-> Vec<SocketAddr> {
+    /// returns the next four `SocketAddr` in the network_table
+    pub fn get_heartbeat_successors(&mut self) -> Vec<SocketAddr> {
         let values = self.network_table.values();
         let mut addresses = Vec::new();
-        for val in values{
+        for val in values {
             addresses.push(val);
         }
-        addresses.sort_by(|a, b|a.port().cmp(&b.port()));
+        addresses.sort_by(|a, b| a.port().cmp(&b.port()));
         let index = addresses.iter().position(|&r| r == self.get_ip()).unwrap();
 
         let mut successors = Vec::new();
-        for i in index+1..index+4 {
+        for i in index + 1..index + 4 {
             if i >= addresses.len() {
                 let j = i - addresses.len();
                 successors.push(**addresses.get(j).unwrap());

@@ -163,6 +163,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     Ok(())
 }
 
+/// starts the heartbeat
 fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     loop {
         thread::sleep(HEARTBEAT_SLEEP_DURATION);
@@ -181,6 +182,7 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     }
 }
 
+/// send the heartbeat request to all targets in `targets`
 fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
     for addr in targets {
