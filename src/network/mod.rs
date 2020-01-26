@@ -172,15 +172,18 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         let network_size = peer_clone.network_table.len();
         if network_size == 1 {
             continue;
+        } else if network_size <= 10 {
+            send_heartbeat(&peer_clone.get_all_socketaddr_from_peers(), &mut peer_clone);
         } else {
-            send_heartbeat(&mut peer_clone);
+            let successors = peer_clone.get_heartbeat_successors();
+            send_heartbeat(&successors, &mut peer_clone);
         }
     }
 }
 
-fn send_heartbeat(peer: &mut Peer) {
+fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
-    for addr in peer.network_table.values() {
+    for addr in targets {
         let stream = match TcpStream::connect(addr) {
             Ok(s) => s,
             Err(_e) => {
@@ -190,7 +193,7 @@ fn send_heartbeat(peer: &mut Peer) {
         };
         let not = Notification {
             content: Content::Heartbeat,
-            from: *peer.get_ip(),
+            from: *cloned_peer.get_ip(),
         };
         match serde_json::to_writer(&stream, &not) {
             Ok(ser) => ser,
