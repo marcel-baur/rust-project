@@ -172,8 +172,10 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         let network_size = peer_clone.network_table.len();
         if network_size == 1 {
             continue;
-        } else {
+        } else if network_size <= 10 {
             send_heartbeat(&mut peer_clone);
+        } else {
+            let successors = peer_clone.get_heartbeat_successors();
         }
     }
 }
