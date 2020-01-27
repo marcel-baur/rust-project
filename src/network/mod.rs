@@ -272,7 +272,9 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             };
             let new_network_peer = json_string_to_network_table(table);
             for (key, addr) in new_network_peer {
+                let name = key.clone();
                 peer.network_table.insert(key, addr);
+                println!("{} joined the network.", name);
             }
         }
         Content::RequestForTable { value } => {
@@ -347,6 +349,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::DeleteFromNetwork { name } => {
             if peer.network_table.contains_key(&name) {
                 peer.network_table.remove(&name);
+                println!("{} left the network.", &name);
             }
         }
         Content::SelfStatusRequest {} => {
