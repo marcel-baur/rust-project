@@ -21,13 +21,11 @@ use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
 };
-use crate::network::music_exchange::{
-    read_file_exist, send_exist_response, send_file_request, send_get_file_reponse,
-};
+use crate::network::music_exchange::{read_file_exist, send_exist_response, send_file_request, send_get_file_reponse, song_order_request};
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
 use crate::network::response::*;
-use crate::shell::{print_external_files, spawn_shell};
+use crate::shell::{print_external_files, spawn_shell, push_music_to_database};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::SystemTime;
@@ -286,31 +284,31 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 send_network_table(sender.to_string(), &peer);
             }
         }
-        Content::FindFile { key } => {
+        Content::FindFile {song_name} => {
             // @TODO check if file is in database first
             // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
             // @TODO in this case we need to remove the request?
             let id = SystemTime::now();
-            peer.add_new_request(&id, &key);
+            peer.add_new_request(&id, &song_name);
 
             for (_key, value) in &peer.network_table {
                 if _key != &peer.name {
-                    read_file_exist(*value, peer.ip_address, &key, id);
+                    read_file_exist(*value, peer.ip_address, &song_name, id);
                 }
             }
         }
-        Content::ExistFile { id, key } => {
-            let exist = peer.does_file_exist(key.as_ref());
+        Content::ExistFile { song_name, id } => {
+            let exist = peer.does_file_exist(song_name.as_ref());
             if exist {
-                send_exist_response(sender, peer.ip_address, key.as_ref(), id);
+                send_exist_response(sender, peer.ip_address, song_name.as_ref(), id);
             }
         }
-        Content::ExistFileResponse { key, id } => {
+        Content::ExistFileResponse { song_name, id } => {
             //Check if peer request is still active. when true remove it
             if peer.check_request_still_active(&id) {
                 //@TODO maybe create new request?
                 peer.delete_handled_request(&id);
-                send_file_request(sender, peer.ip_address, key.as_ref());
+                send_file_request(sender, peer.ip_address, song_name.as_ref());
             }
         }
         Content::GetFile { key } => {
@@ -344,7 +342,25 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                     update_table_after_delete(*value, addr, &peer.name);
                 }
             }
+            let database = peer.get_db().get_data();
+            let mut network_table = &peer.network_table;
+            if network_table.len() > 1 {
+                for (song, value) in database {
+                    let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
+                    song_order_request(redundant_target, peer.ip_address, song.to_string());
+                }
+            }
             process::exit(0);
+        }
+        Content::OrderSongRequest { song_name } => {
+            let mut network_table = &peer.network_table;
+            // TODO: REVIEW unwrap
+            let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
+            if peer.get_db().get_data().contains_key(&song_name) {
+                song_order_request(redundant_target, peer.ip_address, song_name.to_string());
+            } else {
+                send_read_request(redundant_target, &song_name)
+            }
         }
         Content::DeleteFromNetwork { name } => {
             if peer.network_table.contains_key(&name) {
@@ -482,7 +498,7 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
 
     let not = Notification {
         content: Content::FindFile {
-            key: name.to_string(),
+            song_name: name.to_string(),
         },
         from: target,
     };

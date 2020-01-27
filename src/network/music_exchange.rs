@@ -8,8 +8,8 @@ pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: Sys
 
     let not = Notification {
         content: Content::ExistFile {
+            song_name: name.to_string(),
             id,
-            key: name.to_string(),
         },
         from,
     };
@@ -33,7 +33,7 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
     };
     let not = Notification {
         content: Content::ExistFileResponse {
-            key: name.to_string(),
+            song_name: name.to_string(),
             id,
         },
         from,
@@ -82,6 +82,28 @@ pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, va
         content: Content::GetFileResponse {
             key: key.to_string(),
             value,
+        },
+        from,
+    };
+    match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: String) {
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            eprintln!("Failed to connect to {:?}", target);
+            return;
+        }
+    };
+    let not = Notification {
+        content: Content::OrderSongRequest {
+            song_name,
         },
         from,
     };

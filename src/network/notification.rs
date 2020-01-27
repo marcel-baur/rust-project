@@ -38,7 +38,7 @@ pub enum Content {
         value: String,
     },
     FindFile {
-        key: String,
+        song_name: String,
     },
     GetFile {
         key: String,
@@ -48,8 +48,8 @@ pub enum Content {
         value: Vec<u8>,
     },
     ExistFile {
+        song_name: String,
         id: SystemTime,
-        key: String,
     },
     ExitPeer {
         addr: SocketAddr,
@@ -58,7 +58,7 @@ pub enum Content {
         name: String,
     },
     ExistFileResponse {
-        key: String,
+        song_name: String,
         id: SystemTime,
     },
     StatusRequest {},
@@ -74,4 +74,7 @@ pub enum Content {
         addr: SocketAddr,
     },
     Heartbeat,
+    OrderSongRequest {
+        song_name: String,
+    },
 }
