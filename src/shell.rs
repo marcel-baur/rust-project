@@ -101,7 +101,26 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 print_existing_files(&arc);
             }
             Some(&"play") => {
-                send_play_request(instructions[1], peer_clone.ip_address);
+                if instructions.len() == 2 {
+                    send_play_request(instructions[1], peer_clone.ip_address);
+                } else {
+                    println!("File name is missing. For more information type help.\n");
+                }
+
+            }
+            Some(&"remove") => {
+                if instructions.len() == 2 {
+
+                } else {
+                    println!("You need to specify name of mp3 file. For more information type help.\n");
+                }
+            }
+            Some(&"stream") => {
+                if instructions.len() == 2 {
+                    println!("Not yet implemented.\n");
+                } else {
+                    println!("You need to specify name of mp3 file. For more information type help.\n");
+                }
             }
 
             _ => println!("No valid instructions. Try help!\n"),
@@ -112,6 +131,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
 pub fn show_help_instructions() {
     let info = "\nHelp Menu:\n\n\
                 Use following instructions: \n\n\
+                status - show current state of peer\n\
                 push [mp3 name] [direction to mp3] - add mp3 to database\n\
                 get [mp3 name] - get mp3 file from database\n\
                 stream [mp3 name] - get mp3 stream from database\n\
