@@ -1,7 +1,6 @@
 use std::io::Read;
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
-use std::process;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -10,28 +9,21 @@ mod music_exchange;
 mod notification;
 pub mod peer;
 mod response;
+mod request;
 
 extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::{play_music, play_music_by_vec};
+use crate::audio::{play_music};
 use crate::utils::{HEARTBEAT_SLEEP_DURATION, Instructions};
-use crate::network::handshake::{
-    json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
-    send_table_to_all_peers, update_table_after_delete,
-};
-use crate::network::music_exchange::{
-    read_file_exist, send_exist_response, send_file_request, send_get_file_reponse,
-    song_order_request, delete_redundant_song_request,
-};
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
 use crate::network::response::*;
 use crate::shell::{print_external_files, spawn_shell};
 use std::collections::HashMap;
-use std::time::SystemTime;
-use crate::utils::Instructions::{REMOVE, PLAY, ORDER, GET};
+use crate::network::request::{push_to_db, redundant_push_to_db, change_peer_name, send_network_table, request_for_table, find_file, exist_file, send_network_update_table, exist_file_response, get_file, get_file_response, delete_file_request, exit_peer, delete_from_network, dropped_peer, order_song_request, self_status_request, status_request};
+use crate::network::handshake::send_table_request;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -212,222 +204,56 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
-            if peer.database.data.contains_key(&key) {
-                println!("File already exists in your database");
-            } else {
-                peer.process_store_request((key.clone(), value.clone()));
-                println!("Saved file to database");
-
-                let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
-                match redundant_target {
-                    Some(target) => {
-                        send_write_request(
-                            target,
-                            *peer.get_ip(),
-                            (key.clone(), value.clone()),
-                            true,
-                            peer,
-                        );
-                    }
-                    None => println!("Only peer in network. No redundancy possible"),
-                };
-                match from.parse::<SocketAddr>() {
-                    Ok(target_address) => {
-                        send_write_response(target_address, *peer.get_ip(), key.clone(), peer);
-                    }
-                    Err(e) => {
-                        dbg!(e);
-                    }
-                }
-            }
+            push_to_db(key, value, from, peer);
         }
         Content::RedundantPushToDB { key, value, .. } => {
-            peer.process_store_request((key, value));
+            redundant_push_to_db(key, value, peer);
         }
         Content::ChangePeerName { value } => {
-            peer.network_table.remove(&peer.name);
-            peer.name = value;
-            peer.network_table
-                .insert(peer.name.clone(), peer.ip_address);
-            //send request existing network table
-            send_table_request(sender, *peer.get_ip(), &peer.name);
+            change_peer_name(value, sender, peer);
         }
         Content::SendNetworkTable { value } => {
-            let table = match String::from_utf8(value) {
-                Ok(val) => val,
-                Err(utf) => {
-                    dbg!(utf);
-                    return;
-                }
-            };
-            let network_table = json_string_to_network_table(table);
-            for (key, addr) in network_table {
-                peer.network_table.insert(key, addr);
-            }
-            send_table_to_all_peers(peer);
+            send_network_table(value, peer);
         }
         Content::SendNetworkUpdateTable { value } => {
-            let table = match String::from_utf8(value) {
-                Ok(val) => val,
-                Err(utf) => {
-                    dbg!(utf);
-                    return;
-                }
-            };
-            let new_network_peer = json_string_to_network_table(table);
-            for (key, addr) in new_network_peer {
-                let name = key.clone();
-                peer.network_table.insert(key, addr);
-                println!("{} joined the network.", name);
-            }
+            send_network_update_table(value, peer);
         }
         Content::RequestForTable { value } => {
-            // checks if key is unique, otherwise send change name request
-            if peer.network_table.contains_key(&value) {
-                let name = format!("{}+{}", &value, "1");
-                send_change_name_request(sender, *peer.get_ip(), name.as_ref());
-            } else {
-                send_network_table(sender, &peer);
-            }
+            request_for_table(value, sender, peer);
         }
         Content::FindFile { song_name, instr } => {
-            // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
-            // @TODO in this case we need to remove the request?
-            if peer.get_db().get_data().contains_key(&song_name) {
-                if instr == REMOVE {
-                    peer.delete_file_from_database(&song_name);
-                    println!("Remove file {} from database", &song_name);
-
-                    let id = SystemTime::now();
-                    peer.add_new_request(&id, instr);
-
-                    for (_key, value) in &peer.network_table {
-                        if _key != &peer.name {
-                            delete_redundant_song_request(*value, peer.ip_address, &song_name);
-                        }
-                    }
-                } else if instr == PLAY {
-                    // TODO: play music if file in own database
-                }
-            } else {
-                let id = SystemTime::now();
-                peer.add_new_request(&id, instr);
-
-                for (_key, value) in &peer.network_table {
-                    if _key != &peer.name {
-                        read_file_exist(*value, peer.ip_address, &song_name, id);
-                    }
-                }
-            }
+            find_file(instr, song_name, peer);
         }
         Content::ExistFile { song_name, id } => {
-            let exist = peer.does_file_exist(song_name.as_ref());
-            if exist {
-                send_exist_response(sender, peer.ip_address, song_name.as_ref(), id);
-            }
+            exist_file(song_name, id, sender, peer);
         }
         Content::ExistFileResponse { song_name, id } => {
-            //Check if peer request is still active. when true remove it
-            let peer_clone = peer.open_request_table.clone();
-            match peer_clone.get(&id) {
-                Some(instr) => {
-                    peer.delete_handled_request(&id);
-                    send_file_request(sender, peer.ip_address, song_name.as_ref(), instr.clone());
-                }
-                None => {
-                    println!("There is not file \"{}\" to remove.", &song_name);
-                }
-            }
+            exist_file_response(song_name, id, sender, peer);
         }
         Content::GetFile { key, instr } => {
-            match peer.find_file(key.as_ref()) {
-                Some(music) => send_get_file_reponse(
-                    sender,
-                    peer.ip_address,
-                    key.as_ref(),
-                    music.clone(),
-                    instr,
-                ),
-                None => {
-                    //@TODO error handling}
-                    println!("TODO!");
-                }
-            }
+            get_file(instr, key, sender, peer);
         }
         Content::GetFileResponse { value, instr, key } => {
-            match instr {
-                PLAY => {
-                    //save to tmp and play audio
-                    match play_music_by_vec(&value) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            println!("Could not play the requested file {}", &key);
-                            error!("Failed to play music from {}", &key);
-                        }
-                    };
-                },
-                GET => {
-                    //Download mp3 file
-                },
-                ORDER => {
-                    peer.process_store_request((key.clone(), value.clone()));
-                },
-                _ => {}
-            }
+            get_file_response(instr, key, value, peer);
         }
         Content::DeleteFileRequest { song_name} => {
-            if peer.database.data.contains_key(&song_name) {
-                println!("Remove file {} from database", &song_name);
-                peer.delete_file_from_database(&song_name);
-            }
+            delete_file_request(song_name, peer);
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
-            for value in peer.network_table.values() {
-                if *value != addr {
-                    update_table_after_delete(*value, addr, &peer.name);
-                }
-            }
-            let database = peer.get_db().get_data();
-            let network_table = &peer.network_table;
-            if network_table.len() > 1 {
-                for (song, _value) in database {
-                    let redundant_target =
-                        other_random_target(network_table, peer.get_ip()).unwrap();
-                    song_order_request(redundant_target, peer.ip_address, song.to_string());
-                }
-            }
-            process::exit(0);
+            exit_peer(addr, peer);
         }
         Content::OrderSongRequest { song_name } => {
-            let network_table = &peer.network_table;
-            // TODO: REVIEW unwrap
-            if peer.get_db().get_data().contains_key(&song_name) {
-                let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
-                song_order_request(redundant_target, peer.ip_address, song_name.to_string());
-            } else {
-                send_read_request(peer.ip_address, &song_name, Instructions::ORDER)
-            }
+            order_song_request(song_name, peer);
         }
         Content::DeleteFromNetwork { name } => {
-            if peer.network_table.contains_key(&name) {
-                peer.network_table.remove(&name);
-                println!("{} left the network.", &name);
-            }
+            delete_from_network(name, peer);
         }
         Content::SelfStatusRequest {} => {
-            let mut cloned_peer = peer.clone();
-            for addr in peer.network_table.values() {
-                send_status_request(*addr, *peer.get_ip(), &mut cloned_peer);
-            }
+            self_status_request(peer);
         }
         Content::StatusRequest {} => {
-            let mut res: Vec<String> = Vec::new();
-            for k in peer.get_db().data.keys() {
-                res.push(k.to_string());
-            }
-            let peer_name = &peer.name;
-            send_local_file_status(sender, res, *peer.get_ip(), peer_name.to_string());
+            status_request(sender, peer);
         }
         Content::StatusResponse { files, name } => {
             print_external_files(files, name);
@@ -439,8 +265,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         },
         Content::DroppedPeer { addr } => {
-            println!("Peer at {:?} was dropped", addr);
-            peer.drop_peer_by_ip(&addr);
+            dropped_peer(addr, peer);
         }
         Content::Heartbeat => {}
     }

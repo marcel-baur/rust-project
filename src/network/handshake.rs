@@ -40,7 +40,7 @@ pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> Str
     serde_json::to_string(&array).unwrap()
 }
 
-pub fn send_network_table(target: SocketAddr, peer: &Peer) {
+pub fn send_network_table_request(target: SocketAddr, peer: &Peer) {
     let not = Notification {
         content: Content::SendNetworkTable {
             value: network_table_to_json(&peer.network_table).into_bytes(),
@@ -51,7 +51,7 @@ pub fn send_network_table(target: SocketAddr, peer: &Peer) {
     tcp_request_with_notification(target, not);
 }
 
-pub fn send_network_update_table(
+pub fn send_network_update_table_request(
     target: SocketAddr,
     from: SocketAddr,
     hashmap: &HashMap<String, SocketAddr>,
@@ -85,7 +85,7 @@ pub fn send_table_to_all_peers(peer: &Peer) {
     for (key, value) in network_table {
         // just update all other peers
         if key != peer.name {
-            send_network_update_table(value, peer.ip_address, &hashmap);
+            send_network_update_table_request(value, peer.ip_address, &hashmap);
         }
     }
 }
