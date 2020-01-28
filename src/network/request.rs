@@ -208,9 +208,7 @@ pub fn exist_file_response(song_name: String, id: SystemTime, sender: SocketAddr
             peer.delete_handled_request(&id);
             send_file_request(sender, peer.ip_address, song_name.as_ref(), instr.clone());
         }
-        None => {
-            println!("There is no file \"{}\" to remove.", &song_name);
-        }
+        None => {}
     }
 }
 
