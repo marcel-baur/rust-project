@@ -40,6 +40,7 @@ pub fn play_music_by_vec(music: &Vec<u8>) -> Result<(), String> {
         Err(_e) => return Err("file could not be decoded. is it mp3?".to_string()),
     };
     //@TODO use sink here to control audio, i.e. pause, stop
+    // BufferReader extension trait?
     rodio::play_raw(&device, source.convert_samples());
     match fs::remove_file("file/tmp.mp3") {
         Ok(_) => return Ok(()),

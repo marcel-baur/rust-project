@@ -71,7 +71,13 @@ pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr
 }
 
 /// Sends a response to a GetFile Request containing the music data
-pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, value: Vec<u8>, instr: &str) {
+pub fn send_get_file_reponse(
+    target: SocketAddr,
+    from: SocketAddr,
+    key: &str,
+    value: Vec<u8>,
+    instr: &str,
+) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -104,9 +110,7 @@ pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: Strin
         }
     };
     let not = Notification {
-        content: Content::OrderSongRequest {
-            song_name,
-        },
+        content: Content::OrderSongRequest { song_name },
         from,
     };
     match serde_json::to_writer(&stream, &not) {

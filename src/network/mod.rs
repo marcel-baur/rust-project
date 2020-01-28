@@ -21,11 +21,14 @@ use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
 };
-use crate::network::music_exchange::{read_file_exist, send_exist_response, send_file_request, send_get_file_reponse, song_order_request};
+use crate::network::music_exchange::{
+    read_file_exist, send_exist_response, send_file_request, send_get_file_reponse,
+    song_order_request,
+};
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
 use crate::network::response::*;
-use crate::shell::{print_external_files, spawn_shell, push_music_to_database};
+use crate::shell::{print_external_files, push_music_to_database, spawn_shell};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::SystemTime;
@@ -285,7 +288,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 send_network_table(sender.to_string(), &peer);
             }
         }
-        Content::FindFile {song_name, instr} => {
+        Content::FindFile { song_name, instr } => {
             // @TODO check if file is in database first
             // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
             // @TODO in this case we need to remove the request?
@@ -312,17 +315,21 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 Some(instr) => {
                     peer.delete_handled_request(&id);
                     send_file_request(sender, peer.ip_address, song_name.as_ref(), instr);
-                },
+                }
                 None => {
                     println!("scheisse!'!!");
                 }
             }
         }
-        Content::GetFile { key , instr} => {
+        Content::GetFile { key, instr } => {
             match peer.find_file(key.as_ref()) {
-                Some(music) => {
-                    send_get_file_reponse(sender, peer.ip_address, key.as_ref(), music.clone(), instr.as_ref())
-                }
+                Some(music) => send_get_file_reponse(
+                    sender,
+                    peer.ip_address,
+                    key.as_ref(),
+                    music.clone(),
+                    instr.as_ref(),
+                ),
                 None => {
                     //@TODO error handling}
                     println!("TODO!");
@@ -342,10 +349,10 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
                 "get" => {
                     //Download mp3 file
-                },
+                }
                 "order" => {
                     peer.process_store_request((key.clone(), value.clone()));
-                },
+                }
                 _ => {}
             }
         }
@@ -360,7 +367,8 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             let mut network_table = &peer.network_table;
             if network_table.len() > 1 {
                 for (song, value) in database {
-                    let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
+                    let redundant_target =
+                        other_random_target(network_table, peer.get_ip()).unwrap();
                     song_order_request(redundant_target, peer.ip_address, song.to_string());
                 }
             }

@@ -106,26 +106,26 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 } else {
                     println!("File name is missing. For more information type help.\n");
                 }
-
             }
             Some(&"remove") => {
                 if instructions.len() == 2 {
-
                 } else {
-                    println!("You need to specify name of mp3 file. For more information type help.\n");
+                    println!(
+                        "You need to specify name of mp3 file. For more information type help.\n"
+                    );
                 }
             }
             Some(&"stream") => {
                 if instructions.len() == 2 {
                     println!("Not yet implemented.\n");
                 } else {
-                    println!("You need to specify name of mp3 file. For more information type help.\n");
+                    println!(
+                        "You need to specify name of mp3 file. For more information type help.\n"
+                    );
                 }
             }
 
-            _ => {
-                println!("No valid instructions. Try help!\n")
-            },
+            _ => println!("No valid instructions. Try help!\n"),
         }
     }
 }
