@@ -71,8 +71,9 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                         &mut peer_clone,
                     ) {
                         Ok(_) => {}
-                        Err(_e) => {
+                        Err(e) => {
                             eprintln!("Failed to push {} to database", instructions[1]);
+                            error!("Could not push {:?} to the database, error code {:?}", instructions, e);
                         }
                     };
                 } else {
