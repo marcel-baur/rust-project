@@ -73,9 +73,11 @@ pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: Strin
 }
 
 /// Sends a request to delete redundant file
-pub fn delete_redundant_song_request(target: SocketAddr, from: SocketAddr, song_name: String) {
+pub fn delete_redundant_song_request(target: SocketAddr, from: SocketAddr, song_name: &str) {
     let not = Notification {
-        content: Content::DeleteFileRequest { song_name },
+        content: Content::DeleteFileRequest {
+            song_name: song_name.to_string(),
+        },
         from,
     };
 

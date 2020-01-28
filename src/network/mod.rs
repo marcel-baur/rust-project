@@ -23,7 +23,7 @@ use crate::network::handshake::{
 };
 use crate::network::music_exchange::{
     read_file_exist, send_exist_response, send_file_request, send_get_file_reponse,
-    song_order_request,
+    song_order_request, delete_redundant_song_request,
 };
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
@@ -290,23 +290,22 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         }
         Content::FindFile { song_name, instr } => {
-            // @TODO check if file is in database first
             // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
             // @TODO in this case we need to remove the request?
             if peer.get_db().get_data().contains_key(&song_name) {
                 if instr == REMOVE {
-                    //Remove und read_file_exists und delte dort
+                    /// Remove local music file
                     peer.delete_file_from_database(&song_name);
 
                     let id = SystemTime::now();
                     peer.add_new_request(&id, instr);
 
+                    /// Remove redundant music file
                     for (_key, value) in &peer.network_table {
                         if _key != &peer.name {
-                            read_file_exist(*value, peer.ip_address, &song_name, id);
+                            delete_redundant_song_request(*value, peer.ip_address, &song_name);
                         }
                     }
-                    println!("Remove file {} from database", &song_name);
                 } else if instr == PLAY {
                     //play file
                 }
@@ -374,14 +373,14 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 ORDER => {
                     peer.process_store_request((key.clone(), value.clone()));
                 },
-                REMOVE => {
-                    println!("Remove file!!");
-                    peer.delete_file_from_database(&key);
-                },
+                _ => {}
             }
         }
         Content::DeleteFileRequest { song_name} => {
-
+            if peer.database.data.contains_key(&song_name) {
+                println!("Remove file {} from database", &song_name);
+                peer.delete_file_from_database(&song_name);
+            }
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
