@@ -363,7 +363,8 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                     match play_music_by_vec(&value) {
                         Ok(_) => {}
                         Err(_) => {
-                            eprintln!("Failed to play music");
+                            println!("Could not play the requested file {}", &key);
+                            error!("Failed to play music from {}", &key);
                         }
                     };
                 },
@@ -436,7 +437,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::PlayAudioRequest { name } => match play_music(peer, name.as_str()) {
             Ok(_) => {}
             Err(e) => {
-                println!("{}", e);
+                error!("{}", e);
             }
         },
         Content::DroppedPeer { addr } => {
@@ -472,7 +473,8 @@ pub fn send_write_request(
         };
         match serde_json::to_writer(&stream, &not) {
             Ok(ser) => ser,
-            Err(_e) => {
+            Err(e) => {
+                error!("Could not serialize {:?}, Error: {:?}", &not, e);
                 println!("Failed to serialize SendRequest {:?}", &not);
             }
         };
@@ -486,8 +488,9 @@ pub fn send_write_request(
             from: origin,
         };
         match serde_json::to_writer(&stream, &not) {
-            Ok(ser) => ser,
-            Err(_e) => {
+            Ok(_ser) => {},
+            Err(e) => {
+                error!("Could not serialize {:?}, Error: {:?}", &not, e);
                 println!("Failed to serialize SendRequest {:?}", &not);
             }
         };
@@ -528,8 +531,9 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
         from: origin,
     };
     match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
+        Ok(_ser) => {},
+        Err(e) => {
+            error!("Could not serialize {:?}, Error: {:?}", &not, e);
             println!("Failed to serialize Response {:?}", &not);
         }
     };

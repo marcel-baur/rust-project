@@ -115,7 +115,7 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
         Ok(stream) => stream,
         Err(e) => {
             //@TODO this means ip-address is not right! add proper error handling
-            dbg!(e);
+            error!("{}", e);
             return;
         }
     };
@@ -127,8 +127,8 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
     };
     match serde_json::to_writer(&stream, &not) {
         Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SimpleRequest {:?}", &not);
+        Err(e) => {
+            error!("Failed to serialize SimpleRequest {:?}, Error: {:?}", &not, e);
         }
     };
 }
