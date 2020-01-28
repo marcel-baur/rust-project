@@ -30,7 +30,6 @@ use crate::network::peer::{create_peer, Peer};
 use crate::network::response::*;
 use crate::shell::{print_external_files, spawn_shell};
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::time::SystemTime;
 use crate::utils::Instructions::{REMOVE, PLAY, ORDER, GET};
 
@@ -96,7 +95,7 @@ pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Re
     //send request existing network table
     match ip_address {
         Some(ip) => {
-            send_table_request(&ip, &own_addr, own_name);
+            send_table_request(ip, own_addr, own_name);
         }
         None => {
             println!("Ip address is empty");
@@ -245,11 +244,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             peer.network_table
                 .insert(peer.name.clone(), peer.ip_address);
             //send request existing network table
-            send_table_request(
-                &SocketAddr::from_str(&sender.to_string()).unwrap(),
-                peer.get_ip(),
-                &peer.name,
-            );
+            send_table_request(sender, *peer.get_ip(), &peer.name);
         }
         Content::SendNetworkTable { value } => {
             let table = match String::from_utf8(value) {
@@ -284,9 +279,9 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             // checks if key is unique, otherwise send change name request
             if peer.network_table.contains_key(&value) {
                 let name = format!("{}+{}", &value, "1");
-                send_change_name_request(sender.to_string(), peer.get_ip(), name.as_ref());
+                send_change_name_request(sender, *peer.get_ip(), name.as_ref());
             } else {
-                send_network_table(sender.to_string(), &peer);
+                send_network_table(sender, &peer);
             }
         }
         Content::FindFile { song_name, instr } => {
@@ -295,6 +290,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             if peer.get_db().get_data().contains_key(&song_name) {
                 if instr == REMOVE {
                     peer.delete_file_from_database(&song_name);
+                    println!("Remove file {} from database", &song_name);
 
                     let id = SystemTime::now();
                     peer.add_new_request(&id, instr);
@@ -333,7 +329,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                     send_file_request(sender, peer.ip_address, song_name.as_ref(), instr.clone());
                 }
                 None => {
-                    println!("scheisse!'!!");
+                    println!("There is not file \"{}\" to remove.", &song_name);
                 }
             }
         }
