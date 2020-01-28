@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
 use std::time::SystemTime;
+use crate::utils::Instructions;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -12,7 +13,7 @@ pub struct Peer {
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
     database: Database,
-    pub open_request_table: HashMap<SystemTime, String>,
+    pub open_request_table: HashMap<SystemTime, Instructions>,
 }
 
 impl Peer {
@@ -25,7 +26,7 @@ impl Peer {
         ip_address: SocketAddr,
         onw_name: &str,
         network_table: HashMap<String, SocketAddr>,
-        open_request_table: HashMap<SystemTime, String>,
+        open_request_table: HashMap<SystemTime, Instructions>,
     ) -> Peer {
         Peer {
             name: onw_name.to_string(),
@@ -60,8 +61,8 @@ impl Peer {
         }
     }
 
-    pub fn add_new_request(&mut self, time: &SystemTime, content: &str) {
-        self.open_request_table.insert(*time, content.to_string());
+    pub fn add_new_request(&mut self, time: &SystemTime, content: Instructions) {
+        self.open_request_table.insert(*time, content);
     }
 
     pub fn check_request_still_active(&self, time: &SystemTime) -> bool {

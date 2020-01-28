@@ -6,7 +6,7 @@ use clap::{App, Arg};
 use std::net::SocketAddr;
 
 mod audio;
-mod constants;
+mod utils;
 mod database;
 mod network;
 mod shell;

@@ -1,6 +1,7 @@
 use crate::network::notification::{Content, Notification};
 use std::net::{SocketAddr, TcpStream};
 use std::time::SystemTime;
+use crate::utils::Instructions;
 
 /// Sends a request to the other peers to check if they have the wanted file
 pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
@@ -47,7 +48,7 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
 }
 
 /// Sends a request (as a response of ExistFileResponse Request) to get a certain file
-pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: &str) {
+pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: Instructions) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -57,7 +58,7 @@ pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr
     };
     let not = Notification {
         content: Content::GetFile {
-            instr: instr.to_string(),
+            instr,
             key: name.to_string(),
         },
         from,
@@ -76,7 +77,7 @@ pub fn send_get_file_reponse(
     from: SocketAddr,
     key: &str,
     value: Vec<u8>,
-    instr: &str,
+    instr: Instructions,
 ) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
@@ -87,7 +88,7 @@ pub fn send_get_file_reponse(
     };
     let not = Notification {
         content: Content::GetFileResponse {
-            instr: instr.to_string(),
+            instr,
             key: key.to_string(),
             value,
         },

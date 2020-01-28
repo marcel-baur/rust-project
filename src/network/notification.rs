@@ -2,6 +2,7 @@ use crate::network::response::Message;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::time::SystemTime;
+use crate::utils::Instructions;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Notification {
@@ -38,15 +39,15 @@ pub enum Content {
         value: String,
     },
     FindFile {
-        instr: String,
+        instr: Instructions,
         song_name: String,
     },
     GetFile {
-        instr: String,
+        instr: Instructions,
         key: String,
     },
     GetFileResponse {
-        instr: String,
+        instr: Instructions,
         key: String,
         value: Vec<u8>,
     },

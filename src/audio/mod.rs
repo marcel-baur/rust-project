@@ -4,6 +4,7 @@ use rodio::Source;
 use std::fs;
 use std::io::BufReader;
 use std::string::ToString;
+use crate::utils::Instructions::PLAY;
 
 /// plays audio when mp3 is in database otherwise sends request to find file
 /// # Arguments:
@@ -15,7 +16,7 @@ pub fn play_music(peer: &mut Peer, name: &str) -> Result<(), String> {
     let sound_data = match peer.get_db().data.get(name) {
         Some(data) => data,
         None => {
-            send_read_request(peer.ip_address, name, "play");
+            send_read_request(peer.ip_address, name, PLAY);
             return Err("File not in Database, send_request sent".to_string());
         }
     };

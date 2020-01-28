@@ -16,7 +16,7 @@ extern crate rand;
 use rand::Rng;
 
 use crate::audio::{play_music, play_music_by_vec};
-use crate::constants::HEARTBEAT_SLEEP_DURATION;
+use crate::utils::{HEARTBEAT_SLEEP_DURATION, Instructions};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table, send_table_request,
     send_table_to_all_peers, update_table_after_delete,
@@ -32,6 +32,7 @@ use crate::shell::{print_external_files, push_music_to_database, spawn_shell};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::SystemTime;
+use crate::utils::Instructions::{REMOVE, PLAY, ORDER, GET};
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -292,12 +293,22 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             // @TODO check if file is in database first
             // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
             // @TODO in this case we need to remove the request?
-            let id = SystemTime::now();
-            peer.add_new_request(&id, &instr);
+            if peer.get_db().get_data().contains_key(&song_name) {
+                if instr == REMOVE {
+                    //Remove und read_file_exists und delte dort
+                    println!("remove file from database");
+                } else if instr == PLAY {
+                    //play file
+                }
+                println!("file in own database");
+            } else {
+                let id = SystemTime::now();
+                peer.add_new_request(&id, instr);
 
-            for (_key, value) in &peer.network_table {
-                if _key != &peer.name {
-                    read_file_exist(*value, peer.ip_address, &song_name, id);
+                for (_key, value) in &peer.network_table {
+                    if _key != &peer.name {
+                        read_file_exist(*value, peer.ip_address, &song_name, id);
+                    }
                 }
             }
         }
@@ -314,7 +325,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             match peer_clone.get(&id) {
                 Some(instr) => {
                     peer.delete_handled_request(&id);
-                    send_file_request(sender, peer.ip_address, song_name.as_ref(), instr);
+                    send_file_request(sender, peer.ip_address, song_name.as_ref(), instr.clone());
                 }
                 None => {
                     println!("scheisse!'!!");
@@ -328,7 +339,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                     peer.ip_address,
                     key.as_ref(),
                     music.clone(),
-                    instr.as_ref(),
+                    instr,
                 ),
                 None => {
                     //@TODO error handling}
@@ -337,8 +348,8 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             }
         }
         Content::GetFileResponse { value, instr, key } => {
-            match instr.as_str() {
-                "play" => {
+            match instr {
+                PLAY => {
                     //save to tmp and play audio
                     match play_music_by_vec(&value) {
                         Ok(_) => {}
@@ -346,14 +357,16 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                             eprintln!("Failed to play music");
                         }
                     };
-                }
-                "get" => {
+                },
+                GET => {
                     //Download mp3 file
-                }
-                "order" => {
+                },
+                ORDER => {
                     peer.process_store_request((key.clone(), value.clone()));
-                }
-                _ => {}
+                },
+                REMOVE => {
+                    println!("file löschen {}", &key);
+                },
             }
         }
         Content::Response { .. } => {}
@@ -381,7 +394,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
                 song_order_request(redundant_target, peer.ip_address, song_name.to_string());
             } else {
-                send_read_request(peer.ip_address, &song_name, "order")
+                send_read_request(peer.ip_address, &song_name, Instructions::ORDER)
             }
         }
         Content::DeleteFromNetwork { name } => {
@@ -510,7 +523,7 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
 }
 
 /// Communicate to the listener that we want to find the location of a given file
-pub fn send_read_request(target: SocketAddr, name: &str, instr: &str) {
+pub fn send_read_request(target: SocketAddr, name: &str, instr: Instructions) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -520,7 +533,7 @@ pub fn send_read_request(target: SocketAddr, name: &str, instr: &str) {
 
     let not = Notification {
         content: Content::FindFile {
-            instr: instr.to_string(),
+            instr,
             song_name: name.to_string(),
         },
         from: target,

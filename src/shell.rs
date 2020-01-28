@@ -1,6 +1,6 @@
 use prettytable::format;
 extern crate colored;
-use crate::constants;
+use crate::utils;
 use crate::network::peer::Peer;
 use crate::network::{
     send_delete_peer_request, send_play_request, send_read_request, send_status_request,
@@ -15,6 +15,8 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
+use crate::utils::Instructions::{GET, REMOVE};
+use crate::utils::Instructions;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -39,7 +41,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
         let peer = arc.lock().unwrap();
         let peer_clone = peer.clone();
         drop(peer);
-        thread::sleep(constants::THREAD_SLEEP_DURATION);
+        thread::sleep(utils::THREAD_SLEEP_DURATION);
     }
 }
 
@@ -83,7 +85,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"get") => {
                 if instructions.len() == 2 {
-                    send_read_request(peer_clone.ip_address, instructions[1], "get");
+                    send_read_request(peer_clone.ip_address, instructions[1], GET);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -109,6 +111,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"remove") => {
                 if instructions.len() == 2 {
+                    send_read_request(peer_clone.ip_address, instructions[1], REMOVE);
                 } else {
                     println!(
                         "You need to specify name of mp3 file. For more information type help.\n"
