@@ -212,26 +212,32 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
-            peer.process_store_request((key.clone(), value.clone()));
-            let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
-            match redundant_target {
-                Some(target) => {
-                    send_write_request(
-                        target,
-                        *peer.get_ip(),
-                        (key.clone(), value.clone()),
-                        true,
-                        peer,
-                    );
-                }
-                None => println!("Only peer in network. No redundancy possible"),
-            };
-            match from.parse::<SocketAddr>() {
-                Ok(target_address) => {
-                    send_write_response(target_address, *peer.get_ip(), key.clone(), peer);
-                }
-                Err(e) => {
-                    dbg!(e);
+            if peer.database.data.contains_key(&key) {
+                println!("File already exists in your database");
+            } else {
+                peer.process_store_request((key.clone(), value.clone()));
+                println!("Saved file to database");
+
+                let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
+                match redundant_target {
+                    Some(target) => {
+                        send_write_request(
+                            target,
+                            *peer.get_ip(),
+                            (key.clone(), value.clone()),
+                            true,
+                            peer,
+                        );
+                    }
+                    None => println!("Only peer in network. No redundancy possible"),
+                };
+                match from.parse::<SocketAddr>() {
+                    Ok(target_address) => {
+                        send_write_response(target_address, *peer.get_ip(), key.clone(), peer);
+                    }
+                    Err(e) => {
+                        dbg!(e);
+                    }
                 }
             }
         }

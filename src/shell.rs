@@ -168,12 +168,11 @@ pub fn push_music_to_database(
         let read_result = fs::read(path);
         match read_result {
             Ok(content) => {
-                println!("file eingelesen");
+                println!("Pushing... This can take a while");
                 //@TODO save to database
                 //                peer.get_db().add_file(name, content);
                 //                peer.store((name.parse().unwrap(), content));
                 send_write_request(addr, addr, (name.to_string(), content), false, peer);
-                println!("saved to hash map");
                 return Ok(());
             }
             Err(err) => {
