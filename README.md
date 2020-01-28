@@ -1,4 +1,4 @@
-# Rust Project Group C
+# Rust Project Group C - Music Entertainment for Friends (MEFF)
 
 A distributed key-value database storing audio files for sharing and streaming music.
 
