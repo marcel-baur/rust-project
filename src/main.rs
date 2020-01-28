@@ -12,7 +12,7 @@ mod network;
 mod shell;
 
 fn main() {
-    let matches = App::new("music_p2p")
+    let matches = App::new("MEFF-Music")
         .version("0.1.0")
         .arg(
             Arg::with_name("own-name")
