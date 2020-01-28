@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::time::SystemTime;
 use crate::utils::Instructions;
+use std::process;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Notification {
@@ -83,14 +84,14 @@ pub enum Content {
     },
     DeleteFileRequest {
         song_name: String,
-    }
+    },
 }
 
 pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
-            eprintln!("Failed to connect to {:?}", target);
+            handle_error(notification.content, target);
             return;
         }
     };
@@ -104,4 +105,16 @@ pub fn tcp_request_with_notification(target: SocketAddr, notification: Notificat
         }
     };
 
+}
+
+fn handle_error(content: Content, target: SocketAddr) {
+    match content {
+        Content::RequestForTable { .. } => {
+            println!("There is no existing network containing this IP {:?}\nPlease check the IP-Address you want to join", target);
+            process::exit(0);
+        }
+        _ => {
+            eprintln!("Failed to connect to {:?}", target);
+        }
+    }
 }
