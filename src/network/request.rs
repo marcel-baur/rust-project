@@ -174,18 +174,20 @@ pub fn exist_file(song_name: String, id: SystemTime, sender:SocketAddr, peer: &m
 }
 
 pub fn exit_peer(addr: SocketAddr, peer: &mut Peer) {
-    for value in peer.network_table.values() {
-        if *value != addr {
-            update_table_after_delete(*value, addr, &peer.name);
+    if peer.network_table.len() > 1 {
+        for value in peer.network_table.values() {
+            if *value != addr {
+                update_table_after_delete(*value, addr, &peer.name);
+            }
         }
-    }
-    let database = peer.get_db().get_data();
-    let network_table = &peer.network_table;
-    if network_table.len() > 1 {
-        for (song, _value) in database {
-            let redundant_target =
-                other_random_target(network_table, peer.get_ip()).unwrap();
-            song_order_request(redundant_target, peer.ip_address, song.to_string());
+        let database = peer.get_db().get_data();
+        let network_table = &peer.network_table;
+        if network_table.len() > 1 {
+            for (song, _value) in database {
+                let redundant_target =
+                    other_random_target(network_table, peer.get_ip()).unwrap();
+                song_order_request(redundant_target, peer.ip_address, song.to_string());
+            }
         }
     }
     process::exit(0);
