@@ -1,12 +1,10 @@
-use crate::network::notification::{Content, Notification};
+use crate::network::notification::{Content, Notification, tcp_request_with_notification};
 use std::net::{SocketAddr, TcpStream};
 use std::time::SystemTime;
 use crate::utils::Instructions;
 
 /// Sends a request to the other peers to check if they have the wanted file
 pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
-    let stream = TcpStream::connect(target).unwrap();
-
     let not = Notification {
         content: Content::ExistFile {
             song_name: name.to_string(),
@@ -15,23 +13,11 @@ pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: Sys
         from,
     };
 
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+    tcp_request_with_notification(target, not);
 }
 
 /// Sends a response (to ExistFile Request) to let one peer know to have a requested file
 pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            eprintln!("Failed to connect to {:?}", target);
-            return;
-        }
-    };
     let not = Notification {
         content: Content::ExistFileResponse {
             song_name: name.to_string(),
@@ -39,23 +25,12 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
         },
         from,
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+
+    tcp_request_with_notification(target, not);
 }
 
 /// Sends a request (as a response of ExistFileResponse Request) to get a certain file
 pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: Instructions) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            eprintln!("Failed to connect to {:?}", target);
-            return;
-        }
-    };
     let not = Notification {
         content: Content::GetFile {
             instr,
@@ -63,12 +38,8 @@ pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr
         },
         from,
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+
+    tcp_request_with_notification(target, not);
 }
 
 /// Sends a response to a GetFile Request containing the music data
@@ -79,13 +50,7 @@ pub fn send_get_file_reponse(
     value: Vec<u8>,
     instr: Instructions,
 ) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            eprintln!("Failed to connect to {:?}", target);
-            return;
-        }
-    };
+
     let not = Notification {
         content: Content::GetFileResponse {
             instr,
@@ -94,51 +59,25 @@ pub fn send_get_file_reponse(
         },
         from,
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+
+    tcp_request_with_notification(target, not);
 }
 
 pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: String) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            eprintln!("Failed to connect to {:?}", target);
-            return;
-        }
-    };
     let not = Notification {
         content: Content::OrderSongRequest { song_name },
         from,
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+
+    tcp_request_with_notification(target, not);
 }
 
 /// Sends a request to delete redundant file
 pub fn delete_redundant_song_request(target: SocketAddr, from: SocketAddr, song_name: String) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            eprintln!("Failed to connect to {:?}", target);
-            return;
-        }
-    };
     let not = Notification {
         content: Content::DeleteFileRequest { song_name },
         from,
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+
+    tcp_request_with_notification(target, not);
 }

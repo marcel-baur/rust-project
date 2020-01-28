@@ -134,14 +134,6 @@ pub fn send_table_request(target: &SocketAddr, from: &SocketAddr, name: &str) {
 }
 
 pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &str) {
-    let stream = match TcpStream::connect(target) {
-        Ok(stream) => stream,
-        Err(e) => {
-            dbg!(e);
-            return;
-        }
-    };
-
     let not = Notification {
         content: Content::DeleteFromNetwork {
             name: name.to_string(),
@@ -149,10 +141,5 @@ pub fn update_table_after_delete(target: SocketAddr, from: SocketAddr, name: &st
         from,
     };
 
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+    tcp_request_with_notification(target, not);
 }

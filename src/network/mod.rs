@@ -537,13 +537,6 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
 
 /// Communicate to the listener that we want to find the location of a given file
 pub fn send_read_request(target: SocketAddr, name: &str, instr: Instructions) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            return;
-        }
-    };
-
     let not = Notification {
         content: Content::FindFile {
             instr,
@@ -552,33 +545,16 @@ pub fn send_read_request(target: SocketAddr, name: &str, instr: Instructions) {
         from: target,
     };
 
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+    tcp_request_with_notification(target, not);
 }
 
 pub fn send_delete_peer_request(target: SocketAddr) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            return;
-        }
-    };
-
     let not = Notification {
         content: Content::ExitPeer { addr: target },
         from: target,
     };
 
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+    tcp_request_with_notification(target, not);
 }
 
 pub fn send_status_request(target: SocketAddr, from: SocketAddr, peer: &mut Peer) {
@@ -609,12 +585,6 @@ fn send_local_file_status(
     from: SocketAddr,
     peer_name: String,
 ) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            return;
-        }
-    };
     let not = Notification {
         content: Content::StatusResponse {
             files,
@@ -623,12 +593,7 @@ fn send_local_file_status(
         from,
     };
 
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+    tcp_request_with_notification(target, not);
 }
 
 pub fn send_play_request(name: &str, from: SocketAddr) {

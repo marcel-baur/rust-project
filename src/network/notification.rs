@@ -1,6 +1,6 @@
 use crate::network::response::Message;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use std::net::{SocketAddr, TcpStream};
 use std::time::SystemTime;
 use crate::utils::Instructions;
 
@@ -84,4 +84,24 @@ pub enum Content {
     DeleteFileRequest {
         song_name: String,
     }
+}
+
+pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            eprintln!("Failed to connect to {:?}", target);
+            return;
+        }
+    };
+
+    let not = notification;
+
+    match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+
 }
