@@ -333,15 +333,12 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             match instr.as_str() {
                 "play" => {
                     //save to tmp and play audio
-                    if peer.waiting_to_play {
-                        peer.waiting_to_play = false;
-                        match play_music_by_vec(&value) {
-                            Ok(_) => {}
-                            Err(_) => {
-                                eprintln!("Failed to play music");
-                            }
-                        };
-                    }
+                    match play_music_by_vec(&value) {
+                        Ok(_) => {}
+                        Err(_) => {
+                            eprintln!("Failed to play music");
+                        }
+                    };
                 }
                 "get" => {
                     //Download mp3 file

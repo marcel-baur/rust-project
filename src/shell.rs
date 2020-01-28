@@ -123,7 +123,9 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 }
             }
 
-            _ => println!("No valid instructions. Try help!\n"),
+            _ => {
+                println!("No valid instructions. Try help!\n")
+            },
         }
     }
 }

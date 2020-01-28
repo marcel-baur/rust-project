@@ -15,7 +15,6 @@ pub fn play_music(peer: &mut Peer, name: &str) -> Result<(), String> {
     let sound_data = match peer.get_db().data.get(name) {
         Some(data) => data,
         None => {
-            peer.set_waiting_to_play(true);
             send_read_request(peer.ip_address, name, "play");
             return Err("File not in Database, send_request sent".to_string());
         }
