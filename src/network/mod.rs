@@ -28,7 +28,7 @@ use crate::network::music_exchange::{
 use crate::network::notification::*;
 use crate::network::peer::{create_peer, Peer};
 use crate::network::response::*;
-use crate::shell::{print_external_files, push_music_to_database, spawn_shell};
+use crate::shell::{print_external_files, spawn_shell};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::SystemTime;
@@ -294,22 +294,19 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             // @TODO in this case we need to remove the request?
             if peer.get_db().get_data().contains_key(&song_name) {
                 if instr == REMOVE {
-                    /// Remove local music file
                     peer.delete_file_from_database(&song_name);
 
                     let id = SystemTime::now();
                     peer.add_new_request(&id, instr);
 
-                    /// Remove redundant music file
                     for (_key, value) in &peer.network_table {
                         if _key != &peer.name {
                             delete_redundant_song_request(*value, peer.ip_address, &song_name);
                         }
                     }
                 } else if instr == PLAY {
-                    //play file
+                    // TODO: play music if file in own database
                 }
-                println!("file in own database");
             } else {
                 let id = SystemTime::now();
                 peer.add_new_request(&id, instr);
@@ -390,9 +387,9 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
             let database = peer.get_db().get_data();
-            let mut network_table = &peer.network_table;
+            let network_table = &peer.network_table;
             if network_table.len() > 1 {
-                for (song, value) in database {
+                for (song, _value) in database {
                     let redundant_target =
                         other_random_target(network_table, peer.get_ip()).unwrap();
                     song_order_request(redundant_target, peer.ip_address, song.to_string());
@@ -401,7 +398,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             process::exit(0);
         }
         Content::OrderSongRequest { song_name } => {
-            let mut network_table = &peer.network_table;
+            let network_table = &peer.network_table;
             // TODO: REVIEW unwrap
             if peer.get_db().get_data().contains_key(&song_name) {
                 let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();

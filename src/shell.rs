@@ -16,7 +16,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
 use crate::utils::Instructions::{GET, REMOVE};
-use crate::utils::Instructions;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -39,7 +38,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
 
     loop {
         let peer = arc.lock().unwrap();
-        let peer_clone = peer.clone();
+        let _peer_clone = peer.clone();
         drop(peer);
         thread::sleep(utils::THREAD_SLEEP_DURATION);
     }

@@ -65,10 +65,6 @@ impl Peer {
         self.open_request_table.insert(*time, content);
     }
 
-    pub fn check_request_still_active(&self, time: &SystemTime) -> bool {
-        self.open_request_table.contains_key(time)
-    }
-
     pub fn delete_handled_request(&mut self, time: &SystemTime) {
         self.open_request_table.remove(time);
     }

@@ -1,5 +1,5 @@
 [package]
-name = "MEFF-Music"
+name = "meff-music"
 version = "0.1.0"
 authors = ["Marcel Baur <mail@marcelbaur.io>", "Fabian Frey <mail@fabianfrey.de>", "Elena Liebl <elena_liebl@web.de>", "Franziska Lang <franziska@langfeldafing.de>"]
 edition = "2018"
