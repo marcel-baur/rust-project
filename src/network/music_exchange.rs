@@ -47,7 +47,7 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
 }
 
 /// Sends a request (as a response of ExistFileResponse Request) to get a certain file
-pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
+pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: &str) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -57,6 +57,7 @@ pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
     };
     let not = Notification {
         content: Content::GetFile {
+            instr: instr.to_string(),
             key: name.to_string(),
         },
         from,
@@ -70,7 +71,7 @@ pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str) {
 }
 
 /// Sends a response to a GetFile Request containing the music data
-pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, value: Vec<u8>) {
+pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, value: Vec<u8>, instr: &str) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -80,6 +81,7 @@ pub fn send_get_file_reponse(target: SocketAddr, from: SocketAddr, key: &str, va
     };
     let not = Notification {
         content: Content::GetFileResponse {
+            instr: instr.to_string(),
             key: key.to_string(),
             value,
         },

@@ -205,6 +205,7 @@ fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
 }
 
 fn handle_notification(notification: Notification, peer: &mut Peer) {
+    //dbg!(&notification);
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
@@ -284,12 +285,12 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 send_network_table(sender.to_string(), &peer);
             }
         }
-        Content::FindFile {song_name} => {
+        Content::FindFile {song_name, instr} => {
             // @TODO check if file is in database first
             // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
             // @TODO in this case we need to remove the request?
             let id = SystemTime::now();
-            peer.add_new_request(&id, &song_name);
+            peer.add_new_request(&id, &instr);
 
             for (_key, value) in &peer.network_table {
                 if _key != &peer.name {
@@ -299,22 +300,28 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         }
         Content::ExistFile { song_name, id } => {
             let exist = peer.does_file_exist(song_name.as_ref());
+            println!("{}", &exist);
             if exist {
                 send_exist_response(sender, peer.ip_address, song_name.as_ref(), id);
             }
         }
         Content::ExistFileResponse { song_name, id } => {
             //Check if peer request is still active. when true remove it
-            if peer.check_request_still_active(&id) {
-                //@TODO maybe create new request?
-                peer.delete_handled_request(&id);
-                send_file_request(sender, peer.ip_address, song_name.as_ref());
+            let peer_clone = peer.open_request_table.clone();
+            match peer_clone.get(&id) {
+                Some(instr) => {
+                    peer.delete_handled_request(&id);
+                    send_file_request(sender, peer.ip_address, song_name.as_ref(), instr);
+                },
+                None => {
+                    println!("scheisse!'!!");
+                }
             }
         }
-        Content::GetFile { key } => {
+        Content::GetFile { key , instr} => {
             match peer.find_file(key.as_ref()) {
                 Some(music) => {
-                    send_get_file_reponse(sender, peer.ip_address, key.as_ref(), music.clone())
+                    send_get_file_reponse(sender, peer.ip_address, key.as_ref(), music.clone(), instr.as_ref())
                 }
                 None => {
                     //@TODO error handling}
@@ -322,18 +329,28 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                 }
             }
         }
-        Content::GetFileResponse { value, .. } => {
-            //save to tmp and play audio
-            if peer.waiting_to_play {
-                peer.waiting_to_play = false;
-                match play_music_by_vec(&value) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        eprintln!("Failed to play music");
+        Content::GetFileResponse { value, instr, key } => {
+            match instr.as_str() {
+                "play" => {
+                    //save to tmp and play audio
+                    if peer.waiting_to_play {
+                        peer.waiting_to_play = false;
+                        match play_music_by_vec(&value) {
+                            Ok(_) => {}
+                            Err(_) => {
+                                eprintln!("Failed to play music");
+                            }
+                        };
                     }
-                };
+                }
+                "get" => {
+                    //Download mp3 file
+                },
+                "order" => {
+                    peer.process_store_request((key.clone(), value.clone()));
+                },
+                _ => {}
             }
-            //Download mp3 file
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
@@ -355,11 +372,11 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::OrderSongRequest { song_name } => {
             let mut network_table = &peer.network_table;
             // TODO: REVIEW unwrap
-            let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
             if peer.get_db().get_data().contains_key(&song_name) {
+                let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
                 song_order_request(redundant_target, peer.ip_address, song_name.to_string());
             } else {
-                send_read_request(redundant_target, &song_name)
+                send_read_request(peer.ip_address, &song_name, "order")
             }
         }
         Content::DeleteFromNetwork { name } => {
@@ -488,7 +505,7 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
 }
 
 /// Communicate to the listener that we want to find the location of a given file
-pub fn send_read_request(target: SocketAddr, name: &str) {
+pub fn send_read_request(target: SocketAddr, name: &str, instr: &str) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -498,6 +515,7 @@ pub fn send_read_request(target: SocketAddr, name: &str) {
 
     let not = Notification {
         content: Content::FindFile {
+            instr: instr.to_string(),
             song_name: name.to_string(),
         },
         from: target,

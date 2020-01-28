@@ -38,12 +38,15 @@ pub enum Content {
         value: String,
     },
     FindFile {
+        instr: String,
         song_name: String,
     },
     GetFile {
+        instr: String,
         key: String,
     },
     GetFileResponse {
+        instr: String,
         key: String,
         value: Vec<u8>,
     },

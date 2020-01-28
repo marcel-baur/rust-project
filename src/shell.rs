@@ -83,7 +83,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"get") => {
                 if instructions.len() == 2 {
-                    send_read_request(peer_clone.ip_address, instructions[1]);
+                    send_read_request(peer_clone.ip_address, instructions[1], "get");
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
