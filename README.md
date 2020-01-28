@@ -39,6 +39,26 @@ Use following command to join:
 - `remove [mp3 name]` - deletes mp3 file from database
 - `exit` - exit network
 
+## Crates used:
+
+    clap
+    
+    get_if_addrs
+    
+    serde
+    
+    serde_json
+    
+    local_ipaddress
+    
+    rand
+    
+    prettytable-rs
+    
+    colored
+    
+    rodio
+
 ## What is already working?
 - Creates a peer when starting program
 - Peer creates network if needed
