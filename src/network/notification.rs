@@ -81,4 +81,7 @@ pub enum Content {
     OrderSongRequest {
         song_name: String,
     },
+    DeleteFileRequest {
+        song_name: String,
+    }
 }

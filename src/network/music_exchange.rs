@@ -121,3 +121,24 @@ pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: Strin
         }
     };
 }
+
+/// Sends a request to delete redundant file
+pub fn delete_redundant_song_request(target: SocketAddr, from: SocketAddr, song_name: String) {
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            eprintln!("Failed to connect to {:?}", target);
+            return;
+        }
+    };
+    let not = Notification {
+        content: Content::DeleteFileRequest { song_name },
+        from,
+    };
+    match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}

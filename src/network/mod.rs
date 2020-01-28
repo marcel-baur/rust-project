@@ -296,7 +296,17 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             if peer.get_db().get_data().contains_key(&song_name) {
                 if instr == REMOVE {
                     //Remove und read_file_exists und delte dort
-                    println!("remove file from database");
+                    peer.delete_file_from_database(&song_name);
+
+                    let id = SystemTime::now();
+                    peer.add_new_request(&id, instr);
+
+                    for (_key, value) in &peer.network_table {
+                        if _key != &peer.name {
+                            read_file_exist(*value, peer.ip_address, &song_name, id);
+                        }
+                    }
+                    println!("Remove file {} from database", &song_name);
                 } else if instr == PLAY {
                     //play file
                 }
@@ -314,7 +324,6 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         }
         Content::ExistFile { song_name, id } => {
             let exist = peer.does_file_exist(song_name.as_ref());
-            println!("{}", &exist);
             if exist {
                 send_exist_response(sender, peer.ip_address, song_name.as_ref(), id);
             }
@@ -365,9 +374,13 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
                     peer.process_store_request((key.clone(), value.clone()));
                 },
                 REMOVE => {
-                    println!("file löschen {}", &key);
+                    println!("Remove file!!");
+                    peer.delete_file_from_database(&key);
                 },
             }
+        }
+        Content::DeleteFileRequest { song_name} => {
+
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {

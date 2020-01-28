@@ -12,7 +12,7 @@ pub struct Peer {
     pub name: String,
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
-    database: Database,
+    pub database: Database,
     pub open_request_table: HashMap<SystemTime, Instructions>,
 }
 
@@ -71,6 +71,10 @@ impl Peer {
 
     pub fn delete_handled_request(&mut self, time: &SystemTime) {
         self.open_request_table.remove(time);
+    }
+
+    pub fn delete_file_from_database(&mut self, song_name: &str) {
+        self.database.data.remove(song_name);
     }
 
     pub fn drop_peer_by_ip(&mut self, addr: &SocketAddr) {
