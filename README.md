@@ -32,6 +32,7 @@ Use following command to join:
 
 ## Usage
 - `help` - get the instruction menu
+- `status` - show current state of peer
 - `push [mp3 name] [direction to mp3]` - add mp3 to database
 - `get [mp3 name]` - download the mp3 file from database
 - `play [mp3 name]` - download the mp3 file from the database and play it
@@ -58,6 +59,10 @@ Use following command to join:
     colored
     
     rodio
+    
+    log
+    
+    log4rs
 
 ## What is already working?
 - Creates a peer when starting program
@@ -71,6 +76,8 @@ Use following command to join:
 - Redundancy for saving files
 - Get a file and play it
 - Error handling has greatly improved
+- Remove files from database
+- Exit network and redistribute files from database
 
 ## What are the next steps?
 - Some more error handling
