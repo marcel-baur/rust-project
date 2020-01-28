@@ -1,3 +1,12 @@
+# Rust Project Group C
+
+A distributed key-value database storing audio files for sharing and streaming music.
+
+
+
+Our database is distributed in an interconnected peer to peer network. Storage resources are shared between peers. Every user that
+wants to be part of the network to access files must also provide storage to the database.
+
 The graphic illustrates the structure of the network, which is fully meshed.
 This is optimal for smaller communities that want to privately share their music through a decentralised system.
 
