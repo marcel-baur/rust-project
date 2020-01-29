@@ -1,11 +1,12 @@
 use prettytable::format;
 extern crate colored;
-use crate::utils;
 use crate::network::peer::Peer;
 use crate::network::{
     send_delete_peer_request, send_play_request, send_read_request, send_status_request,
     send_write_request,
 };
+use crate::utils;
+use crate::utils::Instructions::{GET, REMOVE};
 use colored::*;
 use std::error::Error;
 use std::fs;
@@ -15,7 +16,6 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
-use crate::utils::Instructions::{GET, REMOVE};
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -74,7 +74,10 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                         Ok(_) => {}
                         Err(e) => {
                             eprintln!("Failed to push {} to database", instructions[1]);
-                            error!("Could not push {:?} to the database, error code {:?}", instructions, e);
+                            error!(
+                                "Could not push {:?} to the database, error code {:?}",
+                                instructions, e
+                            );
                         }
                     };
                 } else {

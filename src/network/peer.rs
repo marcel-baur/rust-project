@@ -1,10 +1,10 @@
 use crate::database::Database;
 use crate::network::get_own_ip_address;
+use crate::utils::Instructions;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
 use std::time::SystemTime;
-use crate::utils::Instructions;
 
 /// Represents a Peer in the network
 #[derive(Clone)]

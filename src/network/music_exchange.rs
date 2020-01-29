@@ -1,7 +1,7 @@
-use crate::network::notification::{Content, Notification, tcp_request_with_notification};
-use std::net::{SocketAddr};
-use std::time::SystemTime;
+use crate::network::notification::{tcp_request_with_notification, Content, Notification};
 use crate::utils::Instructions;
+use std::net::SocketAddr;
+use std::time::SystemTime;
 
 /// Sends a request to the other peers to check if they have the wanted file
 pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
@@ -50,7 +50,6 @@ pub fn send_get_file_reponse(
     value: Vec<u8>,
     instr: Instructions,
 ) {
-
     let not = Notification {
         content: Content::GetFileResponse {
             instr,

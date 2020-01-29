@@ -1,9 +1,9 @@
 use crate::network::response::Message;
+use crate::utils::Instructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
-use std::time::SystemTime;
-use crate::utils::Instructions;
 use std::process;
+use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Notification {
@@ -104,7 +104,6 @@ pub fn tcp_request_with_notification(target: SocketAddr, notification: Notificat
             println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
-
 }
 
 fn handle_error(content: Content, target: SocketAddr) {

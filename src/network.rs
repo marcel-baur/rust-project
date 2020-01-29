@@ -8,22 +8,27 @@ mod handshake;
 mod music_exchange;
 mod notification;
 pub mod peer;
-mod response;
 mod request;
+mod response;
 
 extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::{play_music};
-use crate::utils::{HEARTBEAT_SLEEP_DURATION, Instructions};
-use crate::network::notification::*;
-use crate::network::peer::{create_peer, Peer};
-use crate::network::response::*;
+use crate::audio::play_music;
 use crate::shell::{print_external_files, spawn_shell};
+use crate::utils::{Instructions, HEARTBEAT_SLEEP_DURATION};
+use handshake::send_table_request;
+use notification::*;
+use peer::{create_peer, Peer};
+use request::{
+    change_peer_name, delete_file_request, delete_from_network, dropped_peer, exist_file,
+    exist_file_response, exit_peer, find_file, get_file, get_file_response, order_song_request,
+    push_to_db, redundant_push_to_db, request_for_table, self_status_request, send_network_table,
+    send_network_update_table, status_request,
+};
+use response::*;
 use std::collections::HashMap;
-use crate::network::request::{push_to_db, redundant_push_to_db, change_peer_name, send_network_table, request_for_table, find_file, exist_file, send_network_update_table, exist_file_response, get_file, get_file_response, delete_file_request, exit_peer, delete_from_network, dropped_peer, order_song_request, self_status_request, status_request};
-use crate::network::handshake::send_table_request;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -236,7 +241,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::GetFileResponse { value, instr, key } => {
             get_file_response(instr, key, value, peer);
         }
-        Content::DeleteFileRequest { song_name} => {
+        Content::DeleteFileRequest { song_name } => {
             delete_file_request(song_name, peer);
         }
         Content::Response { .. } => {}
@@ -311,7 +316,7 @@ pub fn send_write_request(
             from: origin,
         };
         match serde_json::to_writer(&stream, &not) {
-            Ok(_ser) => {},
+            Ok(_ser) => {}
             Err(e) => {
                 error!("Could not serialize {:?}, Error: {:?}", &not, e);
                 println!("Failed to serialize SendRequest {:?}", &not);
@@ -354,7 +359,7 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
         from: origin,
     };
     match serde_json::to_writer(&stream, &not) {
-        Ok(_ser) => {},
+        Ok(_ser) => {}
         Err(e) => {
             error!("Could not serialize {:?}, Error: {:?}", &not, e);
             println!("Failed to serialize Response {:?}", &not);

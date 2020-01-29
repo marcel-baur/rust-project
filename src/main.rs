@@ -8,10 +8,10 @@ use clap::{App, Arg};
 use std::net::SocketAddr;
 
 mod audio;
-mod utils;
 mod database;
 mod network;
 mod shell;
+mod utils;
 
 fn main() {
     log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
@@ -69,11 +69,11 @@ fn main() {
         if let Err(e) = network::startup(name, port, None) {
             error!("Could not join network {:?}", e);
         }
-//        match network::startup(name, port, None) {
-//            Ok(_) => {}
-//            Err(e) => {
-//                error!("Could not join network {:?}", e);
-//            }
-//        };
+        //        match network::startup(name, port, None) {
+        //            Ok(_) => {}
+        //            Err(e) => {
+        //                error!("Could not join network {:?}", e);
+        //            }
+        //        };
     }
 }

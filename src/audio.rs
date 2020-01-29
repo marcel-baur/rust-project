@@ -1,10 +1,10 @@
 use crate::network::peer::Peer;
 use crate::network::send_read_request;
+use crate::utils::Instructions::PLAY;
 use rodio::Source;
 use std::fs;
 use std::io::BufReader;
 use std::string::ToString;
-use crate::utils::Instructions::PLAY;
 
 /// plays audio when mp3 is in database otherwise sends request to find file
 /// # Arguments:

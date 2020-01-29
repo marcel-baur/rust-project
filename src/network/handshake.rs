@@ -2,7 +2,7 @@ use crate::network::notification::*;
 use crate::network::peer::Peer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 use std::str::FromStr;
 use std::string::ToString;
 
