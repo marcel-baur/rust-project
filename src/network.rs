@@ -15,7 +15,7 @@ extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::play_music;
+use crate::audio::{play_music, MusicState};
 use crate::shell::{print_external_files, spawn_shell};
 use crate::utils::{Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
@@ -263,11 +263,8 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
         Content::StatusResponse { files, name } => {
             print_external_files(files, name);
         }
-        Content::PlayAudioRequest { name } => match play_music(peer, name.as_str()) {
-            Ok(_) => {}
-            Err(e) => {
-                error!("{}", e);
-            }
+        Content::PlayAudioRequest { name , state} => {
+            play_music(peer, name.as_str(), state);
         },
         Content::DroppedPeer { addr } => {
             dropped_peer(addr, peer);
@@ -428,7 +425,7 @@ fn send_local_file_status(
     tcp_request_with_notification(target, not);
 }
 
-pub fn send_play_request(name: &str, from: SocketAddr) {
+pub fn send_play_request(name: &str, from: SocketAddr, state: MusicState) {
     let stream = match TcpStream::connect(from) {
         Ok(s) => s,
         Err(_e) => {
@@ -439,6 +436,7 @@ pub fn send_play_request(name: &str, from: SocketAddr) {
     let not = Notification {
         content: Content::PlayAudioRequest {
             name: name.to_string(),
+            state,
         },
         from,
     };

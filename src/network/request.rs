@@ -150,13 +150,7 @@ pub fn get_file_response(instr: Instructions, key: String, value: Vec<u8>, peer:
     match instr {
         PLAY => {
             //save to tmp and play audio
-            match play_music_by_vec(&value) {
-                Ok(_) => {}
-                Err(_) => {
-                    println!("Could not play the requested file {}", &key);
-                    error!("Failed to play music from {}", &key);
-                }
-            };
+
         }
         GET => {
             //Download mp3 file
