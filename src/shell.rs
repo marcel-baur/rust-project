@@ -16,7 +16,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
-use crate::audio::MusicState::{PAUSE, STOP, PLAY};
+use crate::audio::MusicState::{PAUSE, STOP, PLAY, CONTINUE};
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -132,25 +132,13 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 }
             }
             Some(&"pause") => {
-                if instructions.len() == 2 {
-                    send_play_request("", peer_clone.ip_address, PAUSE);
-                } else {
-                    println!("File name is missing. For more information type help.\n");
-                }
+                send_play_request("", peer_clone.ip_address, PAUSE);
             }
             Some(&"stop") => {
-                if instructions.len() == 2 {
-                    send_play_request(instructions[1], peer_clone.ip_address, STOP);
-                } else {
-                    println!("File name is missing. For more information type help.\n");
-                }
+                send_play_request("", peer_clone.ip_address, STOP);
             }
             Some(&"continue") => {
-                if instructions.len() == 2 {
-                    send_play_request(instructions[1], peer_clone.ip_address, PAUSE);
-                } else {
-                    println!("File name is missing. For more information type help.\n");
-                }
+                send_play_request("", peer_clone.ip_address, CONTINUE);
             }
 
             _ => println!("No valid instructions. Try help!\n"),

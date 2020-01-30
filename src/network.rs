@@ -15,7 +15,7 @@ extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::{create_sink, play_music, MusicState, pause_current_playing_music};
+use crate::audio::{create_sink, play_music, MusicState, pause_current_playing_music, stop_current_playing_music, continue_paused_music};
 use crate::shell::{print_external_files, spawn_shell};
 use crate::utils::{Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
@@ -29,7 +29,6 @@ use request::{
 };
 use response::*;
 use std::collections::HashMap;
-use crate::audio::MusicState::PLAY;
 use rodio::Sink;
 
 #[cfg(target_os = "macos")]
@@ -243,7 +242,7 @@ fn handle_notification(notification: Notification, peer: &mut Peer, sink: Arc<Si
             get_file(instr, key, sender, peer);
         }
         Content::GetFileResponse { value, instr, key } => {
-            get_file_response(instr, key, value, peer);
+            get_file_response(instr, key, value, peer, sink);
         }
         Content::DeleteFileRequest { song_name } => {
             delete_file_request(song_name, peer);
@@ -269,8 +268,10 @@ fn handle_notification(notification: Notification, peer: &mut Peer, sink: Arc<Si
         }
         Content::PlayAudioRequest { name , state} => {
             match state {
-                MusicState::PLAY => play_music(peer, name.as_str(), state, sink),
+                MusicState::PLAY => play_music(peer, name.as_str(), sink),
                 MusicState::PAUSE => pause_current_playing_music(sink),
+                MusicState::STOP => stop_current_playing_music(sink),
+                MusicState::CONTINUE => continue_paused_music(sink),
                 _ => {},
             };
         },
