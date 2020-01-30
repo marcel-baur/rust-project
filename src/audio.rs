@@ -3,10 +3,13 @@ use crate::network::send_read_request;
 use crate::utils::Instructions::PLAY;
 use rodio::{Sink};
 use std::{fs, thread};
-use std::io::BufReader;
+use std::io::{BufReader, Cursor};
 use std::string::ToString;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::io::BufRead;
+use std::io::Read;
+
 
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -44,7 +47,7 @@ pub fn play_music(peer: &mut Peer, name: &str, sink: &mut MusicPlayer) {
             return;
         }
     };
-    play_music_by_vec(sound_data, sink);
+    play_music_by_vec(sound_data.clone(), sink);
 }
 
 pub fn pause_current_playing_music(sink: &mut MusicPlayer) {
@@ -60,20 +63,13 @@ pub fn continue_paused_music(sink: &mut MusicPlayer) {
     sink.sink.play();
 }
 
-pub fn play_music_by_vec(music: &Vec<u8>, sink: &mut MusicPlayer) -> Result<(), String> {
-    match fs::write("file/tmp.mp3", music) {
-        Ok(_) => {}
-        Err(_e) => return Err("could not save file to disk".to_string()),
-    };
-    let file = match std::fs::File::open("file/tmp.mp3") {
-        Ok(file) => file,
-        Err(_e) => return Err("could not read file from disk".to_string()),
-    };
-    let source = match rodio::Decoder::new(BufReader::new(file)) {
+pub fn play_music_by_vec(music: Vec<u8>, sink: &mut MusicPlayer) -> Result<(), String> {
+    let music_a = Cursor::new(music);
+    let file = BufReader::new(music_a);
+    let source = match rodio::Decoder::new(file) {
         Ok(decoded_source) => decoded_source,
         Err(_e) => return Err("file could not be decoded. is it mp3?".to_string()),
     };
-
     if sink.is_playing {
         sink.sink.append(source);
     } else {
