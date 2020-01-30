@@ -15,7 +15,7 @@ extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::{create_sink, play_music, MusicState, pause_current_playing_music, stop_current_playing_music, continue_paused_music};
+use crate::audio::{create_sink, play_music, MusicState, pause_current_playing_music, stop_current_playing_music, continue_paused_music, MusicPlayer};
 use crate::shell::{print_external_files, spawn_shell};
 use crate::utils::{Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
@@ -131,7 +131,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     let clone = arc.clone();
     let listen_ip = clone.lock().unwrap().ip_address;
     let listener = TcpListener::bind(&listen_ip).unwrap();
-    let sink = Arc::new(create_sink().unwrap());
+    let mut sink = create_sink().unwrap();
     println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
         let mut buf = String::new();
@@ -148,10 +148,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                     }
                 };
                 let mut peer = clone.lock().unwrap();
-                //                dbg!(&deserialized);
-                let sink_clone = sink.clone();
-                handle_notification(des, &mut peer, sink_clone);
-                //                handle_incoming_requests(deserialized, &mut peer);
+                handle_notification(des, &mut peer, &mut sink);
                 drop(peer);
                 // TODO: Response, handle duplicate key, redundancy
             }
@@ -207,7 +204,7 @@ fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
     }
 }
 
-fn handle_notification(notification: Notification, peer: &mut Peer, sink: Arc<Sink>) {
+fn handle_notification(notification: Notification, peer: &mut Peer, sink: &mut MusicPlayer) {
     dbg!(&notification);
     let sender = notification.from;
     match notification.content {
