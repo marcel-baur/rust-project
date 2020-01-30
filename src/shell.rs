@@ -133,7 +133,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"pause") => {
                 if instructions.len() == 2 {
-                    send_play_request(instructions[1], peer_clone.ip_address, PAUSE);
+                    send_play_request("", peer_clone.ip_address, PAUSE);
                 } else {
                     println!("File name is missing. For more information type help.\n");
                 }

@@ -15,7 +15,7 @@ extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::{play_music, MusicState};
+use crate::audio::{create_sink, play_music, MusicState, pause_current_playing_music};
 use crate::shell::{print_external_files, spawn_shell};
 use crate::utils::{Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
@@ -29,6 +29,8 @@ use request::{
 };
 use response::*;
 use std::collections::HashMap;
+use crate::audio::MusicState::PLAY;
+use rodio::Sink;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -130,6 +132,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     let clone = arc.clone();
     let listen_ip = clone.lock().unwrap().ip_address;
     let listener = TcpListener::bind(&listen_ip).unwrap();
+    let sink = Arc::new(create_sink().unwrap());
     println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
         let mut buf = String::new();
@@ -147,7 +150,8 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                 };
                 let mut peer = clone.lock().unwrap();
                 //                dbg!(&deserialized);
-                handle_notification(des, &mut peer);
+                let sink_clone = sink.clone();
+                handle_notification(des, &mut peer, sink_clone);
                 //                handle_incoming_requests(deserialized, &mut peer);
                 drop(peer);
                 // TODO: Response, handle duplicate key, redundancy
@@ -204,8 +208,8 @@ fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
     }
 }
 
-fn handle_notification(notification: Notification, peer: &mut Peer) {
-    //dbg!(&notification);
+fn handle_notification(notification: Notification, peer: &mut Peer, sink: Arc<Sink>) {
+    dbg!(&notification);
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
@@ -264,7 +268,11 @@ fn handle_notification(notification: Notification, peer: &mut Peer) {
             print_external_files(files, name);
         }
         Content::PlayAudioRequest { name , state} => {
-            play_music(peer, name.as_str(), state);
+            match state {
+                MusicState::PLAY => play_music(peer, name.as_str(), state, sink),
+                MusicState::PAUSE => pause_current_playing_music(sink),
+                _ => {},
+            };
         },
         Content::DroppedPeer { addr } => {
             dropped_peer(addr, peer);

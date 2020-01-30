@@ -2,12 +2,13 @@ use crate::network::peer::Peer;
 use crate::network::send_read_request;
 use crate::utils::Instructions::PLAY;
 use rodio::{Source, Sink};
-use std::fs;
+use std::{fs, thread};
 use std::io::BufReader;
 use std::string::ToString;
 use std::thread::sleep;
 use std::time::Duration;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -15,12 +16,20 @@ pub enum MusicState {
     PLAY, PAUSE, STOP
 }
 
+pub fn create_sink() -> Result<Sink, String> {
+    let device = match rodio::default_output_device() {
+        Some(device) => device,
+        None => return Err("No output device found".to_string()),
+    };
+    Ok(Sink::new(&device))
+}
+
 /// plays audio when mp3 is in database otherwise sends request to find file
 /// # Arguments:
 ///
 /// * `name` - String including mp3 name (key in our database)
 ///
-pub fn play_music(peer: &mut Peer, name: &str, state: MusicState) {
+pub fn play_music(peer: &mut Peer, name: &str, state: MusicState, sink: Arc<Sink>) {
     // we play sound when it is in our own database, otherwise we ask for the location
     let sound_data = match peer.get_db().data.get(name) {
         Some(data) => data,
@@ -29,14 +38,14 @@ pub fn play_music(peer: &mut Peer, name: &str, state: MusicState) {
             return
         }
     };
-    play_music_by_vec(sound_data, state);
+    play_music_by_vec(sound_data, state, sink);
 }
 
-pub fn play_music_by_vec(music: &Vec<u8>, state: MusicState) -> Result<(), String> {
-    let device = match rodio::default_output_device() {
-        Some(device) => device,
-        None => return Err("No output device found".to_string()),
-    };
+pub fn pause_current_playing_music(sink: Arc<Sink>) {
+    sink.pause();
+}
+
+pub fn play_music_by_vec(music: &Vec<u8>, state: MusicState, sink: Arc<Sink>) -> Result<(), String> {
     match fs::write("file/tmp.mp3", music) {
         Ok(_) => {}
         Err(_e) => return Err("could not save file to disk".to_string()),
@@ -50,8 +59,15 @@ pub fn play_music_by_vec(music: &Vec<u8>, state: MusicState) -> Result<(), Strin
         Err(_e) => return Err("file could not be decoded. is it mp3?".to_string()),
     };
 
-//    let sink= Sink::new(&device);
-//    sink.append(source);
+    let listener = thread::Builder::new()
+        .name("AudioThread".to_string())
+        .spawn(move || {
+            sink.append(source);
+            sink.sleep_until_end();
+        })
+        .unwrap();
+
+    //hier neuen thread mac hen
     //sink.detach();
 
 
@@ -74,12 +90,12 @@ pub fn play_music_by_vec(music: &Vec<u8>, state: MusicState) -> Result<(), Strin
     //@TODO use sink here to control audio, i.e. pause, stop
     // BufferReader extension trait?
     //rodio::play_raw(&device, source.convert_samples());
-    rodio::play_once(&device, source.convert_samples());
-    match fs::remove_file("file/tmp.mp3") {
+    //rodio::play_once(&device, source.convert_samples());
+    /**match fs::remove_file("file/tmp.mp3") {
         Ok(_) => return Ok(()),
         Err(_e) => {
             return Err("Could not delete file from disk".to_string());
         } //TODO review},
-    };
-    //    Ok(())
+    };**/
+        Ok(())
 }
