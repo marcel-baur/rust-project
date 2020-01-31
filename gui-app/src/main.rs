@@ -15,12 +15,28 @@ use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, M
 
 use std::env::args;
 
+
+// Basic CSS: we change background color, we set font color to black and we set it as bold.
+const STYLE: &str = "
+#headline {
+    color: blue;
+    font-weight: bold;
+    font-size: 32px;
+}
+#subheadline {
+    font-size: 12px;
+}
+#scrollview {
+    padding: 10px;
+}";
+
+
 fn build_ui(application: &gtk::Application) {
     let window = ApplicationWindow::new(application);
 
-    window.set_title("FEFM Database Music");
+    window.set_title("MEFF");
     window.set_position(WindowPosition::Center);
-    window.set_size_request(400, 400);
+    window.set_size_request(600, 600);
 
     let v_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
 
@@ -47,7 +63,12 @@ fn build_ui(application: &gtk::Application) {
     let (key, modifier) = gtk::accelerator_parse("<Primary>Q");
     quit.add_accelerator("activate", &accel_group, key, modifier, AccelFlags::VISIBLE);
 
-    let label = Label::new(Some("FEFM Database Music"));
+    let label = Label::new(Some("MEFF"));
+    let label2 = Label::new(Some("Music Entertainment For Friends"));
+
+    gtk::WidgetExt::set_widget_name(&label, "headline");
+    gtk::WidgetExt::set_widget_name(&label2, "subheadline");
+
     let button = gtk::Button::new_with_label("Choose file");
     //FOR CSS
     gtk::WidgetExt::set_widget_name(&button, "button1");
@@ -70,19 +91,37 @@ fn build_ui(application: &gtk::Application) {
 
     let search_button = gtk::Button::new_with_label("search for music");
 
-
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
     let textbox = gtk::Entry::new();
     let h_box_label = Label::new(Some("Titel"));
+
+    let list_box = gtk::ListBox::new();
+
+    for x in 0..100 {
+        let mut list_box_row = gtk::ListBoxRow::new();
+        let hbox = gtk::Box::new(gtk::Orientation::Vertical, 5);
+        let label = Label::new(Some("Abba"));
+        hbox.pack_start(&label, false, false, 5);
+        list_box_row.add(&hbox);
+        list_box_row.show_all();
+        list_box.add(&list_box_row);
+    }
 
     h_box.pack_start(&h_box_label, false, true, 0);
     h_box.pack_start(&textbox, false, true, 0);
 
     v_box.pack_start(&menu_bar, false, false, 0);
     v_box.pack_start(&label, false, true, 0);
+    v_box.pack_start(&label2, false, true, 0);
     v_box.pack_start(&h_box, false, true, 0);
     v_box.pack_start(&button, false, true, 0);
     v_box.pack_start(&search_button, false, true, 0);
+    let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+    gtk::WidgetExt::set_widget_name(&scrolled_window, "scrollview");
+    scrolled_window.add(&list_box);
+    scrolled_window.set_size_request(200, 200);
+    scrolled_window.set_valign(gtk::Align::Start);
+    v_box.pack_start(&scrolled_window, false, false, 10);
     window.add(&v_box);
     window.show_all();
 
@@ -101,12 +140,26 @@ fn build_ui(application: &gtk::Application) {
 
 fn main() {
     let application = gtk::Application::new(
-        Some("com.github.gtk-rs.examples.menu_bar"),
+        Some("com.meef"),
         Default::default(),
     )
         .expect("Initialization failed...");
 
-    application.connect_activate(|app| {
+    application.connect_startup(|app| {
+        // The CSS "magic" happens here.
+        let provider = gtk::CssProvider::new();
+        provider
+            .load_from_data(STYLE.as_bytes())
+            .expect("Failed to load CSS");
+        // We give the CssProvided to the default screen so the CSS rules we added
+        // can be applied to our window.
+        gtk::StyleContext::add_provider_for_screen(
+            &gdk::Screen::get_default().expect("Error initializing gtk css provider."),
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+
+        // We build the application UI.
         build_ui(app);
     });
 
