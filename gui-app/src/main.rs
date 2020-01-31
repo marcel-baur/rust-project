@@ -23,7 +23,11 @@ const STYLE: &str = "
     font-size: 32px;
 }
 #subheadline {
-    font-size: 12px;
+    font-size: 18px;
+}
+#button {
+    background: white;
+    border-color: white;
 }
 #scrollview {
     padding: 10px;
@@ -100,13 +104,18 @@ fn build_ui(application: &gtk::Application) {
     let textbox = gtk::Entry::new();
     let h_box_label = Label::new(Some("Titel"));
 
-    let list_box = gtk::ListBox::new();
+    let list_box = gtk::ListBoxBuilder::new().activate_on_single_click(true).build();
 
     for x in 0..100 {
         let mut list_box_row = gtk::ListBoxRow::new();
         let hbox = gtk::Box::new(gtk::Orientation::Vertical, 5);
-        let label = Label::new(Some("Abba"));
-        hbox.pack_start(&label, false, false, 5);
+        //let label = Label::new(Some("Abba"));
+        let label_button = gtk::Button::new_with_label("Abba");
+        gtk::WidgetExt::set_widget_name(&label_button, "button");
+        hbox.pack_start(&label_button, false, false, 5);
+        list_box_row.connect_activate( move |_| {
+            println!("row {} return", x);
+        });
         list_box_row.add(&hbox);
         list_box_row.show_all();
         list_box.add(&list_box_row);
