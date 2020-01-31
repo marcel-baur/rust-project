@@ -1,5 +1,5 @@
 [package]
-name = "gui-app"
+name = "MEFF"
 version = "0.1.0"
 authors = ["Fabian Frey <fabian@appdafuer.com>"]
 edition = "2018"

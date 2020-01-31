@@ -11,12 +11,14 @@ extern crate gtk;
 use gio::prelude::*;
 use glib::clone;
 use gtk::prelude::*;
-use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
+use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, IconSize, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
 
 use std::env::args;
 
 fn build_ui(application: &gtk::Application) {
     let window = ApplicationWindow::new(application);
+
+    let second_window = ApplicationWindow::new(application);
 
     window.set_title("FEFM Database Music");
     window.set_position(WindowPosition::Center);
@@ -75,6 +77,58 @@ fn build_ui(application: &gtk::Application) {
     let textbox = gtk::Entry::new();
     let h_box_label = Label::new(Some("Titel"));
 
+
+    let middle_separator = gtk::Separator::new(gtk::Orientation::Vertical);
+
+    let bottom_separator = gtk::Separator::new(gtk::Orientation::Horizontal);
+
+    let grid = gtk::Grid::new();
+    grid.attach(&middle_separator, 1, 2, 1, 1);
+    grid.attach(&bottom_separator, 0, 1, 3, 1);
+    grid.attach(&v_box, 0, 2, 1, 1);
+    grid.set_column_homogeneous(true);
+
+
+    let mut is_playing = false;
+
+    let controller_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+
+    let play_music = gtk::Button::new();
+    //let pause_music = gtk::Button::new();
+    let stop_music = gtk::Button::new();
+
+    let image_play = gtk::Image::new_from_file("src/play.png");
+    let image_pause = gtk::Image::new_from_file("src/pause.png");
+    let image_stop = gtk::Image::new_from_file("src/stop.png");
+    play_music.set_image(Some(&image_play));
+    //pause_music.set_image(Some(&image_pause));
+    stop_music.set_image(Some(&image_stop));
+
+    play_music.connect_clicked(move |_| {
+        println!("Clicked play");
+//        let mut playing = is_playing.clone();
+//        if playing {
+//            play_music.set_image(Some(&image_play));
+//            playing = false;
+//        } else {
+//            play_music.set_image(Some(&image_pause));
+//            playing = true;
+//        }
+    });
+
+    stop_music.connect_clicked(move |_| {
+        println!("Clicked stop");
+    });
+
+
+
+    controller_box.pack_start(&play_music, false, true, 0);
+    //controller_box.pack_start(&pause_music, false, true, 0);
+    controller_box.pack_start(&stop_music, false, true, 0);
+    controller_box.set_halign(gtk::Align::Center);
+    controller_box.set_valign(gtk::Align::End);
+    //status_bar.pack_start(&controller_box, false, true, 0);
+
     h_box.pack_start(&h_box_label, false, true, 0);
     h_box.pack_start(&textbox, false, true, 0);
 
@@ -83,7 +137,9 @@ fn build_ui(application: &gtk::Application) {
     v_box.pack_start(&h_box, false, true, 0);
     v_box.pack_start(&button, false, true, 0);
     v_box.pack_start(&search_button, false, true, 0);
-    window.add(&v_box);
+    v_box.pack_start(&controller_box, true, true, 10);
+    //window.add(&v_box);
+    window.add(&grid);
     window.show_all();
 
     about.connect_activate(move |_| {
