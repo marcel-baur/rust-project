@@ -1,5 +1,5 @@
 [package]
-name = "kvd-rust"
+name = "meff-music"
 version = "0.1.0"
 authors = ["Marcel Baur <mail@marcelbaur.io>", "Fabian Frey <mail@fabianfrey.de>", "Elena Liebl <elena_liebl@web.de>", "Franziska Lang <franziska@langfeldafing.de>"]
 edition = "2018"
@@ -16,3 +16,5 @@ rand = "0.7.2"
 prettytable-rs = "^0.8"
 colored = "1.9.2"
 rodio = "0.10.0"
+log4rs = "0.9.0"
+log = "0.4.8"

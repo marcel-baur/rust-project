@@ -1,18 +1,23 @@
 extern crate clap;
 #[macro_use]
 extern crate prettytable;
-
+#[macro_use]
+extern crate log;
+extern crate log4rs;
 use clap::{App, Arg};
 use std::net::SocketAddr;
 
-mod constants;
+mod audio;
 mod database;
 mod network;
 mod shell;
-mod audio;
+mod utils;
 
 fn main() {
-    let matches = App::new("music_p2p")
+    log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
+
+    info!("Starting...");
+    let matches = App::new("MEFF-Music")
         .version("0.1.0")
         .arg(
             Arg::with_name("own-name")
@@ -43,24 +48,32 @@ fn main() {
         let addr;
         match matches.value_of("ip-address") {
             Some(ip) => {
-                dbg!(ip);
+                info!("{}", ip);
                 addr = match ip.parse::<SocketAddr>() {
                     Ok(socket_addr) => socket_addr,
-                    Err(e) => {
-                        println!("Could not parse ip address of remote Peer");
+                    Err(_) => {
+                        error!("Could not parse ip address of remote Peer");
                         return;
                     }
                 }
             }
             None => {
-                println!("Could not parse ip-address");
+                error!("Could not parse ip-address");
                 return;
             }
         }
-        network::join_network(name, port, addr);
+        if let Err(e) = network::startup(name, port, Some(addr)) {
+            error!("Could not join network {:?}", e);
+        }
     } else {
-        // TODO: Create new p2p network
-        let join_handle = network::startup(name.parse().unwrap(), port.parse().unwrap());
-        join_handle.join().expect_err("Could not spawn peer");
+        if let Err(e) = network::startup(name, port, None) {
+            error!("Could not join network {:?}", e);
+        }
+        //        match network::startup(name, port, None) {
+        //            Ok(_) => {}
+        //            Err(e) => {
+        //                error!("Could not join network {:?}", e);
+        //            }
+        //        };
     }
 }

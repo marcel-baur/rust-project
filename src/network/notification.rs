@@ -1,8 +1,10 @@
 use crate::network::response::Message;
+use crate::utils::Instructions;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::net::SocketAddr;
+use std::net::{SocketAddr, TcpStream};
+use std::process;
 use std::time::SystemTime;
+use crate::audio::MusicState;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Notification {
@@ -39,18 +41,21 @@ pub enum Content {
         value: String,
     },
     FindFile {
-        key: String,
+        instr: Instructions,
+        song_name: String,
     },
     GetFile {
+        instr: Instructions,
         key: String,
     },
     GetFileResponse {
+        instr: Instructions,
         key: String,
         value: Vec<u8>,
     },
     ExistFile {
+        song_name: String,
         id: SystemTime,
-        key: String,
     },
     ExitPeer {
         addr: SocketAddr,
@@ -59,16 +64,58 @@ pub enum Content {
         name: String,
     },
     ExistFileResponse {
-        key: String,
+        song_name: String,
         id: SystemTime,
     },
-    StatusRequest {
-    },
+    StatusRequest {},
     SelfStatusRequest,
     StatusResponse {
         files: Vec<String>,
+        name: String,
     },
     PlayAudioRequest {
         name: String,
+        state: MusicState,
+    },
+    DroppedPeer {
+        addr: SocketAddr,
+    },
+    Heartbeat,
+    OrderSongRequest {
+        song_name: String,
+    },
+    DeleteFileRequest {
+        song_name: String,
+    },
+}
+
+pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_error(notification.content, target);
+            return;
+        }
+    };
+
+    let not = notification;
+
+    match serde_json::to_writer(&stream, &not) {
+        Ok(ser) => ser,
+        Err(_e) => {
+            println!("Failed to serialize SendRequest {:?}", &not);
+        }
+    };
+}
+
+fn handle_error(content: Content, target: SocketAddr) {
+    match content {
+        Content::RequestForTable { .. } => {
+            println!("There is no existing network containing this IP {:?}\nPlease check the IP-Address you want to join", target);
+            process::exit(0);
+        }
+        _ => {
+            eprintln!("Failed to connect to {:?}", target);
+        }
     }
 }
