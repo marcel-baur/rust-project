@@ -15,6 +15,20 @@ use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, M
 
 use std::env::args;
 
+// Basic CSS: we change background color, we set font color to black and we set it as bold.
+const STYLE: &str = "
+#headline {
+    color: blue;
+    font-weight: bold;
+    font-size: 32px;
+}
+#subheadline {
+    font-size: 12px;
+}
+#scrollview {
+    padding: 10px;
+}";
+
 fn build_ui(application: &gtk::Application) {
     let window = ApplicationWindow::new(application);
 
@@ -115,6 +129,7 @@ fn build_ui(application: &gtk::Application) {
     let image_play = gtk::Image::new_from_file("src/play.png");
     let image_pause = gtk::Image::new_from_file("src/pause.png");
     let image_stop = gtk::Image::new_from_file("src/stop.png");
+
     play_music.set_image(Some(&image_play));
     //pause_music.set_image(Some(&image_pause));
     stop_music.set_image(Some(&image_stop));
