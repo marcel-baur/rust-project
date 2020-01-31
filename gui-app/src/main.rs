@@ -27,6 +27,9 @@ const STYLE: &str = "
 }
 #scrollview {
     padding: 10px;
+}
+#frame{
+    padding: 10px;
 }";
 
 fn build_ui(application: &gtk::Application) {
@@ -36,7 +39,10 @@ fn build_ui(application: &gtk::Application) {
     window.set_position(WindowPosition::Center);
     window.set_size_request(600, 600);
 
-    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    let v_box_window = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    let h_box_window = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
+    let v_box2 = gtk::Box::new(gtk::Orientation::Vertical, 5);
 
     let menu = Menu::new();
     let accel_group = AccelGroup::new();
@@ -106,24 +112,14 @@ fn build_ui(application: &gtk::Application) {
         list_box.add(&list_box_row);
     }
 
-
-    let middle_separator = gtk::Separator::new(gtk::Orientation::Vertical);
-
-    let bottom_separator = gtk::Separator::new(gtk::Orientation::Horizontal);
-
-    let grid = gtk::Grid::new();
-    grid.attach(&middle_separator, 1, 2, 1, 1);
-    grid.attach(&bottom_separator, 0, 1, 3, 1);
-    grid.attach(&v_box, 0, 2, 1, 1);
-    grid.set_column_homogeneous(true);
-
-
     let mut is_playing = false;
 
+    let title_db = Label::new(Some("Your Music"));
+    let upload_button = gtk::Button::new_with_label("Upload");
     let controller_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
 
     let play_music = gtk::Button::new();
-    //let pause_music = gtk::Button::new();
+    let pause_music = gtk::Button::new();
     let stop_music = gtk::Button::new();
 
     let image_play = gtk::Image::new_from_file("src/play.png");
@@ -131,7 +127,7 @@ fn build_ui(application: &gtk::Application) {
     let image_stop = gtk::Image::new_from_file("src/stop.png");
 
     play_music.set_image(Some(&image_play));
-    //pause_music.set_image(Some(&image_pause));
+    pause_music.set_image(Some(&image_pause));
     stop_music.set_image(Some(&image_stop));
 
     play_music.connect_clicked(move |_| {
@@ -150,34 +146,71 @@ fn build_ui(application: &gtk::Application) {
         println!("Clicked stop");
     });
 
+    let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+    gtk::WidgetExt::set_widget_name(&scrolled_window, "scrollview");
+    scrolled_window.add(&list_box);
+    scrolled_window.set_size_request(100, 200);
+    scrolled_window.set_valign(gtk::Align::Start);
 
+    let frame = gtk::Frame::new(Option::from("Music Controll"));
+    gtk::WidgetExt::set_widget_name(&frame, "frame");
+
+    let middle_sep = gtk::Separator::new(gtk::Orientation::Vertical);
 
     controller_box.pack_start(&play_music, false, true, 0);
-    //controller_box.pack_start(&pause_music, false, true, 0);
+    controller_box.pack_start(&pause_music, false, true, 0);
     controller_box.pack_start(&stop_music, false, true, 0);
     controller_box.set_halign(gtk::Align::Center);
     controller_box.set_valign(gtk::Align::End);
-    //status_bar.pack_start(&controller_box, false, true, 0);
+
+    v_box2.pack_start(&title_db, false, true, 0);
+    v_box2.pack_start(&scrolled_window, false, true, 0);
+    v_box2.pack_start(&upload_button, false, true, 0);
 
     h_box.pack_start(&h_box_label, false, true, 0);
     h_box.pack_start(&textbox, false, true, 0);
 
-    v_box.pack_start(&menu_bar, false, false, 0);
-    v_box.pack_start(&label, false, true, 0);
-    v_box.pack_start(&label2, false, true, 0);
     v_box.pack_start(&h_box, false, true, 0);
     v_box.pack_start(&button, false, true, 0);
     v_box.pack_start(&search_button, false, true, 0);
-    let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
-    gtk::WidgetExt::set_widget_name(&scrolled_window, "scrollview");
-    scrolled_window.add(&list_box);
-    scrolled_window.set_size_request(200, 200);
-    scrolled_window.set_valign(gtk::Align::Start);
-    v_box.pack_start(&scrolled_window, false, false, 10);
-    window.add(&v_box);
-    v_box.pack_start(&controller_box, true, true, 10);
-    //window.add(&v_box);
-    window.add(&grid);
+
+    h_box_window.pack_start(&v_box, true, true, 10);
+    h_box_window.pack_start(&middle_sep, false, false, 0);
+    h_box_window.pack_start(&v_box2, true, true, 10);
+
+    frame.add(&h_box_window);
+
+    v_box_window.pack_start(&menu_bar, false, false, 0);
+    v_box_window.pack_start(&label, false, true, 0);
+    v_box_window.pack_start(&label2, false, true, 0);
+    v_box_window.pack_start(&frame, true, true, 10);
+    v_box_window.pack_start(&controller_box, true, true, 10);
+
+    window.add(&v_box_window);
+
+//
+//    let grid = gtk::Grid::new();
+//    grid.attach(&menu_bar, 0, 0, 3, 1);
+//    grid.attach(&label, 0, 1, 3, 1);
+//    grid.attach(&label2, 0, 2, 3, 1);
+//    grid.attach(&middle_sep_h, 0, 3, 3, 1);
+//    grid.attach(&v_box, 1, 4, 1, 1);
+//    grid.attach(&middle_sep_v, 2, 4, 3, 1);
+//    grid.attach(&scrolled_window, 3, 4, 1, 1);
+//    grid.attach(&middle_sep_h, 0, 3, 1, 1);
+//    grid.attach(&textbox, 0, 4, 1, 1);
+//    grid.attach(&h_box_label, 1, 4, 1, 1);
+//    grid.attach(&search_button, 0, 5, 1, 1);
+//    grid.attach(&search_button, 1, 5, 1, 1);
+//    grid.attach(&middle_sep_v, 2, 1, 1, 1);
+//    grid.attach(&scrolled_window, 3, 1, 1, 1);
+//    grid.attach(&bottom_separator, 0, 6, 3, 1);
+//    grid.attach(&controller_box, 0, 7, 3, 1);
+
+//    grid.set_column_homogeneous(true);
+//
+//
+//    window.add(&grid);
     window.show_all();
 
     about.connect_activate(move |_| {
