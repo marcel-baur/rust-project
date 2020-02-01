@@ -1,4 +1,4 @@
-use crate::audio::{play_music_by_vec, play_music, MusicPlayer};
+use crate::audio::{play_music, play_music_by_vec, MusicPlayer};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table_request,
     send_table_request, send_table_to_all_peers, update_table_after_delete,
@@ -14,11 +14,11 @@ use crate::network::{
 };
 use crate::utils::Instructions;
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
+use rodio::Sink;
 use std::net::SocketAddr;
 use std::process;
-use std::time::SystemTime;
 use std::sync::Arc;
-use rodio::Sink;
+use std::time::SystemTime;
 
 pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer) {
     if peer.database.data.contains_key(&key) {
@@ -148,7 +148,13 @@ pub fn get_file(instr: Instructions, key: String, sender: SocketAddr, peer: &mut
     }
 }
 
-pub fn get_file_response(instr: Instructions, key: String, value: Vec<u8>, peer: &mut Peer, sink: &mut MusicPlayer) {
+pub fn get_file_response(
+    instr: Instructions,
+    key: String,
+    value: Vec<u8>,
+    peer: &mut Peer,
+    sink: &mut MusicPlayer,
+) {
     match instr {
         PLAY => {
             //save to tmp and play audio

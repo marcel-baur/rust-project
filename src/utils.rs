@@ -12,3 +12,7 @@ pub enum Instructions {
     ORDER,
     REMOVE,
 }
+
+pub trait AppListener: Send {
+    fn notify(&self);
+}

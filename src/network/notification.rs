@@ -1,10 +1,10 @@
+use crate::audio::MusicState;
 use crate::network::response::Message;
 use crate::utils::Instructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::time::SystemTime;
-use crate::audio::MusicState;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Notification {

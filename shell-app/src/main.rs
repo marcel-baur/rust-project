@@ -1,10 +1,12 @@
 extern crate meff;
+use crate::util::Application;
+use clap::{App, Arg};
 use meff::network;
 use std::net::SocketAddr;
-use clap::{Arg, App};
+
+mod util;
 
 fn main() {
-
     let matches = App::new("MEFF-Music")
         .version("0.1.0")
         .arg(
@@ -39,23 +41,25 @@ fn main() {
                 addr = match ip.parse::<SocketAddr>() {
                     Ok(socket_addr) => socket_addr,
                     Err(_) => {
-                      //  error!("Could not parse ip address of remote Peer");
+                        //  error!("Could not parse ip address of remote Peer");
                         return;
                     }
                 }
             }
             None => {
-              //  error!("Could not parse ip-address");
+                //  error!("Could not parse ip-address");
                 return;
             }
         }
-        if let Err(e) = network::startup(name, port, Some(addr)) {
-           // error!("Could not join network {:?}", e);
+        let appl = Application {};
+        if let Err(e) = network::startup(name, port, Some(addr), Box::new(appl)) {
+            // error!("Could not join network {:?}", e);
         }
     } else {
-        if let Err(e) = network::startup(name, port, None) {
-           // error!("Could not join network {:?}", e);
+        let appl = Application {};
+
+        if let Err(e) = network::startup(name, port, None, Box::new(appl)) {
+            // error!("Could not join network {:?}", e);
         }
     }
-
 }

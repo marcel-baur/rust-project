@@ -15,9 +15,12 @@ extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::{create_sink, play_music, MusicState, pause_current_playing_music, stop_current_playing_music, continue_paused_music, MusicPlayer};
+use crate::audio::{
+    continue_paused_music, create_sink, pause_current_playing_music, play_music,
+    stop_current_playing_music, MusicPlayer, MusicState,
+};
 use crate::shell::{print_external_files, spawn_shell};
-use crate::utils::{Instructions, HEARTBEAT_SLEEP_DURATION};
+use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
 use peer::{create_peer, Peer};
@@ -28,8 +31,8 @@ use request::{
     send_network_update_table, status_request,
 };
 use response::*;
-use std::collections::HashMap;
 use rodio::Sink;
+use std::collections::HashMap;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -70,16 +73,22 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     Ok(peer_socket_addr)
 }
 
-pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Result<(), String> {
+pub fn startup(
+    own_name: &str,
+    port: &str,
+    ip_address: Option<SocketAddr>,
+    app: Box<dyn AppListener + Sync>,
+) -> Result<(), String> {
     let peer = create_peer(own_name, port).unwrap();
     let own_addr = peer.ip_address;
     let peer_arc = Arc::new(Mutex::new(peer));
     let peer_arc_clone_listen = peer_arc.clone();
+    let app_arc = Arc::new(app);
 
     let listener = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            match listen_tcp(peer_arc_clone_listen) {
+            match listen_tcp(peer_arc_clone_listen, app_arc) {
                 Ok(_) => {}
                 Err(_) => {
                     eprintln!("Failed to spawn listener");
@@ -127,7 +136,7 @@ pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Re
     Ok(())
 }
 
-fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
+fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Box<dyn AppListener + Sync>>) -> Result<(), String> {
     let clone = arc.clone();
     let listen_ip = clone.lock().unwrap().ip_address;
     let listener = TcpListener::bind(&listen_ip).unwrap();
@@ -148,7 +157,8 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                     }
                 };
                 let mut peer = clone.lock().unwrap();
-                handle_notification(des, &mut peer, &mut sink);
+
+                handle_notification(des, &mut peer, &mut sink, &app);
                 drop(peer);
                 // TODO: Response, handle duplicate key, redundancy
             }
@@ -204,7 +214,12 @@ fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
     }
 }
 
-fn handle_notification(notification: Notification, peer: &mut Peer, sink: &mut MusicPlayer) {
+fn handle_notification(
+    notification: Notification,
+    peer: &mut Peer,
+    sink: &mut MusicPlayer,
+    listener: &Arc<Box<dyn AppListener + Sync>>,
+) {
     dbg!(&notification);
     let sender = notification.from;
     match notification.content {
@@ -263,15 +278,15 @@ fn handle_notification(notification: Notification, peer: &mut Peer, sink: &mut M
         Content::StatusResponse { files, name } => {
             print_external_files(files, name);
         }
-        Content::PlayAudioRequest { name , state} => {
+        Content::PlayAudioRequest { name, state } => {
             match state {
                 MusicState::PLAY => play_music(peer, name.as_str(), sink),
                 MusicState::PAUSE => pause_current_playing_music(sink),
                 MusicState::STOP => stop_current_playing_music(sink),
                 MusicState::CONTINUE => continue_paused_music(sink),
-                _ => {},
+                _ => {}
             };
-        },
+        }
         Content::DroppedPeer { addr } => {
             dropped_peer(addr, peer);
         }
