@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 
 mod audio;
 mod database;
-mod network;
+pub mod network;
 mod shell;
 mod utils;
 
