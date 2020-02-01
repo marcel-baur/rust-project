@@ -73,6 +73,18 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     Ok(peer_socket_addr)
 }
 
+/// Create or join a network, depending on the value of `ip_address`. If the value is `None`, a new
+/// network will be created. Otherwise the library will attempt to join an existing network on that
+/// IP address.
+/// # Parameters
+/// `own_name` - name of the local peer
+///
+/// `port` - port on which the local peer will listen on
+///
+/// `ip_address` - IP Address of one of the peers of an existing network / `None` if a new network
+/// is to be created
+///
+/// `app` - listener object of the application that implements the library.
 pub fn startup(
     own_name: &str,
     port: &str,
@@ -284,7 +296,6 @@ fn handle_notification(
                 MusicState::PAUSE => pause_current_playing_music(sink),
                 MusicState::STOP => stop_current_playing_music(sink),
                 MusicState::CONTINUE => continue_paused_music(sink),
-                _ => {}
             };
         }
         Content::DroppedPeer { addr } => {
@@ -343,6 +354,8 @@ pub fn send_write_request(
     }
 }
 
+/// Selects a random `SocketAddr` from the `network_table` that is not equal to `own_ip`. Returns
+/// `None` if there is no other `SocketAddr` in `network_table`.
 fn other_random_target(
     network_table: &HashMap<String, SocketAddr>,
     own_ip: &SocketAddr,
