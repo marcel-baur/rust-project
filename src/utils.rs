@@ -17,4 +17,5 @@ pub enum Instructions {
 /// library. Its functions are used to communicate network events.
 pub trait AppListener: Send {
     fn notify(&self);
+    fn notify_status(&self, files: Vec<String>, name: String);
 }

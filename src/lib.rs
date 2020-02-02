@@ -19,7 +19,6 @@ use std::net::SocketAddr;
 pub mod audio;
 pub mod database;
 pub mod network;
-mod shell;
 pub mod utils;
 
 

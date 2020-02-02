@@ -19,7 +19,7 @@ use crate::audio::{
     continue_paused_music, create_sink, pause_current_playing_music, play_music,
     stop_current_playing_music, MusicPlayer, MusicState,
 };
-use crate::shell::{print_external_files, spawn_shell};
+
 use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
@@ -289,7 +289,7 @@ fn handle_notification(
             status_request(sender, peer);
         }
         Content::StatusResponse { files, name } => {
-            print_external_files(files, name);
+            listener.notify_status(files, name);
         }
         Content::PlayAudioRequest { name, state } => {
             match state {
