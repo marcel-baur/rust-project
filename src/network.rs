@@ -122,18 +122,18 @@ pub fn startup(
         }
     }
 
-    let interact = thread::Builder::new()
-        .name("Interact".to_string())
-        .spawn(move || {
-            //spawn shell
-            match spawn_shell(peer_arc_clone_interact) {
-                Ok(_) => {}
-                Err(_) => {
-                    eprintln!("Failed to spawn shell");
-                }
-            };
-        })
-        .unwrap();
+//    let interact = thread::Builder::new()
+//        .name("Interact".to_string())
+//        .spawn(move || {
+//            //spawn shell
+//            match spawn_shell(peer_arc_clone_interact) {
+//                Ok(_) => {}
+//                Err(_) => {
+//                    eprintln!("Failed to spawn shell");
+//                }
+//            };
+//        })
+//        .unwrap();
     let heartbeat = thread::Builder::new()
         .name("Heartbeat".to_string())
         .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
@@ -144,7 +144,7 @@ pub fn startup(
         })
         .unwrap();
     listener.join().expect_err("Could not join Listener");
-    interact.join().expect_err("Could not join Interact");
+//    interact.join().expect_err("Could not join Interact");
     heartbeat.join().expect_err("Could not join Heartbeat");
     Ok(peer_arc_clone_return)
 }

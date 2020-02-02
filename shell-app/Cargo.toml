@@ -9,3 +9,7 @@ edition = "2018"
 [dependencies]
 meff = {path="../"}
 clap = "2.33.0"
+prettytable-rs = "^0.8"
+colored = "1.9.2"
+log4rs = "0.9.0"
+log = "0.4.8"

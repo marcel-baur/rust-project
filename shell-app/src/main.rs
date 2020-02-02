@@ -1,9 +1,18 @@
 extern crate meff;
+use crate::shell::spawn_shell;
 use crate::util::Application;
 use clap::{App, Arg};
 use meff::network;
 use std::net::SocketAddr;
+use std::thread;
 
+#[macro_use]
+extern crate log;
+extern crate log4rs;
+#[macro_use]
+extern crate prettytable;
+
+mod shell;
 mod util;
 
 fn main() {
@@ -67,5 +76,14 @@ fn main() {
                 return;
             } // error!("Could not join network {:?}", e);
         };
+        let interact = thread::Builder::new()
+            .name("Interact".to_string())
+            .spawn(move || match spawn_shell(peer) {
+                Ok(_) => {}
+                Err(_) => {
+                    eprintln!("Failed to spawn shell");
+                }
+            })
+            .unwrap();
     }
 }
