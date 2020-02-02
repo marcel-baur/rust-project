@@ -206,7 +206,7 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 }
 
 /// send the heartbeat request to all targets in `targets`
-fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
+fn send_heartbeat(targets: &[SocketAddr], peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
     for addr in targets {
         let stream = match TcpStream::connect(addr) {
@@ -305,6 +305,9 @@ fn handle_notification(
             dropped_peer(addr, peer);
         }
         Content::Heartbeat => {}
+        Content::NewFileSaved {song_name} => {
+            listener.new_file_saved(song_name);
+        }
     }
 }
 
@@ -514,4 +517,22 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
             println!("Failed to serialize SendRequest {:?}", &not);
         }
     };
+}
+
+/// Send a notification
+pub fn send_new_file_notification (target: SocketAddr, file_name: &str, peer: &mut Peer) {
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
+        Err(_e) => {
+            handle_lost_connection(target, peer);
+            return;
+        }
+    };
+    let not = Notification {
+        content: Content::NewFileSaved {song_name: file_name.to_string()},
+        from: *peer.get_ip(),
+    };
+    if let Err(_e) = serde_json::to_writer(&stream, &not) {
+        println!("Failed to serialize SendRequest {:?}", &not);
+    }
 }

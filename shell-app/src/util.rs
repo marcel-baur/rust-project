@@ -10,4 +10,7 @@ impl AppListener for Application {
     fn notify_status(&self, files: Vec<String>, name: String) {
         shell::print_external_files(files, name);
     }
+    fn new_file_saved(&self, name: String) {
+        println!("New file {} saved!", name);
+    }
 }
