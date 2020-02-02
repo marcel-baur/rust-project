@@ -52,14 +52,20 @@ fn main() {
             }
         }
         let appl = Application {};
-        if let Err(e) = network::startup(name, port, Some(addr), Box::new(appl)) {
-            // error!("Could not join network {:?}", e);
-        }
+        let peer = match network::startup(name, port, Some(addr), Box::new(appl)) {
+            Ok(p) => p,
+            Err(_e) => {
+                return;
+            } // error!("Could not join network {:?}", e);
+        };
     } else {
         let appl = Application {};
 
-        if let Err(e) = network::startup(name, port, None, Box::new(appl)) {
-            // error!("Could not join network {:?}", e);
-        }
+        let peer = match network::startup(name, port, None, Box::new(appl)) {
+            Ok(p) => p,
+            Err(_e) => {
+                return;
+            } // error!("Could not join network {:?}", e);
+        };
     }
 }

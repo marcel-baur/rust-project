@@ -90,11 +90,12 @@ pub fn startup(
     port: &str,
     ip_address: Option<SocketAddr>,
     app: Box<dyn AppListener + Sync>,
-) -> Result<(), String> {
+) -> Result<Arc<Mutex<Peer>>, String> {
     let peer = create_peer(own_name, port).unwrap();
     let own_addr = peer.ip_address;
     let peer_arc = Arc::new(Mutex::new(peer));
     let peer_arc_clone_listen = peer_arc.clone();
+    let peer_arc_clone_return = peer_arc.clone();
     let app_arc = Arc::new(app);
 
     let listener = thread::Builder::new()
@@ -145,7 +146,7 @@ pub fn startup(
     listener.join().expect_err("Could not join Listener");
     interact.join().expect_err("Could not join Interact");
     heartbeat.join().expect_err("Could not join Heartbeat");
-    Ok(())
+    Ok(peer_arc_clone_return)
 }
 
 fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Box<dyn AppListener + Sync>>) -> Result<(), String> {
