@@ -1,13 +1,14 @@
 use prettytable::format;
 extern crate colored;
-use crate::network::peer::Peer;
-use crate::network::{
+use colored::*;
+use meff::audio::MusicState::{CONTINUE, PAUSE, PLAY, STOP};
+use meff::network::peer::Peer;
+use meff::network::{
     send_delete_peer_request, send_play_request, send_read_request, send_status_request,
     send_write_request,
 };
-use crate::utils;
-use crate::utils::Instructions::{GET, REMOVE};
-use colored::*;
+use meff::utils;
+use meff::utils::Instructions::{GET, REMOVE};
 use std::error::Error;
 use std::fs;
 use std::io::{stdin, ErrorKind};
@@ -16,7 +17,6 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
-use crate::audio::MusicState::{PAUSE, STOP, PLAY, CONTINUE};
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));

@@ -1,10 +1,10 @@
+use crate::audio::MusicState;
 use crate::network::response::Message;
 use crate::utils::Instructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::time::SystemTime;
-use crate::audio::MusicState;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Notification {
@@ -87,6 +87,9 @@ pub enum Content {
     DeleteFileRequest {
         song_name: String,
     },
+    NewFileSaved {
+        song_name: String,
+    }
 }
 
 pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {

@@ -152,6 +152,7 @@ Cargo.lock
 #Added by cargo
 
 /target
+/shell-app/target
 
 # mp3 files
 /file/

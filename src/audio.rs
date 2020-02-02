@@ -1,20 +1,21 @@
 use crate::network::peer::Peer;
 use crate::network::send_read_request;
 use crate::utils::Instructions::PLAY;
-use rodio::{Sink};
-use std::{fs, thread};
-use std::io::{BufReader, Cursor};
-use std::string::ToString;
+use rodio::Sink;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::io::BufRead;
 use std::io::Read;
-
-
+use std::io::{BufReader, Cursor};
+use std::string::ToString;
+use std::sync::Arc;
+use std::{fs, thread};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum MusicState {
-    PLAY, PAUSE, STOP, CONTINUE,
+    PLAY,
+    PAUSE,
+    STOP,
+    CONTINUE,
 }
 
 pub struct MusicPlayer {
