@@ -23,6 +23,7 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer) {
     } else {
         peer.process_store_request((key.clone(), value.clone()));
         println!("Saved file to database");
+        new_file_notification(key.clone(), peer);
 
         let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
         match redundant_target {
