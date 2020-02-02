@@ -522,7 +522,11 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
     }
 }
 
-/// Send a notification
+/// Send a notification to the peer at `target` that a new file has been saved.
+/// # Parameters:
+/// - `target`: `SocketAddr` of the Peer that should receive the notification
+/// - `file_name`: name of the file as string
+/// - `peer`: the local `Peer`
 pub fn send_new_file_notification (target: SocketAddr, file_name: &str, peer: &mut Peer) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
