@@ -67,6 +67,16 @@ fn main() {
                 return;
             } // error!("Could not join network {:?}", e);
         };
+        let interact = thread::Builder::new()
+            .name("Interact".to_string())
+            .spawn(move || match spawn_shell(peer) {
+                Ok(_) => {}
+                Err(_) => {
+                    eprintln!("Failed to spawn shell");
+                }
+            })
+            .unwrap();
+        interact.join().unwrap();
     } else {
         let appl = Application {};
 
@@ -85,5 +95,6 @@ fn main() {
                 }
             })
             .unwrap();
+        interact.join().unwrap();
     }
 }

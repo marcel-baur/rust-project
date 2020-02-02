@@ -143,10 +143,10 @@ pub fn startup(
             }
         })
         .unwrap();
-    listener.join().expect_err("Could not join Listener");
-//    interact.join().expect_err("Could not join Interact");
-    heartbeat.join().expect_err("Could not join Heartbeat");
-    Ok(peer_arc_clone_return)
+    return Ok(peer_arc_clone_return);
+//    listener.join().expect_err("Could not join Listener");
+//    heartbeat.join().expect_err("Could not join Heartbeat");
+
 }
 
 fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Box<dyn AppListener + Sync>>) -> Result<(), String> {
