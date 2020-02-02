@@ -1,5 +1,5 @@
-use meff::utils::AppListener;
 use crate::shell;
+use meff::utils::AppListener;
 
 pub struct Application {}
 

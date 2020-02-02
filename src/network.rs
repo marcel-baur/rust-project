@@ -85,6 +85,8 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
 /// is to be created
 ///
 /// `app` - listener object of the application that implements the library.
+/// # Returns
+/// the peer object wrapped in a Mutex
 pub fn startup(
     own_name: &str,
     port: &str,
