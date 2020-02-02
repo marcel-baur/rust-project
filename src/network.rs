@@ -494,6 +494,12 @@ fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
     }
 }
 
+/// Send a notification to the peer at `target` that the peer at `dropped_addr` has left the network
+/// or was dropped.
+/// # Parameters:
+/// - `target`: `SocketAddr` of the Peer that should receive the notification
+/// - `dropped_addr`: `SocketAddr` of the Peer that is not connected anymore
+/// - `peer`: the local `Peer`
 fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, peer: &mut Peer) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
@@ -506,10 +512,7 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
         content: Content::DroppedPeer { addr: dropped_addr },
         from: *peer.get_ip(),
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+    if let Err(_e) = serde_json::to_writer(&stream, &not) {
+        println!("Failed to serialize SendRequest {:?}", &not);
+    }
 }
