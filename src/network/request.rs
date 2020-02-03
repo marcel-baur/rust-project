@@ -1,4 +1,4 @@
-use crate::audio::{play_music_by_vec, play_music, MusicPlayer};
+use crate::audio::{play_music, play_music_by_vec, MusicPlayer};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table_request,
     send_table_request, send_table_to_all_peers, update_table_after_delete,
@@ -8,17 +8,14 @@ use crate::network::music_exchange::{
     send_get_file_reponse, song_order_request,
 };
 use crate::network::peer::Peer;
-use crate::network::{
-    other_random_target, send_local_file_status, send_read_request, send_status_request,
-    send_write_request, send_write_response,
-};
+use crate::network::{other_random_target, send_local_file_status, send_read_request, send_status_request, send_write_request, send_write_response, send_new_file_notification};
 use crate::utils::Instructions;
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
+use rodio::Sink;
 use std::net::SocketAddr;
 use std::process;
-use std::time::SystemTime;
 use std::sync::Arc;
-use rodio::Sink;
+use std::time::SystemTime;
 
 pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer) {
     if peer.database.data.contains_key(&key) {
@@ -26,6 +23,7 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer) {
     } else {
         peer.process_store_request((key.clone(), value.clone()));
         println!("Saved file to database");
+        new_file_notification(key.clone(), peer);
 
         let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
         match redundant_target {
@@ -148,7 +146,13 @@ pub fn get_file(instr: Instructions, key: String, sender: SocketAddr, peer: &mut
     }
 }
 
-pub fn get_file_response(instr: Instructions, key: String, value: Vec<u8>, peer: &mut Peer, sink: &mut MusicPlayer) {
+pub fn get_file_response(
+    instr: Instructions,
+    key: String,
+    value: Vec<u8>,
+    peer: &mut Peer,
+    sink: &mut MusicPlayer,
+) {
     match instr {
         PLAY => {
             //save to tmp and play audio
@@ -251,5 +255,14 @@ pub fn delete_file_request(song_name: String, peer: &mut Peer) {
     if peer.database.data.contains_key(&song_name) {
         println!("Remove file {} from database", &song_name);
         peer.delete_file_from_database(&song_name);
+    }
+}
+
+fn new_file_notification(song_name: String, peer: &mut Peer) {
+    let mut cloned_peer = peer.clone();
+    for addr in peer.network_table.values() {
+        if addr != cloned_peer.get_ip(){
+            send_new_file_notification(*addr, &song_name, &mut cloned_peer);
+        }
     }
 }

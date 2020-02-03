@@ -15,9 +15,12 @@ extern crate get_if_addrs;
 extern crate rand;
 use rand::Rng;
 
-use crate::audio::{create_sink, play_music, MusicState, pause_current_playing_music, stop_current_playing_music, continue_paused_music, MusicPlayer};
-use crate::shell::{print_external_files, spawn_shell};
-use crate::utils::{Instructions, HEARTBEAT_SLEEP_DURATION};
+use crate::audio::{
+    continue_paused_music, create_sink, pause_current_playing_music, play_music,
+    stop_current_playing_music, MusicPlayer, MusicState,
+};
+
+use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
 use peer::{create_peer, Peer};
@@ -28,8 +31,8 @@ use request::{
     send_network_update_table, status_request,
 };
 use response::*;
-use std::collections::HashMap;
 use rodio::Sink;
+use std::collections::HashMap;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -70,16 +73,37 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     Ok(peer_socket_addr)
 }
 
-pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Result<(), String> {
+/// Create or join a network, depending on the value of `ip_address`. If the value is `None`, a new
+/// network will be created. Otherwise the library will attempt to join an existing network on that
+/// IP address.
+/// # Parameters
+/// `own_name` - name of the local peer
+///
+/// `port` - port on which the local peer will listen on
+///
+/// `ip_address` - IP Address of one of the peers of an existing network / `None` if a new network
+/// is to be created
+///
+/// `app` - listener object of the application that implements the library.
+/// # Returns
+/// the peer object wrapped in a Mutex
+pub fn startup(
+    own_name: &str,
+    port: &str,
+    ip_address: Option<SocketAddr>,
+    app: Box<dyn AppListener + Sync>,
+) -> Result<Arc<Mutex<Peer>>, String> {
     let peer = create_peer(own_name, port).unwrap();
     let own_addr = peer.ip_address;
     let peer_arc = Arc::new(Mutex::new(peer));
     let peer_arc_clone_listen = peer_arc.clone();
+    let peer_arc_clone_return = peer_arc.clone();
+    let app_arc = Arc::new(app);
 
     let listener = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            match listen_tcp(peer_arc_clone_listen) {
+            match listen_tcp(peer_arc_clone_listen, app_arc) {
                 Ok(_) => {}
                 Err(_) => {
                     eprintln!("Failed to spawn listener");
@@ -100,18 +124,18 @@ pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Re
         }
     }
 
-    let interact = thread::Builder::new()
-        .name("Interact".to_string())
-        .spawn(move || {
-            //spawn shell
-            match spawn_shell(peer_arc_clone_interact) {
-                Ok(_) => {}
-                Err(_) => {
-                    eprintln!("Failed to spawn shell");
-                }
-            };
-        })
-        .unwrap();
+//    let interact = thread::Builder::new()
+//        .name("Interact".to_string())
+//        .spawn(move || {
+//            //spawn shell
+//            match spawn_shell(peer_arc_clone_interact) {
+//                Ok(_) => {}
+//                Err(_) => {
+//                    eprintln!("Failed to spawn shell");
+//                }
+//            };
+//        })
+//        .unwrap();
     let heartbeat = thread::Builder::new()
         .name("Heartbeat".to_string())
         .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
@@ -121,13 +145,13 @@ pub fn startup(own_name: &str, port: &str, ip_address: Option<SocketAddr>) -> Re
             }
         })
         .unwrap();
-    listener.join().expect_err("Could not join Listener");
-    interact.join().expect_err("Could not join Interact");
-    heartbeat.join().expect_err("Could not join Heartbeat");
-    Ok(())
+    return Ok(peer_arc_clone_return);
+//    listener.join().expect_err("Could not join Listener");
+//    heartbeat.join().expect_err("Could not join Heartbeat");
+
 }
 
-fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
+fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Box<dyn AppListener + Sync>>) -> Result<(), String> {
     let clone = arc.clone();
     let listen_ip = clone.lock().unwrap().ip_address;
     let listener = TcpListener::bind(&listen_ip).unwrap();
@@ -148,7 +172,8 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
                     }
                 };
                 let mut peer = clone.lock().unwrap();
-                handle_notification(des, &mut peer, &mut sink);
+
+                handle_notification(des, &mut peer, &mut sink, &app);
                 drop(peer);
                 // TODO: Response, handle duplicate key, redundancy
             }
@@ -181,7 +206,7 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
 }
 
 /// send the heartbeat request to all targets in `targets`
-fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
+fn send_heartbeat(targets: &[SocketAddr], peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
     for addr in targets {
         let stream = match TcpStream::connect(addr) {
@@ -204,7 +229,12 @@ fn send_heartbeat(targets: &Vec<SocketAddr>, peer: &mut Peer) {
     }
 }
 
-fn handle_notification(notification: Notification, peer: &mut Peer, sink: &mut MusicPlayer) {
+fn handle_notification(
+    notification: Notification,
+    peer: &mut Peer,
+    sink: &mut MusicPlayer,
+    listener: &Arc<Box<dyn AppListener + Sync>>,
+) {
     dbg!(&notification);
     let sender = notification.from;
     match notification.content {
@@ -261,21 +291,23 @@ fn handle_notification(notification: Notification, peer: &mut Peer, sink: &mut M
             status_request(sender, peer);
         }
         Content::StatusResponse { files, name } => {
-            print_external_files(files, name);
+            listener.notify_status(files, name);
         }
-        Content::PlayAudioRequest { name , state} => {
+        Content::PlayAudioRequest { name, state } => {
             match state {
                 MusicState::PLAY => play_music(peer, name.as_str(), sink),
                 MusicState::PAUSE => pause_current_playing_music(sink),
                 MusicState::STOP => stop_current_playing_music(sink),
                 MusicState::CONTINUE => continue_paused_music(sink),
-                _ => {},
             };
-        },
+        }
         Content::DroppedPeer { addr } => {
             dropped_peer(addr, peer);
         }
         Content::Heartbeat => {}
+        Content::NewFileSaved {song_name} => {
+            listener.new_file_saved(song_name);
+        }
     }
 }
 
@@ -328,6 +360,8 @@ pub fn send_write_request(
     }
 }
 
+/// Selects a random `SocketAddr` from the `network_table` that is not equal to `own_ip`. Returns
+/// `None` if there is no other `SocketAddr` in `network_table`.
 fn other_random_target(
     network_table: &HashMap<String, SocketAddr>,
     own_ip: &SocketAddr,
@@ -465,6 +499,12 @@ fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
     }
 }
 
+/// Send a notification to the peer at `target` that the peer at `dropped_addr` has left the network
+/// or was dropped.
+/// # Parameters:
+/// - `target`: `SocketAddr` of the Peer that should receive the notification
+/// - `dropped_addr`: `SocketAddr` of the Peer that is not connected anymore
+/// - `peer`: the local `Peer`
 fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, peer: &mut Peer) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
@@ -477,10 +517,29 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
         content: Content::DroppedPeer { addr: dropped_addr },
         from: *peer.get_ip(),
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
+    if let Err(_e) = serde_json::to_writer(&stream, &not) {
+        println!("Failed to serialize SendRequest {:?}", &not);
+    }
+}
+
+/// Send a notification to the peer at `target` that a new file has been saved.
+/// # Parameters:
+/// - `target`: `SocketAddr` of the Peer that should receive the notification
+/// - `file_name`: name of the file as string
+/// - `peer`: the local `Peer`
+pub fn send_new_file_notification (target: SocketAddr, file_name: &str, peer: &mut Peer) {
+    let stream = match TcpStream::connect(target) {
+        Ok(s) => s,
         Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
+            handle_lost_connection(target, peer);
+            return;
         }
     };
+    let not = Notification {
+        content: Content::NewFileSaved {song_name: file_name.to_string()},
+        from: *peer.get_ip(),
+    };
+    if let Err(_e) = serde_json::to_writer(&stream, &not) {
+        println!("Failed to serialize SendRequest {:?}", &not);
+    }
 }
