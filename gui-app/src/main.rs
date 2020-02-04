@@ -77,15 +77,18 @@ fn build_ui(application: &gtk::Application) {
     gtk::WidgetExt::set_widget_name(&label, "headline");
     gtk::WidgetExt::set_widget_name(&label2, "subheadline");
 
-    let button = gtk::Button::new_with_label("Choose file");
+    let button = gtk::Button::new_with_label("Seach music");
     //FOR CSS
     gtk::WidgetExt::set_widget_name(&button, "button1");
+
+    let upload_button = gtk::Button::new_with_label("Upload music");
 
     let dialog = FileChooserDialog::new(Some("Open File"), Some(&window), FileChooserAction::Open);
     dialog.add_button("_Cancel", ResponseType::Cancel);
     dialog.add_button("_Open", ResponseType::Accept);
 
-    button.connect_clicked(move |_| {
+    upload_button
+        .connect_clicked(move |_| {
         dialog.run();
         let file = dialog.get_filename();
         match file {
@@ -97,12 +100,12 @@ fn build_ui(application: &gtk::Application) {
         dialog.hide();
     });
 
-    let search_button = gtk::Button::new_with_label("search for music");
+    let stream_button = gtk::Button::new_with_label("Stream music");
 
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
     let textbox = gtk::Entry::new();
-    let h_box_label = Label::new(Some("Titel"));
+    let h_box_label = Label::new(Some("Title"));
 
     let list_box = gtk::ListBoxBuilder::new().activate_on_single_click(true).build();
 
@@ -124,7 +127,6 @@ fn build_ui(application: &gtk::Application) {
     let mut is_playing = false;
 
     let title_db = Label::new(Some("Your Music"));
-    let upload_button = gtk::Button::new_with_label("Upload");
     let controller_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
 
     let play_music = gtk::Button::new();
@@ -151,6 +153,10 @@ fn build_ui(application: &gtk::Application) {
 //        }
     });
 
+    pause_music.connect_clicked(move |_| {
+        println!("Clicked pause");
+    });
+
     stop_music.connect_clicked(move |_| {
         println!("Clicked stop");
     });
@@ -161,14 +167,19 @@ fn build_ui(application: &gtk::Application) {
     scrolled_window.set_size_request(100, 200);
     scrolled_window.set_valign(gtk::Align::Start);
 
-    let frame = gtk::Frame::new(Option::from("Music Controll"));
+    let frame = gtk::Frame::new(Option::from("Music Control"));
     gtk::WidgetExt::set_widget_name(&frame, "frame");
 
     let middle_sep = gtk::Separator::new(gtk::Orientation::Vertical);
 
+    //TODO: testen ob das bei anderen Rechnern richtig angezeigt wird
+    //let volume_button = gtk::VolumeButton::new();
+
+
     controller_box.pack_start(&play_music, false, true, 0);
     controller_box.pack_start(&pause_music, false, true, 0);
     controller_box.pack_start(&stop_music, false, true, 0);
+    //controller_box.pack_start(&volume_button, false, true, 0);
     controller_box.set_halign(gtk::Align::Center);
     controller_box.set_valign(gtk::Align::End);
 
@@ -181,7 +192,7 @@ fn build_ui(application: &gtk::Application) {
 
     v_box.pack_start(&h_box, false, true, 0);
     v_box.pack_start(&button, false, true, 0);
-    v_box.pack_start(&search_button, false, true, 0);
+    v_box.pack_start(&stream_button, false, true, 0);
 
     h_box_window.pack_start(&v_box, true, true, 10);
     h_box_window.pack_start(&middle_sep, false, false, 0);
@@ -196,30 +207,6 @@ fn build_ui(application: &gtk::Application) {
     v_box_window.pack_start(&controller_box, true, true, 10);
 
     window.add(&v_box_window);
-
-//
-//    let grid = gtk::Grid::new();
-//    grid.attach(&menu_bar, 0, 0, 3, 1);
-//    grid.attach(&label, 0, 1, 3, 1);
-//    grid.attach(&label2, 0, 2, 3, 1);
-//    grid.attach(&middle_sep_h, 0, 3, 3, 1);
-//    grid.attach(&v_box, 1, 4, 1, 1);
-//    grid.attach(&middle_sep_v, 2, 4, 3, 1);
-//    grid.attach(&scrolled_window, 3, 4, 1, 1);
-//    grid.attach(&middle_sep_h, 0, 3, 1, 1);
-//    grid.attach(&textbox, 0, 4, 1, 1);
-//    grid.attach(&h_box_label, 1, 4, 1, 1);
-//    grid.attach(&search_button, 0, 5, 1, 1);
-//    grid.attach(&search_button, 1, 5, 1, 1);
-//    grid.attach(&middle_sep_v, 2, 1, 1, 1);
-//    grid.attach(&scrolled_window, 3, 1, 1, 1);
-//    grid.attach(&bottom_separator, 0, 6, 3, 1);
-//    grid.attach(&controller_box, 0, 7, 3, 1);
-
-//    grid.set_column_homogeneous(true);
-//
-//
-//    window.add(&grid);
     window.show_all();
 
     about.connect_activate(move |_| {
