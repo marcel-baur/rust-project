@@ -14,6 +14,7 @@ use gtk::prelude::*;
 use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
 
 use std::env::args;
+use gdk::Window;
 
 // Basic CSS: we change background color, we set font color to black and we set it as bold.
 const STYLE: &str = "
@@ -36,12 +37,99 @@ const STYLE: &str = "
     padding: 10px;
 }";
 
-fn build_ui(application: &gtk::Application) {
-    let window = ApplicationWindow::new(application);
+fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
+    let startup_window = gtk::Window::new(gtk::WindowType::Popup);
+    startup_window.set_position(WindowPosition::Center);
+    startup_window.set_size_request(550, 300);
 
-    window.set_title("MEFF");
-    window.set_position(WindowPosition::Center);
-    window.set_size_request(600, 600);
+    let header = gtk::HeaderBar::new();
+    header.set_title(Some("Sign up"));
+    startup_window.set_titlebar(Some(&header));
+
+    let stack = gtk::Stack::new();
+    stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
+    stack.set_transition_duration(400);
+
+    let v_box_create = gtk::Box::new(gtk::Orientation::Vertical, 5);
+
+    let name_entry_create = gtk::Entry::new();
+    let port_entry_create = gtk::Entry::new();
+
+    let name_box = create_entry_with_label("Name", name_entry_create);
+    let port_box = create_entry_with_label("Port    ", port_entry_create);
+
+    v_box_create.pack_start(&name_box, true, true, 0);
+    v_box_create.pack_start(&port_box, true, true, 0);
+    v_box_create.set_margin_top(20);
+    v_box_create.set_margin_bottom(20);
+
+    let v_box_join = gtk::Box::new(gtk::Orientation::Vertical, 5);
+
+    let name_entry_join = gtk::Entry::new();
+    let port_entry_join = gtk::Entry::new();
+    let ip_entry_join = gtk::Entry::new();
+
+    let name_box_join = create_entry_with_label("Name         ", name_entry_join);
+    let port_box_join = create_entry_with_label("Port            ", port_entry_join);
+    let ip_box_join = create_entry_with_label("IP Address", ip_entry_join);
+
+    v_box_join.pack_start(&name_box_join, true, true, 0);
+    v_box_join.pack_start(&port_box_join, true, true, 0);
+    v_box_join.pack_start(&ip_box_join, true, true, 0);
+
+    stack.add_titled(&v_box_create, "create", "Create network");
+    stack.add_titled(&v_box_join, "join", "Join network");
+
+    let stack_switcher = gtk::StackSwitcher::new();
+    stack_switcher.set_stack(Some(&stack));
+
+    let start_button = gtk::Button::new_with_label("Start");
+    let cancel_button = gtk::Button::new_with_label("Cancel");
+
+    start_button.connect_clicked(clone!(@weak startup_window => move |_| {
+        println!("Clicked start");
+        startup_window.destroy();
+
+    }));
+
+    cancel_button.connect_clicked(clone!(@weak main_window => move |_| {
+        main_window.destroy();
+    }));
+
+    let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+    h_box.pack_start(&start_button, false, true, 0);
+    h_box.pack_start(&cancel_button, false, true, 0);
+    h_box.set_halign(gtk::Align::Center);
+    h_box.set_valign(gtk::Align::End);
+
+    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
+    v_box.pack_start(&stack_switcher, true, true, 0);
+    v_box.pack_start(&stack, true, true, 0);
+    v_box.pack_start(&h_box, false, true, 10);
+    v_box.set_halign(gtk::Align::Center);
+    v_box.set_margin_top(10);
+
+    startup_window.add(&v_box);
+    startup_window
+}
+
+fn create_entry_with_label(text: &str, entry: gtk::Entry) -> gtk::Box {
+    let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+    let label = Label::new(Some(&text));
+
+    h_box.pack_start(&label, false, true, 0);
+    h_box.pack_end(&entry, false, true, 0);
+
+    h_box
+}
+
+fn build_ui(application: &gtk::Application) {
+    let main_window = ApplicationWindow::new(application);
+    let startup_window = build_startup(&main_window);
+
+    main_window.set_title("MEFF");
+    main_window.set_position(WindowPosition::Center);
+    main_window.set_size_request(600, 600);
 
     let v_box_window = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let h_box_window = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -50,7 +138,7 @@ fn build_ui(application: &gtk::Application) {
 
     let menu = Menu::new();
     let accel_group = AccelGroup::new();
-    window.add_accel_group(&accel_group);
+    main_window.add_accel_group(&accel_group);
     let menu_bar = MenuBar::new();
     let file = MenuItem::new_with_label("File");
     let about = MenuItem::new_with_label("About");
@@ -61,8 +149,8 @@ fn build_ui(application: &gtk::Application) {
     file.set_submenu(Some(&menu));
     menu_bar.append(&file);
 
-    quit.connect_activate(clone!(@weak window => move |_| {
-        window.destroy();
+    quit.connect_activate(clone!(@weak main_window => move |_| {
+        main_window.destroy();
     }));
 
     // `Primary` is `Ctrl` on Windows and Linux, and `command` on macOS
@@ -83,7 +171,7 @@ fn build_ui(application: &gtk::Application) {
 
     let upload_button = gtk::Button::new_with_label("Upload music");
 
-    let dialog = FileChooserDialog::new(Some("Open File"), Some(&window), FileChooserAction::Open);
+    let dialog = FileChooserDialog::new(Some("Open File"), Some(&main_window), FileChooserAction::Open);
     dialog.add_button("_Cancel", ResponseType::Cancel);
     dialog.add_button("_Open", ResponseType::Accept);
 
@@ -206,8 +294,11 @@ fn build_ui(application: &gtk::Application) {
     v_box_window.pack_start(&frame, true, true, 10);
     v_box_window.pack_start(&controller_box, true, true, 10);
 
-    window.add(&v_box_window);
-    window.show_all();
+    main_window.add(&v_box_window);
+    main_window.show_all();
+    startup_window.set_modal(true);
+    startup_window.set_transient_for(Some(&main_window));
+    startup_window.show_all();
 
     about.connect_activate(move |_| {
         let p = AboutDialog::new();
@@ -216,7 +307,7 @@ fn build_ui(application: &gtk::Application) {
         p.set_website(Some("http://gtk-rs.org"));
         p.set_authors(&["Gtk-rs developers"]);
         p.set_title("About!");
-        p.set_transient_for(Some(&window));
+        p.set_transient_for(Some(&main_window));
         p.run();
         p.destroy();
     });
