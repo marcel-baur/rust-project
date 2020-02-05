@@ -102,7 +102,6 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
         let meffm_clone = meff.clone();
         let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string().clone();
-        let appl = MEFFM::new();
 
         if current_stack == "create" {
             let name = name_entry_create.get_text().unwrap().as_str().to_string().clone();
@@ -111,12 +110,7 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
             set_entry_border(&port, &port_entry_create);
 
             if !name.is_empty() && !port.is_empty() {
-                let peer = match network::startup(&name, &port, None, Box::new(appl)) {
-                    Ok(p) => p,
-                    Err(_e) => {
-                        return;
-                    } // error!("Could not join network {:?}", e);
-                };
+                meff.start(name, port, None);
                 startup_window.destroy();
             }
         } else {
@@ -129,21 +123,14 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
             set_entry_border(&ip, &ip_entry_join);
 
             if !name.is_empty() && !port.is_empty() && !ip.is_empty() {
-
-                verify_ip(&ip);
-
-                let peer = match network::startup(&name, &port, None, Box::new(appl)) {
-                    Ok(p) => p,
-                    Err(_e) => {
-                        return;
-                    } // error!("Could not join network {:?}", e);
-                };
+                let addr = verify_ip(&ip);
+                meff.start(name, port, addr);
                 startup_window.destroy();
             }
 
             //startup_window.destroy();
 
-            println!("{:?}  {:?}  {:?}", &name, &port, &ip);
+            //println!("{:?}  {:?}  {:?}", &name, &port, &ip);
 
         }
     }));
@@ -169,15 +156,11 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
     startup_window
 }
 
-fn verify_ip(addr: &String) {
-    let ip: SocketAddr = match addr.parse::<SocketAddr>() {
-        Ok(socket_addr) => socket_addr,
-        Err(_) => {
-            //  error!("Could not parse ip address of remote Peer");
-            return;
-        }
-    };
-
+fn verify_ip(addr: &String) -> Option<SocketAddr> {
+    match addr.parse::<SocketAddr>() {
+        Ok(socket_addr) => Some(socket_addr),
+        Err(_) => None
+    }
 }
 
 fn set_entry_border(text: &str, entry: &gtk::Entry) {
