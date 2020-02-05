@@ -198,7 +198,7 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     box_label.set_halign(gtk::Align::Center);
     box_label.set_margin_top(10);
 
-    let ok_button = gtk::Button::new_with_label("Ok");
+    let ok_button = gtk::Button::new_with_label("Upload");
     ok_button.set_halign(gtk::Align::Center);
     ok_button.set_valign(gtk::Align::End);
 
@@ -206,6 +206,8 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
         let title = entry.get_text().unwrap().as_str().to_string().clone();
         let song_path_clone = song_path.clone();
         //Push music to database
+        let spinner = gtk::Spinner::new();
+        spinner.start();
         meff.borrow_mut().push(song_path_clone, title);
 
         title_popup.destroy();
@@ -219,7 +221,7 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     title_popup.show_all();
 }
 
-fn add_song_to_list(song_name: &str, list_box:gtk::ListBox) {
+fn add_song_to_list(song_name: &str, list_box: gtk::ListBox) {
     let mut list_box_row = gtk::ListBoxRow::new();
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
@@ -247,9 +249,12 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
     let meff_clone = Rc::clone(&meff);
     let startup_window = build_startup(&main_window, meff_clone);
 
-    main_window.set_title("MEFF");
     main_window.set_position(WindowPosition::Center);
     main_window.set_size_request(600, 600);
+
+    let header = gtk::HeaderBar::new();
+    header.set_title(Some("MEFF"));
+    main_window.set_titlebar(Some(&header));
 
     let v_box_window = gtk::Box::new(gtk::Orientation::Vertical, 10);
     let h_box_window = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -285,11 +290,15 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
     gtk::WidgetExt::set_widget_name(&label, "headline");
     gtk::WidgetExt::set_widget_name(&label2, "subheadline");
 
+    label.set_margin_top(25);
+
     let button = gtk::Button::new_with_label("Seach music");
     //FOR CSS
     gtk::WidgetExt::set_widget_name(&button, "button1");
 
     let upload_button = gtk::Button::new_with_label("Upload music");
+    upload_button.set_margin_start(40);
+    upload_button.set_margin_end(40);
 
     let dialog = FileChooserDialog::new(Some("Open File"), Some(&main_window), FileChooserAction::Open);
     dialog.add_button("_Cancel", ResponseType::Cancel);
@@ -324,8 +333,8 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
         let mut list_box_row = gtk::ListBoxRow::new();
         let h_box_songs = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         let label_button = gtk::Button::new_with_label("Abba");
-        label_button.set_size_request(50, 20);
         let trash_button = gtk::Button::new();
+
         gtk::WidgetExt::set_widget_name(&label_button, "button");
         let image_delete = gtk::Image::new_from_file("src/delete.png");
         trash_button.set_image(Some(&image_delete));
@@ -348,6 +357,7 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
 
     let title_db = Label::new(Some("Your Music"));
     let controller_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+    title_db.set_margin_top(10);
 
     let play_music = gtk::Button::new();
     let pause_music = gtk::Button::new();
@@ -389,7 +399,6 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
 
     let frame = gtk::Frame::new(Option::from("Music Control"));
     gtk::WidgetExt::set_widget_name(&frame, "frame");
-
     let middle_sep = gtk::Separator::new(gtk::Orientation::Vertical);
 
     //TODO: testen ob das bei anderen Rechnern richtig angezeigt wird
@@ -405,25 +414,30 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
 
     v_box2.pack_start(&title_db, false, true, 0);
     v_box2.pack_start(&scrolled_window, false, true, 0);
-    v_box2.pack_start(&upload_button, false, true, 0);
+    v_box2.pack_start(&upload_button, true, false, 10);
 
     h_box.pack_start(&h_box_label, false, true, 0);
     h_box.pack_start(&textbox, false, true, 0);
+    h_box.set_margin_top(20);
+    h_box.set_margin_bottom(10);
+
 
     v_box.pack_start(&h_box, false, true, 0);
-    v_box.pack_start(&button, false, true, 0);
-    v_box.pack_start(&stream_button, false, true, 0);
+    v_box.pack_start(&button, false, false, 0);
+    v_box.pack_start(&stream_button, false, false, 0);
 
-    h_box_window.pack_start(&v_box, true, true, 10);
-    h_box_window.pack_start(&middle_sep, false, false, 0);
+    h_box_window.pack_start(&v_box, false, false, 10);
+    h_box_window.pack_start(&middle_sep, false, false, 10);
     h_box_window.pack_start(&v_box2, true, true, 10);
+    //h_box_window.set_homogeneous(true);
 
     frame.add(&h_box_window);
 
-    v_box_window.pack_start(&menu_bar, false, false, 0);
+    header.pack_start(&menu_bar);
+
     v_box_window.pack_start(&label, false, true, 0);
     v_box_window.pack_start(&label2, false, true, 0);
-    v_box_window.pack_start(&frame, true, true, 10);
+    v_box_window.pack_start(&frame, true, true, 0);
     v_box_window.pack_start(&controller_box, true, true, 10);
 
     main_window.add(&v_box_window);
