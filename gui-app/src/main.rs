@@ -7,14 +7,19 @@
 extern crate gio;
 extern crate glib;
 extern crate gtk;
+extern crate meff;
 
 use gio::prelude::*;
 use glib::clone;
 use gtk::prelude::*;
 use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
+use meff::network;
+use crate::util::Application;
 
 use std::env::args;
 use gdk::Window;
+
+mod util;
 
 // Basic CSS: we change background color, we set font color to black and we set it as bold.
 const STYLE: &str = "
@@ -55,8 +60,8 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
     let name_entry_create = gtk::Entry::new();
     let port_entry_create = gtk::Entry::new();
 
-    let name_box = create_entry_with_label("Name", name_entry_create);
-    let port_box = create_entry_with_label("Port    ", port_entry_create);
+    let name_box = create_entry_with_label("Name", name_entry_create.clone());
+    let port_box = create_entry_with_label("Port    ", port_entry_create.clone());
 
     v_box_create.pack_start(&name_box, true, true, 0);
     v_box_create.pack_start(&port_box, true, true, 0);
@@ -69,9 +74,9 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
     let port_entry_join = gtk::Entry::new();
     let ip_entry_join = gtk::Entry::new();
 
-    let name_box_join = create_entry_with_label("Name         ", name_entry_join);
-    let port_box_join = create_entry_with_label("Port            ", port_entry_join);
-    let ip_box_join = create_entry_with_label("IP Address", ip_entry_join);
+    let name_box_join = create_entry_with_label("Name         ", name_entry_join.clone());
+    let port_box_join = create_entry_with_label("Port            ", port_entry_join.clone());
+    let ip_box_join = create_entry_with_label("IP Address", ip_entry_join.clone());
 
     v_box_join.pack_start(&name_box_join, true, true, 0);
     v_box_join.pack_start(&port_box_join, true, true, 0);
@@ -87,8 +92,20 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
     let cancel_button = gtk::Button::new_with_label("Cancel");
 
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
-        println!("Clicked start");
-        startup_window.destroy();
+//      let current_stack = stack.clone().get_visible_child_name();
+        let name = name_entry_create.clone().get_text();
+        let port = port_entry_create.clone().get_text();
+        println!("{:?}  {:?}", &name, &port);
+
+//        let appl = Application {};
+//
+//        let peer = match network::startup(name, port, None, Box::new(appl)) {
+//            Ok(p) => p,
+//            Err(_e) => {
+//                return;
+//            } // error!("Could not join network {:?}", e);
+//        };
+        //startup_window.destroy();
 
     }));
 
@@ -298,6 +315,7 @@ fn build_ui(application: &gtk::Application) {
     main_window.show_all();
     startup_window.set_modal(true);
     startup_window.set_transient_for(Some(&main_window));
+    startup_window.present();
     startup_window.show_all();
 
     about.connect_activate(move |_| {
