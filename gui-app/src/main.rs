@@ -14,7 +14,7 @@ use glib::clone;
 use gtk::prelude::*;
 use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
 use meff::network;
-use crate::util::Application;
+use crate::util::{MEFFM};
 use std::net::SocketAddr;
 
 use std::env::args;
@@ -106,6 +106,15 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
 
             verify_ip(&ip);
 
+        let appl = MEFFM::new();
+
+        let peer = match network::startup(&name, &port, None, Box::new(appl)) {
+            Ok(p) => p,
+            Err(_e) => {
+                return;
+            } // error!("Could not join network {:?}", e);
+        };
+        startup_window.destroy();
             println!("{:?}  {:?}  {:?}", &name, &port, &ip);
 
         }
@@ -163,7 +172,7 @@ fn create_entry_with_label(text: &str, entry: gtk::Entry) -> gtk::Box {
     h_box
 }
 
-fn build_ui(application: &gtk::Application) {
+fn build_ui(application: &gtk::Application, meff: &MEFFM) {
     let main_window = ApplicationWindow::new(application);
     let startup_window = build_startup(&main_window);
 
@@ -361,6 +370,8 @@ fn main() {
         .expect("Initialization failed...");
 
     application.connect_startup(|app| {
+        // @TODO check if it is okay to create our application model here
+        let meff = MEFFM::new();
         // The CSS "magic" happens here.
         let provider = gtk::CssProvider::new();
         provider
@@ -375,8 +386,9 @@ fn main() {
         );
 
         // We build the application UI.
-        build_ui(app);
+        build_ui(app, &meff);
     });
 
     application.run(&args().collect::<Vec<_>>());
+    print!("run");
 }

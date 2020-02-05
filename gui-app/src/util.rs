@@ -1,8 +1,12 @@
 use meff::utils::AppListener;
 
-pub struct Application {}
+//Music entertainment for friends application model
+#[derive(Clone)]
+pub struct MEFFM {
+    pub songs: Vec<String>
+}
 
-impl AppListener for Application {
+impl AppListener for MEFFM {
     fn notify(&self) {
         println!("Hello world");
     }
@@ -11,7 +15,19 @@ impl AppListener for Application {
         unimplemented!()
     }
 
-    fn new_file_saved(&self, name: String) {
-        println!("New file {} saved!", name);
+    fn new_file_saved(&mut self, name: String) {
+
     }
 }
+
+impl MEFFM {
+    pub fn new() -> MEFFM {
+        let mut songs = Vec::new();
+        MEFFM { songs }
+    }
+
+    fn start(&self, name: String, port: String, ip: Option<String>) {
+
+    }
+}
+
