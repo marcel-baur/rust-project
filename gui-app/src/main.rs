@@ -49,7 +49,7 @@ const STYLE: &str = "
     border-color: #B8B8B8;
 }";
 
-fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
+fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Window {
     let startup_window = gtk::Window::new(gtk::WindowType::Toplevel);
     startup_window.set_position(WindowPosition::Center);
     startup_window.set_size_request(550, 300);
@@ -100,6 +100,7 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
 
     let stack_clone = stack.clone();
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
+        let meffm_clone = meff.clone();
         let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string().clone();
         let appl = MEFFM::new();
 
@@ -198,9 +199,9 @@ fn create_entry_with_label(text: &str, entry: gtk::Entry) -> gtk::Box {
     h_box
 }
 
-fn build_ui(application: &gtk::Application, meff: &MEFFM) {
+fn build_ui(application: &gtk::Application, meff: MEFFM) {
     let main_window = ApplicationWindow::new(application);
-    let startup_window = build_startup(&main_window);
+    let startup_window = build_startup(&main_window, meff);
 
     main_window.set_title("MEFF");
     main_window.set_position(WindowPosition::Center);
@@ -412,7 +413,7 @@ fn main() {
         );
 
         // We build the application UI.
-        build_ui(app, &meff);
+        build_ui(app, meff);
     });
 
     application.run(&args().collect::<Vec<_>>());
