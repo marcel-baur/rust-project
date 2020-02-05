@@ -140,10 +140,11 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
     }));
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-    h_box.pack_start(&start_button, false, true, 0);
-    h_box.pack_start(&cancel_button, false, true, 0);
+    h_box.pack_start(&start_button, true, true, 0);
+    h_box.pack_start(&cancel_button, true, true, 0);
     h_box.set_halign(gtk::Align::Center);
     h_box.set_valign(gtk::Align::End);
+    h_box.set_homogeneous(true);
 
     let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
     v_box.pack_start(&stack_switcher, true, true, 0);
@@ -180,6 +181,61 @@ fn create_entry_with_label(text: &str, entry: gtk::Entry) -> gtk::Box {
     h_box.pack_end(&entry, false, true, 0);
 
     h_box
+}
+
+fn add_music_title(song_path: &str) {
+    let title_popup = gtk::Window::new(gtk::WindowType::Toplevel);
+    title_popup.set_position(WindowPosition::Center);
+    title_popup.set_size_request(400, 200);
+
+    let header = gtk::HeaderBar::new();
+    header.set_title(Some("Enter Title"));
+    title_popup.set_titlebar(Some(&header));
+
+    let entry = gtk::Entry::new();
+    let box_label = create_entry_with_label("Title", entry.clone());
+    box_label.set_halign(gtk::Align::Center);
+    box_label.set_margin_top(10);
+
+    let ok_button = gtk::Button::new_with_label("Ok");
+    ok_button.set_halign(gtk::Align::Center);
+    ok_button.set_valign(gtk::Align::End);
+
+    ok_button.connect_clicked(clone!(@weak title_popup => move |_| {
+        //Push music to database
+
+        title_popup.destroy();
+    }));
+
+    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
+    v_box.pack_start(&box_label, true, true, 0);
+    v_box.pack_start(&ok_button, true, true, 20);
+
+    title_popup.add(&v_box);
+    title_popup.show_all();
+}
+
+fn add_song_to_list(song_name: &str, list_box:gtk::ListBox) {
+    let mut list_box_row = gtk::ListBoxRow::new();
+
+    let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+    let label_button = gtk::Button::new_with_label(&song_name);
+
+    let trash_button = gtk::Button::new();
+    gtk::WidgetExt::set_widget_name(&label_button, "button");
+
+    let image_delete = gtk::Image::new_from_file("src/delete.png");
+    trash_button.set_image(Some(&image_delete));
+
+    h_box.pack_start(&label_button, true, true, 0);
+    h_box.pack_end(&trash_button, false, false, 0);
+    list_box_row.connect_activate( move |_| {
+
+    });
+
+    list_box_row.add(&h_box);
+    list_box_row.show_all();
+    list_box.add(&list_box_row);
 }
 
 fn build_ui(application: &gtk::Application, meff: MEFFM) {
@@ -240,7 +296,8 @@ fn build_ui(application: &gtk::Application, meff: MEFFM) {
         let file = dialog.get_filename();
         match file {
             Some(file) =>  {
-                println!("{}", file.into_os_string().into_string().unwrap())
+                //println!("{}", file.into_os_string().into_string().unwrap());
+                add_music_title(&file.into_os_string().into_string().unwrap());
             },
             _ => {},
         }
@@ -266,7 +323,7 @@ fn build_ui(application: &gtk::Application, meff: MEFFM) {
         let image_delete = gtk::Image::new_from_file("src/delete.png");
         trash_button.set_image(Some(&image_delete));
 
-        h_box_songs.pack_start(&label_button, true, false, 0);
+        h_box_songs.pack_start(&label_button, true, true, 0);
         h_box_songs.pack_end(&trash_button, false, false, 0);
         list_box_row.connect_activate( move |_| {
             println!("row {} return", x);
@@ -275,6 +332,10 @@ fn build_ui(application: &gtk::Application, meff: MEFFM) {
         list_box_row.show_all();
         list_box.add(&list_box_row);
     }
+
+//    for song in list_box.row_selected() {
+//        println!("row {} return", song);
+//    }
 
     let mut is_playing = false;
 
