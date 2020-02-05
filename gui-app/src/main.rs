@@ -19,6 +19,8 @@ use std::net::SocketAddr;
 
 use std::env::args;
 use gdk::Window;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 mod util;
 
@@ -49,7 +51,7 @@ const STYLE: &str = "
     border-color: #B8B8B8;
 }";
 
-fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Window {
+fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>) -> gtk::Window {
     let startup_window = gtk::Window::new(gtk::WindowType::Toplevel);
     startup_window.set_position(WindowPosition::Center);
     startup_window.set_size_request(550, 300);
@@ -100,7 +102,7 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
 
     let stack_clone = stack.clone();
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
-        let meffm_clone = meff.clone();
+        //let meffm_clone = meff.clone();
         let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string().clone();
 
         if current_stack == "create" {
@@ -110,7 +112,7 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
             set_entry_border(&port, &port_entry_create);
 
             if !name.is_empty() && !port.is_empty() {
-                meff.start(name, port, None);
+                meff.borrow_mut().start(name, port, None);
                 startup_window.destroy();
             }
         } else {
@@ -124,7 +126,7 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: MEFFM) -> gtk::Wind
 
             if !name.is_empty() && !port.is_empty() && !ip.is_empty() {
                 let addr = verify_ip(&ip);
-                meff.start(name, port, addr);
+                //*meff.borrow_mut().start(name, port, addr);
                 startup_window.destroy();
             }
 
@@ -240,9 +242,10 @@ fn add_song_to_list(song_name: &str, list_box: gtk::ListBox) {
     list_box.add(&list_box_row);
 }
 
-fn build_ui(application: &gtk::Application, meff: MEFFM) {
+fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
     let main_window = ApplicationWindow::new(application);
-    let startup_window = build_startup(&main_window, meff);
+    let meff_clone = Rc::clone(&meff);
+    let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
     main_window.set_size_request(600, 600);
@@ -459,9 +462,11 @@ fn main() {
     )
         .expect("Initialization failed...");
 
+    //let meff = Rc::new(RefCell::new(MEFFM::new()));
+
     application.connect_startup(|app| {
         // @TODO check if it is okay to create our application model here
-        let meff = MEFFM::new();
+        let meff = Rc::new(RefCell::new(MEFFM::new()));
         // The CSS "magic" happens here.
         let provider = gtk::CssProvider::new();
         provider
