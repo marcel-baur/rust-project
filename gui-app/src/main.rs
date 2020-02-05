@@ -205,10 +205,13 @@ fn add_music_title(song_path: &str) {
 
     ok_button.connect_clicked(clone!(@weak title_popup => move |_| {
         //Push music to database
-        let spinner = gtk::Spinner::new();
-        spinner.start();
-
-        title_popup.destroy();
+        let song_name = entry.get_text().unwrap().as_str().to_string().clone();
+        if song_name.is_empty() {
+            gtk::WidgetExt::set_widget_name(&entry, "entry_red");
+        } else {
+            gtk::WidgetExt::set_widget_name(&entry, "entry_gray");
+            title_popup.destroy();
+        }
     }));
 
     let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
