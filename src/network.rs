@@ -98,7 +98,7 @@ pub fn startup(
     let peer_arc = Arc::new(Mutex::new(peer));
     let peer_arc_clone_listen = peer_arc.clone();
     let peer_arc_clone_return = peer_arc.clone();
-    let app_arc = Arc::new(app);
+    let app_arc = Arc::new(Mutex::new(app));
 
     let listener = thread::Builder::new()
         .name("TCPListener".to_string())
@@ -151,8 +151,9 @@ pub fn startup(
 
 }
 
-fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Box<dyn AppListener + Sync>>) -> Result<(), String> {
+fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Mutex<Box<dyn AppListener + Sync>>>) -> Result<(), String> {
     let clone = arc.clone();
+    //let app_clone = app.clone();
     let listen_ip = clone.lock().unwrap().ip_address;
     let listener = TcpListener::bind(&listen_ip).unwrap();
     let mut sink = create_sink().unwrap();
@@ -172,8 +173,9 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Box<dyn AppListener + Sync>>) -> R
                     }
                 };
                 let mut peer = clone.lock().unwrap();
+                let mut app = app.lock().unwrap();
 
-                handle_notification(des, &mut peer, &mut sink, &app);
+                handle_notification(des, &mut peer, &mut sink, &mut app);
                 drop(peer);
                 // TODO: Response, handle duplicate key, redundancy
             }
@@ -233,7 +235,7 @@ fn handle_notification(
     notification: Notification,
     peer: &mut Peer,
     sink: &mut MusicPlayer,
-    listener: &Arc<Box<dyn AppListener + Sync>>,
+    listener: &mut Box<dyn AppListener + Sync>,
 ) {
     dbg!(&notification);
     let sender = notification.from;
