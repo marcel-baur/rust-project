@@ -1,8 +1,8 @@
-use std::io::Read;
+use std::io::{Read, ErrorKind};
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{thread, io, fs};
 
 mod handshake;
 mod music_exchange;
@@ -33,6 +33,7 @@ use request::{
 use response::*;
 use rodio::Sink;
 use std::collections::HashMap;
+use std::path::Path;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -544,4 +545,43 @@ pub fn send_new_file_notification (target: SocketAddr, file_name: &str, peer: &m
     if let Err(_e) = serde_json::to_writer(&stream, &not) {
         println!("Failed to serialize SendRequest {:?}", &not);
     }
+}
+
+/// Function to check file path to mp3 and saves to db afterwards
+/// # Arguments:
+///
+/// * `name` - String including mp3 name (key in our database)
+/// * `file_path` - Path to the mp3 file
+/// * `peer` - Peer
+///
+/// # Returns:
+/// Result //@TODO
+pub fn push_music_to_database(
+    name: &str,
+    file_path: &str,
+    addr: SocketAddr,
+    peer: &mut Peer,
+) -> Result<(), io::Error> {
+    // get mp3 file
+    let path = Path::new(file_path);
+    if path.exists() {
+        let read_result = fs::read(path);
+        match read_result {
+            Ok(content) => {
+                println!("Pushing... This can take a while");
+                //@TODO save to database
+                //                peer.get_db().add_file(name, content);
+                //                peer.store((name.parse().unwrap(), content));
+                send_write_request(addr, addr, (name.to_string(), content), false, peer);
+                return Ok(());
+            }
+            Err(err) => {
+                println!("Error while parsing file");
+                return Err(err);
+            }
+        }
+    } else {
+        println!("The file could not be found at this path: {:?}", path);
+    }
+    Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"))
 }

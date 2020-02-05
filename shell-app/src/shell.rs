@@ -5,7 +5,7 @@ use meff::audio::MusicState::{CONTINUE, PAUSE, PLAY, STOP};
 use meff::network::peer::Peer;
 use meff::network::{
     send_delete_peer_request, send_play_request, send_read_request, send_status_request,
-    send_write_request,
+    send_write_request, push_music_to_database
 };
 use meff::utils;
 use meff::utils::Instructions::{GET, REMOVE};
@@ -158,45 +158,6 @@ pub fn show_help_instructions() {
                 exit - exit network and leave program\n\n
                 ";
     print!("{}", info);
-}
-
-/// Function to check file path to mp3 and saves to db afterwards
-/// # Arguments:
-///
-/// * `name` - String including mp3 name (key in our database)
-/// * `file_path` - Path to the mp3 file
-/// * `peer` - Peer
-///
-/// # Returns:
-/// Result //@TODO
-pub fn push_music_to_database(
-    name: &str,
-    file_path: &str,
-    addr: SocketAddr,
-    peer: &mut Peer,
-) -> Result<(), io::Error> {
-    // get mp3 file
-    let path = Path::new(file_path);
-    if path.exists() {
-        let read_result = fs::read(path);
-        match read_result {
-            Ok(content) => {
-                println!("Pushing... This can take a while");
-                //@TODO save to database
-                //                peer.get_db().add_file(name, content);
-                //                peer.store((name.parse().unwrap(), content));
-                send_write_request(addr, addr, (name.to_string(), content), false, peer);
-                return Ok(());
-            }
-            Err(err) => {
-                println!("Error while parsing file");
-                return Err(err);
-            }
-        }
-    } else {
-        println!("The file could not be found at this path: {:?}", path);
-    }
-    Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"))
 }
 
 fn print_peer_status(arc: &Arc<Mutex<Peer>>) {

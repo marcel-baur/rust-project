@@ -102,7 +102,6 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>)
 
     let stack_clone = stack.clone();
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
-        //let meffm_clone = meff.clone();
         let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string().clone();
 
         if current_stack == "create" {
@@ -126,7 +125,7 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>)
 
             if !name.is_empty() && !port.is_empty() && !ip.is_empty() {
                 let addr = verify_ip(&ip);
-                //*meff.borrow_mut().start(name, port, addr);
+                meff.borrow_mut().start(name, port, addr);
                 startup_window.destroy();
             }
 
@@ -185,7 +184,7 @@ fn create_entry_with_label(text: &str, entry: gtk::Entry) -> gtk::Box {
     h_box
 }
 
-fn add_music_title(song_path: &str) {
+fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     let title_popup = gtk::Window::new(gtk::WindowType::Toplevel);
     title_popup.set_position(WindowPosition::Center);
     title_popup.set_size_request(400, 200);
@@ -204,7 +203,10 @@ fn add_music_title(song_path: &str) {
     ok_button.set_valign(gtk::Align::End);
 
     ok_button.connect_clicked(clone!(@weak title_popup => move |_| {
+        let title = entry.get_text().unwrap().as_str().to_string().clone();
+        let song_path_clone = song_path.clone();
         //Push music to database
+        meff.borrow_mut().push(song_path_clone, title);
 
         title_popup.destroy();
     }));
@@ -296,11 +298,13 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
     upload_button
         .connect_clicked(move |_| {
         dialog.run();
+
+        let meff_clone2 = Rc::clone(&meff);
         let file = dialog.get_filename();
         match file {
             Some(file) =>  {
-                //println!("{}", file.into_os_string().into_string().unwrap());
-                add_music_title(&file.into_os_string().into_string().unwrap());
+                let file_path = file.into_os_string().into_string().unwrap().clone();
+                add_music_title(file_path, meff_clone2);
             },
             _ => {},
         }
