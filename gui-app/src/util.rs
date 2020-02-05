@@ -1,4 +1,6 @@
 use meff::utils::AppListener;
+use meff::network;
+use std::net::SocketAddr;
 
 //Music entertainment for friends application model
 #[derive(Clone)]
@@ -26,8 +28,13 @@ impl MEFFM {
         MEFFM { songs }
     }
 
-    fn start(&self, name: String, port: String, ip: Option<String>) {
-
+    pub fn start(&self, name: String, port: String, ip: Option<SocketAddr>) {
+        match network::startup(&name, &port, None, Box::new(self.clone())) {
+            Ok(p) => p,
+            Err(_e) => {
+                return;
+            } // error!("Could not join network {:?}", e);
+        };
     }
 }
 
