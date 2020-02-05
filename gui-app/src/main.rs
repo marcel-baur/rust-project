@@ -15,6 +15,7 @@ use gtk::prelude::*;
 use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
 use meff::network;
 use crate::util::Application;
+use std::net::SocketAddr;
 
 use std::env::args;
 use gdk::Window;
@@ -91,12 +92,23 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
     let start_button = gtk::Button::new_with_label("Start");
     let cancel_button = gtk::Button::new_with_label("Cancel");
 
+    let stack_clone = stack.clone();
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
-//      let current_stack = stack.clone().get_visible_child_name();
-        let name = name_entry_create.clone().get_text();
-        let port = port_entry_create.clone().get_text();
-        println!("{:?}  {:?}", &name, &port);
+        let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string().clone();
+        if current_stack == "create" {
+            let name = name_entry_create.get_text().unwrap().as_str().to_string().clone();
+            let port = port_entry_create.get_text().unwrap().as_str().to_string().clone();
+            println!("{:?}  {:?}", &name, &port);
+        } else {
+            let name = name_entry_join.get_text().unwrap().as_str().to_string().clone();
+            let port = port_entry_join.get_text().unwrap().as_str().to_string().clone();
+            let mut ip = ip_entry_join.get_text().unwrap().as_str().to_string().clone();
 
+            verify_ip(&ip);
+
+            println!("{:?}  {:?}  {:?}", &name, &port, &ip);
+
+        }
 //        let appl = Application {};
 //
 //        let peer = match network::startup(name, port, None, Box::new(appl)) {
@@ -128,6 +140,18 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
     startup_window.add(&v_box);
     startup_window
 }
+
+fn verify_ip(addr: &String) {
+    let ip: SocketAddr = match addr.parse::<SocketAddr>() {
+        Ok(socket_addr) => socket_addr,
+        Err(_) => {
+            //  error!("Could not parse ip address of remote Peer");
+            return;
+        }
+    };
+
+}
+
 
 fn create_entry_with_label(text: &str, entry: gtk::Entry) -> gtk::Box {
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 20);
