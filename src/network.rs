@@ -392,9 +392,8 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
     };
 
     let not = Notification {
-        content: Content::Response {
-            from: origin,
-            message: Message::DataStored { key },
+        content: Content::NewFileSaved {
+            song_name: key.to_string(),
         },
         from: origin,
     };
