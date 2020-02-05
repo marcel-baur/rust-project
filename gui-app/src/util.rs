@@ -18,7 +18,7 @@ impl AppListener for MEFFM {
     }
 
     fn new_file_saved(&mut self, name: String) {
-
+        self.songs.push(name);
     }
 }
 
@@ -29,7 +29,7 @@ impl MEFFM {
     }
 
     pub fn start(&self, name: String, port: String, ip: Option<SocketAddr>) {
-        match network::startup(&name, &port, None, Box::new(self.clone())) {
+        match network::startup(&name, &port, ip, Box::new(self.clone())) {
             Ok(p) => p,
             Err(_e) => {
                 return;
