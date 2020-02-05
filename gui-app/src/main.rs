@@ -275,15 +275,20 @@ fn build_ui(application: &gtk::Application, meff: MEFFM) {
 
     for x in 0..100 {
         let mut list_box_row = gtk::ListBoxRow::new();
-        let hbox = gtk::Box::new(gtk::Orientation::Vertical, 5);
-        //let label = Label::new(Some("Abba"));
+        let h_box_songs = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         let label_button = gtk::Button::new_with_label("Abba");
+        label_button.set_size_request(50, 20);
+        let trash_button = gtk::Button::new();
         gtk::WidgetExt::set_widget_name(&label_button, "button");
-        hbox.pack_start(&label_button, false, false, 5);
+        let image_delete = gtk::Image::new_from_file("src/delete.png");
+        trash_button.set_image(Some(&image_delete));
+
+        h_box_songs.pack_start(&label_button, true, false, 0);
+        h_box_songs.pack_end(&trash_button, false, false, 0);
         list_box_row.connect_activate( move |_| {
             println!("row {} return", x);
         });
-        list_box_row.add(&hbox);
+        list_box_row.add(&h_box_songs);
         list_box_row.show_all();
         list_box.add(&list_box_row);
     }
