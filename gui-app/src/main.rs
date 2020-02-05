@@ -43,7 +43,7 @@ const STYLE: &str = "
 }";
 
 fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
-    let startup_window = gtk::Window::new(gtk::WindowType::Popup);
+    let startup_window = gtk::Window::new(gtk::WindowType::Toplevel);
     startup_window.set_position(WindowPosition::Center);
     startup_window.set_size_request(550, 300);
 
@@ -106,7 +106,6 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
 //            } // error!("Could not join network {:?}", e);
 //        };
         //startup_window.destroy();
-
     }));
 
     cancel_button.connect_clicked(clone!(@weak main_window => move |_| {
@@ -315,7 +314,6 @@ fn build_ui(application: &gtk::Application) {
     main_window.show_all();
     startup_window.set_modal(true);
     startup_window.set_transient_for(Some(&main_window));
-    startup_window.present();
     startup_window.show_all();
 
     about.connect_activate(move |_| {
