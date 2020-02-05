@@ -41,6 +41,12 @@ const STYLE: &str = "
 }
 #frame{
     padding: 10px;
+}
+#entry_red {
+    border-color: red;
+}
+#entry_gray {
+    border-color: #B8B8B8;
 }";
 
 fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
@@ -95,38 +101,50 @@ fn build_startup(main_window: &gtk::ApplicationWindow) -> gtk::Window {
     let stack_clone = stack.clone();
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
         let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string().clone();
+        let appl = MEFFM::new();
+
         if current_stack == "create" {
             let name = name_entry_create.get_text().unwrap().as_str().to_string().clone();
             let port = port_entry_create.get_text().unwrap().as_str().to_string().clone();
-            println!("{:?}  {:?}", &name, &port);
+            set_entry_border(&name, &name_entry_create);
+            set_entry_border(&port, &port_entry_create);
+
+            if !name.is_empty() && !port.is_empty() {
+                let peer = match network::startup(&name, &port, None, Box::new(appl)) {
+                    Ok(p) => p,
+                    Err(_e) => {
+                        return;
+                    } // error!("Could not join network {:?}", e);
+                };
+                startup_window.destroy();
+            }
         } else {
             let name = name_entry_join.get_text().unwrap().as_str().to_string().clone();
             let port = port_entry_join.get_text().unwrap().as_str().to_string().clone();
             let mut ip = ip_entry_join.get_text().unwrap().as_str().to_string().clone();
 
-            verify_ip(&ip);
+            set_entry_border(&name, &name_entry_join);
+            set_entry_border(&port, &port_entry_join);
+            set_entry_border(&ip, &ip_entry_join);
 
-        let appl = MEFFM::new();
+            if !name.is_empty() && !port.is_empty() && !ip.is_empty() {
 
-        let peer = match network::startup(&name, &port, None, Box::new(appl)) {
-            Ok(p) => p,
-            Err(_e) => {
-                return;
-            } // error!("Could not join network {:?}", e);
-        };
-        startup_window.destroy();
+                verify_ip(&ip);
+
+                let peer = match network::startup(&name, &port, None, Box::new(appl)) {
+                    Ok(p) => p,
+                    Err(_e) => {
+                        return;
+                    } // error!("Could not join network {:?}", e);
+                };
+                startup_window.destroy();
+            }
+
+            //startup_window.destroy();
+
             println!("{:?}  {:?}  {:?}", &name, &port, &ip);
 
         }
-//        let appl = Application {};
-//
-//        let peer = match network::startup(name, port, None, Box::new(appl)) {
-//            Ok(p) => p,
-//            Err(_e) => {
-//                return;
-//            } // error!("Could not join network {:?}", e);
-//        };
-        //startup_window.destroy();
     }));
 
     cancel_button.connect_clicked(clone!(@weak main_window => move |_| {
@@ -159,6 +177,14 @@ fn verify_ip(addr: &String) {
         }
     };
 
+}
+
+fn set_entry_border(text: &str, entry: &gtk::Entry) {
+    if text.is_empty() {
+        gtk::WidgetExt::set_widget_name(entry, "entry_red");
+    } else {
+        gtk::WidgetExt::set_widget_name(entry, "entry_gray");
+    }
 }
 
 
