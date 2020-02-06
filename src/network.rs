@@ -3,7 +3,7 @@ use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::{thread, io, fs};
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver, SyncSender};
 use std::sync::mpsc;
 
 mod handshake;
@@ -99,7 +99,7 @@ pub fn startup(
     ip_address: Option<SocketAddr>,
     app: Box<dyn AppListener + Sync>,
 ) -> Result<Arc<Mutex<Peer>>, String> {
-    let (sender, receiver): (Sender<Notification>, Receiver<Notification>) = mpsc::channel();
+    let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) = mpsc::sync_channel(5);
     let sender_clone_peer = sender.clone();
     let peer = create_peer(own_name, port, sender_clone_peer).unwrap();
     let own_addr = peer.ip_address;
@@ -173,7 +173,7 @@ pub fn startup(
     return Ok(peer_arc_clone_return);
 }
 
-fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: Sender<Notification>) -> Result<(), String> {
+fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result<(), String> {
     let clone = arc.clone();
     let sender_clone = sender.clone();
     let listen_ip = clone.lock().unwrap().ip_address;

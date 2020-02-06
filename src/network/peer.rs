@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
 use std::time::SystemTime;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Sender, SyncSender};
 use crate::network::notification::Notification;
 
 /// Represents a Peer in the network
@@ -16,7 +16,7 @@ pub struct Peer {
     pub network_table: HashMap<String, SocketAddr>,
     pub database: Database,
     pub open_request_table: HashMap<SystemTime, Instructions>,
-    pub sender: Sender<Notification>,
+    pub sender: SyncSender<Notification>,
 }
 
 impl Peer {
@@ -30,7 +30,7 @@ impl Peer {
         onw_name: &str,
         network_table: HashMap<String, SocketAddr>,
         open_request_table: HashMap<SystemTime, Instructions>,
-        sender: Sender<Notification>
+        sender: SyncSender<Notification>
     ) -> Peer {
         Peer {
             name: onw_name.to_string(),
@@ -127,7 +127,7 @@ impl Peer {
 ///
 /// # Returns:
 /// A new `Peer` if successful, error string if failed
-pub fn create_peer(onw_name: &str, port: &str, sender: Sender<Notification>) -> Result<Peer, String> {
+pub fn create_peer(onw_name: &str, port: &str, sender: SyncSender<Notification>) -> Result<Peer, String> {
     let peer_socket_addr = match get_own_ip_address(port) {
         Ok(val) => val,
         Err(error_message) => return Err(error_message),
