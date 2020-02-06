@@ -10,7 +10,7 @@ extern crate gtk;
 extern crate meff;
 
 use gio::prelude::*;
-use glib::clone;
+use glib::{clone, Receiver};
 use gtk::prelude::*;
 use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
 use meff::network;
@@ -221,7 +221,7 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     title_popup.show_all();
 }
 
-fn add_song_to_list(song_name: &str, list_box: gtk::ListBox) {
+fn add_song_to_list(song_name: &str, list_box: &gtk::ListBox) {
     let mut list_box_row = gtk::ListBoxRow::new();
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
@@ -244,7 +244,7 @@ fn add_song_to_list(song_name: &str, list_box: gtk::ListBox) {
     list_box.add(&list_box_row);
 }
 
-fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
+fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<String>) {
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
     let startup_window = build_startup(&main_window, meff_clone);
@@ -328,30 +328,12 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>) {
     let h_box_label = Label::new(Some("Title"));
 
     let list_box = gtk::ListBoxBuilder::new().activate_on_single_click(true).build();
+    let l_b_clone = list_box.clone();
 
-    for x in 0..100 {
-        let mut list_box_row = gtk::ListBoxRow::new();
-        let h_box_songs = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-        let label_button = gtk::Button::new_with_label("Abba");
-        let trash_button = gtk::Button::new();
-
-        gtk::WidgetExt::set_widget_name(&label_button, "button");
-        let image_delete = gtk::Image::new_from_file("src/delete.png");
-        trash_button.set_image(Some(&image_delete));
-
-        h_box_songs.pack_start(&label_button, true, true, 0);
-        h_box_songs.pack_end(&trash_button, false, false, 0);
-        list_box_row.connect_activate( move |_| {
-            println!("row {} return", x);
-        });
-        list_box_row.add(&h_box_songs);
-        list_box_row.show_all();
-        list_box.add(&list_box_row);
-    }
-
-//    for song in list_box.row_selected() {
-//        println!("row {} return", song);
-//    }
+    receiver.attach(None, move |text| {
+        add_song_to_list(text.as_ref(), &l_b_clone);
+        glib::Continue(true)
+    });
 
     let mut is_playing = false;
 
@@ -471,6 +453,8 @@ fn main() {
     application.connect_startup(|app| {
         // @TODO check if it is okay to create our application model here
         let meff = Rc::new(RefCell::new(MEFFM::new()));
+        let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+        meff.borrow_mut().set_sender(tx);
         // The CSS "magic" happens here.
         let provider = gtk::CssProvider::new();
         provider
@@ -485,7 +469,7 @@ fn main() {
         );
 
         // We build the application UI.
-        build_ui(app, meff);
+        build_ui(app, meff, rx);
     });
 
     application.run(&args().collect::<Vec<_>>());

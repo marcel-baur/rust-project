@@ -7,12 +7,16 @@ use meff::network::{
     send_write_request, push_music_to_database,
 };
 use std::cell::RefCell;
+use std::collections::HashMap;
+use gtk::Widget;
+use glib::{Sender, Receiver};
 
 //Music entertainment for friends application model
 #[derive(Clone)]
 pub struct MEFFM {
     pub songs: Vec<String>,
     pub peer: Option<Peer>,
+    pub sender: Option<Sender<String>>,
 }
 
 impl AppListener for MEFFM {
@@ -26,14 +30,21 @@ impl AppListener for MEFFM {
 
     fn new_file_saved(&mut self, name: String) {
         println!("new_file_saved");
+        //@TODO remove unwrap
+        self.sender.as_ref().unwrap().send(name);
         //self.songs.push(name);
+
     }
 }
 
 impl MEFFM {
     pub fn new() -> MEFFM {
         let mut songs = Vec::new();
-        MEFFM { songs, peer: None }
+        MEFFM { songs, peer: None, sender: None}
+    }
+
+    pub fn set_sender(&mut self, sender: Sender<String>) {
+        self.sender = Some(sender);
     }
 
     //@TODO return result
