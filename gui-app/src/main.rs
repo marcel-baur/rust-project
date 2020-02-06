@@ -357,7 +357,8 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
         } else if instr == "Delete" {
             for element in l_b_clone.get_children() {
-
+                //println!("{}", &element);
+                l_b_clone.remove(&element);
             }
 
         }

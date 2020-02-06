@@ -9,7 +9,7 @@ use crate::network::music_exchange::{
 };
 use crate::network::peer::Peer;
 use crate::network::{other_random_target, send_local_file_status, send_read_request, send_status_request, send_write_request, send_write_response, send_new_file_notification};
-use crate::utils::Instructions;
+use crate::utils::{Instructions, AppListener};
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
 use rodio::Sink;
 use std::net::SocketAddr;
@@ -251,9 +251,11 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
     }
 }
 
-pub fn delete_file_request(song_name: String, peer: &mut Peer) {
+pub fn delete_file_request(song_name: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     if peer.database.data.contains_key(&song_name) {
         println!("Remove file {} from database", &song_name);
+        let song_clone = song_name.clone();
+        listener.file_status_changed(song_clone, "Delete".to_string());
         peer.delete_file_from_database(&song_name);
     }
 }

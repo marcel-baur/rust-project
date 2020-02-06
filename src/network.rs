@@ -275,7 +275,7 @@ fn handle_notification(
             get_file_response(instr, key, value, peer, sink);
         }
         Content::DeleteFileRequest { song_name } => {
-            delete_file_request(song_name, peer);
+            delete_file_request(song_name, peer, listener);
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
