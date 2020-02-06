@@ -71,6 +71,7 @@ pub fn play_music_by_vec(music: Vec<u8>, sink: &mut MusicPlayer) -> Result<(), S
         Ok(decoded_source) => decoded_source,
         Err(_e) => return Err("file could not be decoded. is it mp3?".to_string()),
     };
+    sink.sink.play();
     if sink.is_playing {
         sink.sink.append(source);
     } else {

@@ -11,6 +11,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use gtk::Widget;
 use glib::{Sender, Receiver};
+use meff::audio::MusicState::{CONTINUE, PAUSE, PLAY, STOP};
+use meff::audio::MusicState;
 
 //Music entertainment for friends application model
 #[derive(Clone)]
@@ -74,6 +76,30 @@ impl MEFFM {
     pub fn remove_title(&mut self, title: String) {
         let ip = self.peer.as_ref().unwrap().ip_address;
         send_read_request(ip, &title, REMOVE);
+    }
+
+    fn music_control(&mut self, instr: MusicState) {
+        match self.cur_selected_song.as_ref() {
+            Some(song) => {
+                let ip = self.peer.as_ref().unwrap().ip_address;
+                send_play_request(&song, ip, instr);
+            }
+            None => {
+
+            }
+        }
+    }
+
+    pub fn play(&mut self) {
+        self.music_control(PLAY);
+    }
+
+    pub fn pause(&mut self) {
+        self.music_control(PAUSE);
+    }
+
+    pub fn stop(&mut self) {
+        self.music_control(STOP);
     }
 }
 

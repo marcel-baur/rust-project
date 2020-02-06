@@ -238,12 +238,17 @@ fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<Ref
     let image_delete = gtk::Image::new_from_file("src/delete.png");
     trash_button.set_image(Some(&image_delete));
 
+    let song_clone_1 = song_name.clone();
+    let meff_clone = meff.clone();
     trash_button.connect_clicked(move |_| {
-        meff.borrow_mut().remove_title(song_name.to_string());
+        meff_clone.borrow_mut().remove_title(song_clone_1.to_string());
     });
 
+    let song_clone_2 = song_name.clone();
+    let meff_clone_2 = meff.clone();
     label_button.connect_clicked( move |_| {
-        println!("clicked......");
+        println!("Clicked song");
+        meff_clone_2.borrow_mut().cur_selected_song = Some(song_clone_2.to_string());
     });
 
     h_box.pack_start(&label_button, true, true, 0);
@@ -258,6 +263,10 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
     let meff_clone_l = Rc::clone(&meff_clone);
+    let meff_clone_play = Rc::clone(&meff_clone_l);
+    let meff_clone_pause = Rc::clone(&meff_clone_play);
+    let meff_clone_stop = Rc::clone(&meff_clone_pause);
+    let meff_clone_continue = Rc::clone(&meff_clone_stop);
     let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
@@ -351,13 +360,17 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     receiver.attach(None, move |(text, instr)| {
         if instr == "New" {
             let meff_clone_3 = Rc::clone(&meff_clone_l);
-            let text_clone = Rc::new(text);
+            let clone = text.clone();
+            let text_clone = Rc::new(clone);
             add_song_to_list(text_clone, &l_b_clone, meff_clone_3);
 //        spinner.stop();
 
-        } else if instr == "Delete" {
+        }
+        if instr == "Delete" {
+            let text_clone_2 = Rc::new(text);
             for element in l_b_clone.get_children() {
-                //println!("{}", &element);
+                let text = element.get_widget_name().unwrap().as_str().to_string().clone();
+                println!("{}", &text);
                 l_b_clone.remove(&element);
             }
 
@@ -386,22 +399,20 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
     play_music.connect_clicked(move |_| {
         println!("Clicked play");
-//        let mut playing = is_playing.clone();
-//        if playing {
-//            play_music.set_image(Some(&image_play));
-//            playing = false;
-//        } else {
-//            play_music.set_image(Some(&image_pause));
-//            playing = true;
-//        }
+        let meff_clone_4 = Rc::clone(&meff_clone_play);
+        meff_clone_4.borrow_mut().play();
+
+
     });
 
     pause_music.connect_clicked(move |_| {
-        println!("Clicked pause");
+        let meff_clone_5 = Rc::clone(&meff_clone_pause);
+        meff_clone_5.borrow_mut().pause();
     });
 
     stop_music.connect_clicked(move |_| {
-        println!("Clicked stop");
+        let meff_clone_6 = Rc::clone(&meff_clone_stop);
+        meff_clone_6.borrow_mut().stop();
     });
 
     let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);

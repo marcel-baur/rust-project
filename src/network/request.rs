@@ -103,12 +103,14 @@ pub fn request_for_table(value: String, sender: SocketAddr, peer: &mut Peer) {
     }
 }
 
-pub fn find_file(instr: Instructions, song_name: String, peer: &mut Peer) {
+pub fn find_file(instr: Instructions, song_name: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
     // @TODO in this case we need to remove the request?
     if peer.get_db().get_data().contains_key(&song_name) {
         if instr == REMOVE {
             peer.delete_file_from_database(&song_name);
+            let song_clone = song_name.clone();
+            listener.file_status_changed(song_clone, "Delete".to_string());
             println!("Remove file {} from database", &song_name);
 
             let id = SystemTime::now();

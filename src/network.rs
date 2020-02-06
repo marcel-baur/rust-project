@@ -260,7 +260,7 @@ fn handle_notification(
             request_for_table(value, sender, peer);
         }
         Content::FindFile { song_name, instr } => {
-            find_file(instr, song_name, peer);
+            find_file(instr, song_name, peer, listener);
         }
         Content::ExistFile { song_name, id } => {
             exist_file(song_name, id, sender, peer);
