@@ -10,7 +10,7 @@ use std::string::ToString;
 use std::sync::Arc;
 use std::{fs, thread};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum MusicState {
     PLAY,
     PAUSE,
