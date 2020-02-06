@@ -309,7 +309,7 @@ fn handle_notification(
         }
         Content::Heartbeat => {}
         Content::NewFileSaved {song_name} => {
-            listener.new_file_saved(song_name);
+            listener.file_status_changed(song_name, "New".to_string());
         }
     }
 }

@@ -15,9 +15,9 @@ use glib::{Sender, Receiver};
 //Music entertainment for friends application model
 #[derive(Clone)]
 pub struct MEFFM {
-    pub songs: Vec<String>,
+    pub cur_selected_song: Option<String>,
     pub peer: Option<Peer>,
-    pub sender: Option<Sender<String>>,
+    pub sender: Option<Sender<(String, String)>>,
 }
 
 impl AppListener for MEFFM {
@@ -29,22 +29,20 @@ impl AppListener for MEFFM {
         unimplemented!()
     }
 
-    fn new_file_saved(&mut self, name: String) {
+    fn file_status_changed(&mut self, name: String, instr: String) {
         println!("new_file_saved");
         //@TODO remove unwrap
-        self.sender.as_ref().unwrap().send(name);
+        self.sender.as_ref().unwrap().send((name, instr));
         //self.songs.push(name);
-
     }
 }
 
 impl MEFFM {
     pub fn new() -> MEFFM {
-        let mut songs = Vec::new();
-        MEFFM { songs, peer: None, sender: None}
+        MEFFM { cur_selected_song: None, peer: None, sender: None}
     }
 
-    pub fn set_sender(&mut self, sender: Sender<String>) {
+    pub fn set_sender(&mut self, sender: Sender<(String, String)>) {
         self.sender = Some(sender);
     }
 

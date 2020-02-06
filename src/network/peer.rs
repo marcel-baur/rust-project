@@ -71,6 +71,7 @@ impl Peer {
 
     pub fn delete_file_from_database(&mut self, song_name: &str) {
         self.database.data.remove(song_name);
+
     }
 
     pub fn drop_peer_by_ip(&mut self, addr: &SocketAddr) {

@@ -21,6 +21,7 @@ use std::env::args;
 use gdk::Window;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::borrow::Borrow;
 
 mod util;
 
@@ -225,7 +226,7 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     title_popup.show_all();
 }
 
-fn add_song_to_list(song_name: &str, list_box: &gtk::ListBox) {
+fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<RefCell<MEFFM>>) {
     let mut list_box_row = gtk::ListBoxRow::new();
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
@@ -237,25 +238,26 @@ fn add_song_to_list(song_name: &str, list_box: &gtk::ListBox) {
     let image_delete = gtk::Image::new_from_file("src/delete.png");
     trash_button.set_image(Some(&image_delete));
 
-    let song_clone = song_name.clone();
     trash_button.connect_clicked(move |_| {
-        //meff.borrow_mut().remove_title(song_clone.to_string());
+        meff.borrow_mut().remove_title(song_name.to_string());
+    });
+
+    label_button.connect_clicked( move |_| {
+        println!("clicked......");
     });
 
     h_box.pack_start(&label_button, true, true, 0);
     h_box.pack_end(&trash_button, false, false, 0);
-    label_button.connect_clicked( move |_| {
-        println!("clicked......");
-    });
 
     list_box_row.add(&h_box);
     list_box_row.show_all();
     list_box.add(&list_box_row);
 }
 
-fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<String>) {
+fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<(String, String)>) {
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
+    let meff_clone_l = Rc::clone(&meff_clone);
     let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
@@ -317,13 +319,12 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
     upload_button
         .connect_clicked(move |_| {
-        let result = dialog.run();
+            let meff_clone2 = Rc::clone(&meff);
+            let result = dialog.run();
         match result {
             ResponseType::Cancel => {
-                dialog.hide();
             }
             ResponseType::Accept => {
-                let meff_clone2 = Rc::clone(&meff);
                 let file = dialog.get_filename();
                 match file {
                     Some(file) =>  {
@@ -335,8 +336,8 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
             }
             _ => {}
         }
-
-    });
+            dialog.hide();
+        });
    
     let stream_button = gtk::Button::new_with_label("Stream music");
 
@@ -347,11 +348,21 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let list_box = gtk::ListBoxBuilder::new().activate_on_single_click(true).build();
     let l_b_clone = list_box.clone();
 
-    receiver.attach(None, move |text| {
-        //let meff_clone3 = Rc::clone(&meff);
-        add_song_to_list(text.as_ref(), &l_b_clone);
+    receiver.attach(None, move |(text, instr)| {
+        if instr == "New" {
+            let meff_clone_3 = Rc::clone(&meff_clone_l);
+            let text_clone = Rc::new(text);
+            add_song_to_list(text_clone, &l_b_clone, meff_clone_3);
 //        spinner.stop();
+
+        } else if instr == "Delete" {
+            for element in l_b_clone.get_children() {
+
+            }
+
+        }
         glib::Continue(true)
+
     });
 
     let mut is_playing = false;
