@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
 use std::time::SystemTime;
+use std::sync::mpsc::{Sender, SyncSender};
+use crate::network::notification::Notification;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -14,6 +16,7 @@ pub struct Peer {
     pub network_table: HashMap<String, SocketAddr>,
     pub database: Database,
     pub open_request_table: HashMap<SystemTime, Instructions>,
+    pub sender: SyncSender<Notification>,
 }
 
 impl Peer {
@@ -27,14 +30,15 @@ impl Peer {
         onw_name: &str,
         network_table: HashMap<String, SocketAddr>,
         open_request_table: HashMap<SystemTime, Instructions>,
+        sender: SyncSender<Notification>
     ) -> Peer {
         Peer {
             name: onw_name.to_string(),
             ip_address,
             network_table,
             database: Database::new(),
-            //@TODO refactor this! we need a kind of request list
             open_request_table,
+            sender
         }
     }
 
@@ -123,7 +127,7 @@ impl Peer {
 ///
 /// # Returns:
 /// A new `Peer` if successful, error string if failed
-pub fn create_peer(onw_name: &str, port: &str) -> Result<Peer, String> {
+pub fn create_peer(onw_name: &str, port: &str, sender: SyncSender<Notification>) -> Result<Peer, String> {
     let peer_socket_addr = match get_own_ip_address(port) {
         Ok(val) => val,
         Err(error_message) => return Err(error_message),
@@ -136,6 +140,7 @@ pub fn create_peer(onw_name: &str, port: &str) -> Result<Peer, String> {
         onw_name,
         network_table,
         open_request_table,
+        sender
     );
     Ok(peer)
 }

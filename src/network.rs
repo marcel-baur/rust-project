@@ -3,6 +3,8 @@ use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::{thread, io, fs};
+use std::sync::mpsc::{Sender, Receiver, SyncSender};
+use std::sync::mpsc;
 
 mod handshake;
 mod music_exchange;
@@ -13,6 +15,7 @@ mod response;
 
 extern crate get_if_addrs;
 extern crate rand;
+
 use rand::Rng;
 
 use crate::audio::{
@@ -34,6 +37,8 @@ use response::*;
 use rodio::Sink;
 use std::collections::HashMap;
 use std::path::Path;
+use std::ops::Not;
+use std::rc::Rc;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -94,17 +99,46 @@ pub fn startup(
     ip_address: Option<SocketAddr>,
     app: Box<dyn AppListener + Sync>,
 ) -> Result<Arc<Mutex<Peer>>, String> {
-    let peer = create_peer(own_name, port).unwrap();
+    let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) = mpsc::sync_channel(5);
+    let sender_clone_peer = sender.clone();
+    let peer = create_peer(own_name, port, sender_clone_peer).unwrap();
     let own_addr = peer.ip_address;
+
     let peer_arc = Arc::new(Mutex::new(peer));
     let peer_arc_clone_listen = peer_arc.clone();
     let peer_arc_clone_return = peer_arc.clone();
-    let app_arc = Arc::new(Mutex::new(app));
+    let peer_arc_clone_working = peer_arc.clone();
 
+    let app_arc = Arc::new(Mutex::new(app));
+    let app_arc_working = app_arc.clone();
+
+    let sink = Arc::new(Mutex::new(create_sink().unwrap()));
+    let sink_arc_clone_working = sink.clone();
+
+    let working_thread = thread::Builder::new().name("working_thread".to_string()).spawn(
+        move || {
+            loop {
+                let ele = receiver.recv();
+                match ele {
+                    Ok(not) => {
+                        let mut peer = peer_arc_clone_working.lock().unwrap();
+                        let mut app = app_arc_working.lock().unwrap();
+                        let mut sink = sink_arc_clone_working.lock().unwrap();
+                        handle_notification(not, &mut peer, &mut sink, &mut app);
+                    },
+                    Err(e) => {
+                        println!("error");
+                    }
+                }
+            }
+        }
+    );
+
+    let sender_clone = sender.clone();
     let listener = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            match listen_tcp(peer_arc_clone_listen, app_arc) {
+            match listen_tcp(peer_arc_clone_listen, sender_clone) {
                 Ok(_) => {}
                 Err(_) => {
                     eprintln!("Failed to spawn listener");
@@ -112,6 +146,7 @@ pub fn startup(
             };
         })
         .unwrap();
+
     let peer_arc_clone_interact = peer_arc.clone();
     let peer_arc_clone_heartbeat = peer_arc.clone();
 
@@ -125,18 +160,6 @@ pub fn startup(
         }
     }
 
-//    let interact = thread::Builder::new()
-//        .name("Interact".to_string())
-//        .spawn(move || {
-//            //spawn shell
-//            match spawn_shell(peer_arc_clone_interact) {
-//                Ok(_) => {}
-//                Err(_) => {
-//                    eprintln!("Failed to spawn shell");
-//                }
-//            };
-//        })
-//        .unwrap();
     let heartbeat = thread::Builder::new()
         .name("Heartbeat".to_string())
         .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
@@ -146,22 +169,17 @@ pub fn startup(
             }
         })
         .unwrap();
-    return Ok(peer_arc_clone_return);
-//    listener.join().expect_err("Could not join Listener");
-//    heartbeat.join().expect_err("Could not join Heartbeat");
 
+    return Ok(peer_arc_clone_return);
 }
 
-fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Mutex<Box<dyn AppListener + Sync>>>) -> Result<(), String> {
+fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result<(), String> {
     let clone = arc.clone();
-    //let app_clone = app.clone();
+    let sender_clone = sender.clone();
     let listen_ip = clone.lock().unwrap().ip_address;
     let listener = TcpListener::bind(&listen_ip).unwrap();
-    let mut sink = create_sink().unwrap();
-    println!("Listening on {}", listen_ip);
     for stream in listener.incoming() {
         let mut buf = String::new();
-        //        dbg!(&stream);
         match stream {
             Ok(mut s) => {
                 s.read_to_string(&mut buf).unwrap();
@@ -173,12 +191,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, app: Arc<Mutex<Box<dyn AppListener + Sync>>
                         continue; // skip this stream
                     }
                 };
-                let mut peer = clone.lock().unwrap();
-                let mut app = app.lock().unwrap();
-
-                handle_notification(des, &mut peer, &mut sink, &mut app);
-                drop(peer);
-                // TODO: Response, handle duplicate key, redundancy
+                sender_clone.send(des).unwrap();
             }
             Err(_e) => {
                 println!("could not read stream");
@@ -238,7 +251,6 @@ fn handle_notification(
     sink: &mut MusicPlayer,
     listener: &mut Box<dyn AppListener + Sync>,
 ) {
-    dbg!(&notification);
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
@@ -275,7 +287,8 @@ fn handle_notification(
             get_file_response(instr, key, value, peer, sink);
         }
         Content::DeleteFileRequest { song_name } => {
-            delete_file_request(song_name, peer, listener);
+            delete_file_request(&song_name, peer);
+            listener.file_status_changed(song_name, "Delete".to_string());
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
@@ -471,7 +484,6 @@ pub fn send_play_request(name: &str, from: SocketAddr, state: MusicState) {
     let stream = match TcpStream::connect(from) {
         Ok(s) => s,
         Err(_e) => {
-            //            handle_lost_connection(from, peer); TODO
             return;
         }
     };
@@ -568,10 +580,15 @@ pub fn push_music_to_database(
         match read_result {
             Ok(content) => {
                 println!("Pushing... This can take a while");
-                //@TODO save to database
-                //                peer.get_db().add_file(name, content);
-                //                peer.store((name.parse().unwrap(), content));
-                send_write_request(addr, addr, (name.to_string(), content), false, peer);
+                let not = Notification {
+                    content: Content::PushToDB {
+                        key: name.to_string(),
+                        value: content,
+                        from: addr.to_string(),
+                    },
+                    from: addr,
+                };
+                peer.sender.send(not).unwrap();
                 return Ok(());
             }
             Err(err) => {
