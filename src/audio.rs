@@ -44,7 +44,7 @@ pub fn play_music(peer: &mut Peer, name: &str, sink: &mut MusicPlayer) {
     let sound_data = match peer.get_db().data.get(name) {
         Some(data) => data,
         None => {
-            send_read_request(peer.ip_address, name, PLAY);
+            send_read_request(peer, name, PLAY);
             return;
         }
     };

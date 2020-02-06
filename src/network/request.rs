@@ -249,7 +249,7 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
         let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
         song_order_request(redundant_target, peer.ip_address, song_name.to_string());
     } else {
-        send_read_request(peer.ip_address, &song_name, Instructions::ORDER)
+        send_read_request(peer, &song_name, Instructions::ORDER)
     }
 }
 

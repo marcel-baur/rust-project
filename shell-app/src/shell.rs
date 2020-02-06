@@ -70,7 +70,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                         instructions[1],
                         instructions[2],
                         peer_clone.ip_address,
-                        &mut peer_clone,
+                        peer_clone,
                     ) {
                         Ok(_) => {}
                         Err(e) => {
@@ -89,7 +89,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"get") => {
                 if instructions.len() == 2 {
-                    send_read_request(peer_clone.ip_address, instructions[1], GET);
+                    send_read_request(&mut peer_clone, instructions[1], GET);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -98,7 +98,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"exit") => {
                 println!("You are leaving the network.");
-                send_delete_peer_request(peer_clone.ip_address);
+                send_delete_peer_request(&mut peer_clone);
                 //TODO: stop steams
             }
             Some(&"status") => {
@@ -115,7 +115,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"remove") => {
                 if instructions.len() == 2 {
-                    send_read_request(peer_clone.ip_address, instructions[1], REMOVE);
+                    send_read_request(&mut peer_clone, instructions[1], REMOVE);
                 } else {
                     println!(
                         "You need to specify name of mp3 file. For more information type help.\n"

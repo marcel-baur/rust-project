@@ -124,6 +124,7 @@ pub fn startup(
                         let mut peer = peer_arc_clone_working.lock().unwrap();
                         let mut app = app_arc_working.lock().unwrap();
                         let mut sink = sink_arc_clone_working.lock().unwrap();
+                        println!("handle notification");
                         handle_notification(not, &mut peer, &mut sink, &mut app);
                     },
                     Err(e) => {
@@ -357,22 +358,6 @@ pub fn send_write_request(
                 println!("Failed to serialize SendRequest {:?}", &not);
             }
         };
-    } else {
-        let not = Notification {
-            content: Content::PushToDB {
-                key: data.0,
-                value: data.1,
-                from: origin.to_string(),
-            },
-            from: origin,
-        };
-        match serde_json::to_writer(&stream, &not) {
-            Ok(_ser) => {}
-            Err(e) => {
-                error!("Could not serialize {:?}, Error: {:?}", &not, e);
-                println!("Failed to serialize SendRequest {:?}", &not);
-            }
-        };
     }
 }
 
@@ -420,25 +405,23 @@ pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, 
 }
 
 /// Communicate to the listener that we want to find the location of a given file
-pub fn send_read_request(target: SocketAddr, name: &str, instr: Instructions) {
+pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
     let not = Notification {
         content: Content::FindFile {
             instr,
             song_name: name.to_string(),
         },
-        from: target,
+        from: peer.ip_address,
     };
-
-    tcp_request_with_notification(target, not);
+    peer.sender.send(not).unwrap();
 }
 
-pub fn send_delete_peer_request(target: SocketAddr) {
+pub fn send_delete_peer_request(peer: &mut Peer) {
     let not = Notification {
-        content: Content::ExitPeer { addr: target },
-        from: target,
+        content: Content::ExitPeer { addr: peer.ip_address },
+        from: peer.ip_address,
     };
-
-    tcp_request_with_notification(target, not);
+    peer.sender.send(not).unwrap();
 }
 
 pub fn send_status_request(target: SocketAddr, from: SocketAddr, peer: &mut Peer) {
@@ -480,26 +463,15 @@ fn send_local_file_status(
     tcp_request_with_notification(target, not);
 }
 
-pub fn send_play_request(name: &str, from: SocketAddr, state: MusicState) {
-    let stream = match TcpStream::connect(from) {
-        Ok(s) => s,
-        Err(_e) => {
-            return;
-        }
-    };
+pub fn send_play_request(name: &str, peer: &mut Peer, state: MusicState) {
     let not = Notification {
         content: Content::PlayAudioRequest {
             name: name.to_string(),
             state,
         },
-        from,
+        from: peer.ip_address,
     };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(ser) => ser,
-        Err(_e) => {
-            println!("Failed to serialize SendRequest {:?}", &not);
-        }
-    };
+    peer.sender.send(not).unwrap()
 }
 
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
@@ -579,7 +551,6 @@ pub fn push_music_to_database(
         let read_result = fs::read(path);
         match read_result {
             Ok(content) => {
-                println!("Pushing... This can take a while");
                 let not = Notification {
                     content: Content::PushToDB {
                         key: name.to_string(),

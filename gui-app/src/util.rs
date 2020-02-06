@@ -74,15 +74,15 @@ impl MEFFM {
     }
 
     pub fn remove_title(&mut self, title: String) {
-        let ip = self.peer.as_ref().unwrap().ip_address;
-        send_read_request(ip, &title, REMOVE);
+        let mut peer = self.peer.as_ref().unwrap().clone();
+        send_read_request(&mut peer, &title, REMOVE);
     }
 
     fn music_control(&mut self, instr: MusicState) {
         match self.cur_selected_song.as_ref() {
             Some(song) => {
-                let ip = self.peer.as_ref().unwrap().ip_address;
-                send_play_request(&song, ip, instr);
+                let mut peer_clone = self.peer.as_ref().unwrap().clone();
+                send_play_request(&song, &mut peer_clone, instr);
             }
             None => {
 
