@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
 use std::time::SystemTime;
-use std::sync::mpsc::{Sender, SyncSender};
+use std::sync::mpsc::{ SyncSender};
 use crate::network::notification::Notification;
 
 /// Represents a Peer in the network

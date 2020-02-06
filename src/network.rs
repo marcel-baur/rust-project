@@ -3,7 +3,7 @@ use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::{thread, io, fs};
-use std::sync::mpsc::{Sender, Receiver, SyncSender};
+use std::sync::mpsc::{ Receiver, SyncSender};
 use std::sync::mpsc;
 
 mod handshake;
@@ -33,12 +33,8 @@ use request::{
     push_to_db, redundant_push_to_db, request_for_table, self_status_request, send_network_table,
     send_network_update_table, status_request,
 };
-use response::*;
-use rodio::Sink;
 use std::collections::HashMap;
 use std::path::Path;
-use std::ops::Not;
-use std::rc::Rc;
 
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
@@ -115,7 +111,7 @@ pub fn startup(
     let sink = Arc::new(Mutex::new(create_sink().unwrap()));
     let sink_arc_clone_working = sink.clone();
 
-    let working_thread = thread::Builder::new().name("working_thread".to_string()).spawn(
+    let _working_thread = thread::Builder::new().name("working_thread".to_string()).spawn(
         move || {
             loop {
                 let ele = receiver.recv();
@@ -128,7 +124,7 @@ pub fn startup(
                         handle_notification(not, &mut peer, &mut sink, &mut app);
                     },
                     Err(e) => {
-                        println!("error");
+                        println!("error {}", e);
                     }
                 }
             }
@@ -136,7 +132,7 @@ pub fn startup(
     );
 
     let sender_clone = sender.clone();
-    let listener = thread::Builder::new()
+    let _listener = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
             match listen_tcp(peer_arc_clone_listen, sender_clone) {
@@ -148,7 +144,7 @@ pub fn startup(
         })
         .unwrap();
 
-    let peer_arc_clone_interact = peer_arc.clone();
+    let _peer_arc_clone_interact = peer_arc.clone();
     let peer_arc_clone_heartbeat = peer_arc.clone();
 
     //send request existing network table
@@ -161,7 +157,7 @@ pub fn startup(
         }
     }
 
-    let heartbeat = thread::Builder::new()
+    let _heartbeat = thread::Builder::new()
         .name("Heartbeat".to_string())
         .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
             Ok(_) => {}

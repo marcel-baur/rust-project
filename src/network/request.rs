@@ -1,4 +1,4 @@
-use crate::audio::{play_music, play_music_by_vec, MusicPlayer};
+use crate::audio::{ play_music_by_vec, MusicPlayer};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table_request,
     send_table_request, send_table_to_all_peers, update_table_after_delete,
@@ -11,10 +11,8 @@ use crate::network::peer::Peer;
 use crate::network::{other_random_target, send_local_file_status, send_read_request, send_status_request, send_write_request, send_write_response, send_new_file_notification};
 use crate::utils::{Instructions, AppListener};
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
-use rodio::Sink;
 use std::net::SocketAddr;
 use std::process;
-use std::sync::Arc;
 use std::time::SystemTime;
 
 pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer) {

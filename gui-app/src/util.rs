@@ -2,16 +2,12 @@ use meff::utils::AppListener;
 use meff::network;
 use std::net::SocketAddr;
 use meff::network::peer::Peer;
-use meff::utils::Instructions::{GET, REMOVE};
+use meff::utils::Instructions::{REMOVE};
 use meff::network::{
-    send_delete_peer_request, send_play_request, send_read_request, send_status_request,
-    send_write_request, push_music_to_database,
+    send_delete_peer_request, send_play_request, send_read_request, push_music_to_database,
 };
-use std::cell::RefCell;
-use std::collections::HashMap;
-use gtk::Widget;
-use glib::{Sender, Receiver};
-use meff::audio::MusicState::{CONTINUE, PAUSE, PLAY, STOP};
+use glib::{Sender};
+use meff::audio::MusicState::{PAUSE, PLAY, STOP};
 use meff::audio::MusicState;
 
 //Music entertainment for friends application model
@@ -35,7 +31,6 @@ impl AppListener for MEFFM {
         println!("new_file_saved");
         //@TODO remove unwrap
         self.sender.as_ref().unwrap().send((name, instr));
-        //self.songs.push(name);
     }
 }
 
@@ -100,6 +95,11 @@ impl MEFFM {
 
     pub fn stop(&mut self) {
         self.music_control(STOP);
+    }
+
+    pub fn quit(&mut self) {
+        let mut peer = self.peer.as_ref().unwrap().clone();
+        send_delete_peer_request(&mut peer);
     }
 }
 
