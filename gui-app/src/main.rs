@@ -237,10 +237,15 @@ fn add_song_to_list(song_name: &str, list_box: &gtk::ListBox) {
     let image_delete = gtk::Image::new_from_file("src/delete.png");
     trash_button.set_image(Some(&image_delete));
 
+    let song_clone = song_name.clone();
+    trash_button.connect_clicked(move |_| {
+        //meff.borrow_mut().remove_title(song_clone.to_string());
+    });
+
     h_box.pack_start(&label_button, true, true, 0);
     h_box.pack_end(&trash_button, false, false, 0);
-    list_box_row.connect_activate( move |_| {
-
+    label_button.connect_clicked( move |_| {
+        println!("clicked......");
     });
 
     list_box_row.add(&h_box);
@@ -308,24 +313,30 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     dialog.add_button("_Cancel", ResponseType::Cancel);
     dialog.add_button("_Open", ResponseType::Accept);
 
+    let spinner = gtk::Spinner::new();
+
     upload_button
         .connect_clicked(move |_| {
-        dialog.run();
-
-        let meff_clone2 = Rc::clone(&meff);
-        let file = dialog.get_filename();
-        match file {
-            Some(file) =>  {
-                let file_path = file.into_os_string().into_string().unwrap().clone();
-                add_music_title(file_path, meff_clone2);
-            },
-            _ => {},
+        let result = dialog.run();
+        match result {
+            ResponseType::Cancel => {
+                dialog.hide();
+            }
+            ResponseType::Accept => {
+                let meff_clone2 = Rc::clone(&meff);
+                let file = dialog.get_filename();
+                match file {
+                    Some(file) =>  {
+                        let file_path = file.into_os_string().into_string().unwrap().clone();
+                        add_music_title(file_path, meff_clone2);
+                    },
+                    _ => {},
+                }
+            }
+            _ => {}
         }
-        dialog.hide();
+
     });
-
-
-    let spinner = gtk::Spinner::new();
    
     let stream_button = gtk::Button::new_with_label("Stream music");
 
@@ -337,7 +348,9 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let l_b_clone = list_box.clone();
 
     receiver.attach(None, move |text| {
+        //let meff_clone3 = Rc::clone(&meff);
         add_song_to_list(text.as_ref(), &l_b_clone);
+//        spinner.stop();
         glib::Continue(true)
     });
 

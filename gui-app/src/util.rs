@@ -2,6 +2,7 @@ use meff::utils::AppListener;
 use meff::network;
 use std::net::SocketAddr;
 use meff::network::peer::Peer;
+use meff::utils::Instructions::{GET, REMOVE};
 use meff::network::{
     send_delete_peer_request, send_play_request, send_read_request, send_status_request,
     send_write_request, push_music_to_database,
@@ -70,6 +71,11 @@ impl MEFFM {
                 eprintln!("Failed to push {} to database", path);
             }
         };
+    }
+
+    pub fn remove_title(&mut self, title: String) {
+        let ip = self.peer.as_ref().unwrap().ip_address;
+        send_read_request(ip, &title, REMOVE);
     }
 }
 
