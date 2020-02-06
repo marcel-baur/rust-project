@@ -205,12 +205,16 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     ok_button.connect_clicked(clone!(@weak title_popup => move |_| {
         let title = entry.get_text().unwrap().as_str().to_string().clone();
         let song_path_clone = song_path.clone();
-        //Push music to database
-        let spinner = gtk::Spinner::new();
-        spinner.start();
-        meff.borrow_mut().push(song_path_clone, title);
 
-        title_popup.destroy();
+        if title.is_empty() {
+            gtk::WidgetExt::set_widget_name(&entry, "entry_red");
+        } else {
+            //Push music to database
+            gtk::WidgetExt::set_widget_name(&entry, "entry_gray");
+            meff.borrow_mut().push(song_path_clone, title);
+//            spinner.start();
+            title_popup.destroy();
+        }
     }));
 
     let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
@@ -320,8 +324,10 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
         dialog.hide();
     });
 
-    let stream_button = gtk::Button::new_with_label("Stream music");
 
+    let spinner = gtk::Spinner::new();
+   
+    let stream_button = gtk::Button::new_with_label("Stream music");
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
     let textbox = gtk::Entry::new();
