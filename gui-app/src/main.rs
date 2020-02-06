@@ -474,11 +474,10 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
     about.connect_activate(move |_| {
         let p = AboutDialog::new();
-        p.set_authors(&["gtk-rs developers"]);
-        p.set_website_label(Some("gtk-rs"));
+        p.set_authors(&["Fabian Frey, Marcel Baur, Elena Liebl, Franziska Lang"]);
+        p.set_website_label(Some("MEFF - Music Entertainment For Friends "));
         p.set_website(Some("http://gtk-rs.org"));
-        p.set_authors(&["Gtk-rs developers"]);
-        p.set_title("About!");
+        p.set_title("About");
         p.set_transient_for(Some(&main_window));
         p.run();
         p.destroy();
