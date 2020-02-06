@@ -17,6 +17,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
+use std::borrow::BorrowMut;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -70,7 +71,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                         instructions[1],
                         instructions[2],
                         peer_clone.ip_address,
-                        peer_clone,
+                        peer_clone.borrow_mut(),
                     ) {
                         Ok(_) => {}
                         Err(e) => {
@@ -108,7 +109,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"play") => {
                 if instructions.len() == 2 {
-                    send_play_request(instructions[1], peer_clone.ip_address, PLAY);
+                    send_play_request(instructions[1], &mut peer_clone, PLAY);
                 } else {
                     println!("File name is missing. For more information type help.\n");
                 }
@@ -132,15 +133,11 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 }
             }
             Some(&"pause") => {
-                send_play_request("", peer_clone.ip_address, PAUSE);
+                send_play_request("", &mut peer_clone, PAUSE);
             }
             Some(&"stop") => {
-                send_play_request("", peer_clone.ip_address, STOP);
+                send_play_request("", &mut peer_clone, STOP);
             }
-            Some(&"continue") => {
-                send_play_request("", peer_clone.ip_address, CONTINUE);
-            }
-
             _ => println!("No valid instructions. Try help!\n"),
         }
     }

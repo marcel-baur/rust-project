@@ -246,9 +246,10 @@ fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<Ref
 
     let song_clone_2 = song_name.clone();
     let meff_clone_2 = meff.clone();
+    let meff_clone_3 = meff_clone_2.clone();
     label_button.connect_clicked( move |_| {
-        println!("Clicked song");
         meff_clone_2.borrow_mut().cur_selected_song = Some(song_clone_2.to_string());
+        meff_clone_3.borrow_mut().play();
     });
 
     h_box.pack_start(&label_button, true, true, 0);
@@ -267,6 +268,7 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let meff_clone_pause = Rc::clone(&meff_clone_play);
     let meff_clone_stop = Rc::clone(&meff_clone_pause);
     let meff_clone_continue = Rc::clone(&meff_clone_stop);
+    let meff_clone_remove = Rc::clone(&meff_clone_continue);
     let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
@@ -398,7 +400,6 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     stop_music.set_image(Some(&image_stop));
 
     play_music.connect_clicked(move |_| {
-        println!("Clicked play");
         let meff_clone_4 = Rc::clone(&meff_clone_play);
         meff_clone_4.borrow_mut().play();
 
@@ -413,6 +414,9 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     stop_music.connect_clicked(move |_| {
         let meff_clone_6 = Rc::clone(&meff_clone_stop);
         meff_clone_6.borrow_mut().stop();
+
+        let meff_clone_7 = Rc::clone(&meff_clone_remove);
+        meff_clone_6.borrow_mut().cur_selected_song = None;
     });
 
     let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
