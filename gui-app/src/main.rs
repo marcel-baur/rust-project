@@ -225,6 +225,7 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
 
 fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<RefCell<MEFFM>>) {
     let list_box_row = gtk::ListBoxRow::new();
+    list_box_row.set_selectable(false);
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
     let label_button = gtk::Button::new_with_label(&song_name);
