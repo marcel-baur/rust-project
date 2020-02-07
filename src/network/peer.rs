@@ -50,6 +50,10 @@ impl Peer {
         &self.database
     }
 
+    pub fn get_network(&self) -> &HashMap<String, SocketAddr> {
+        &self.network_table
+    }
+
     pub fn process_store_request(&mut self, data: (String, Vec<u8>)) {
         self.database.data.insert(data.0, data.1);
     }

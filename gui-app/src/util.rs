@@ -3,12 +3,11 @@ use meff::network;
 use std::net::SocketAddr;
 use meff::network::peer::Peer;
 use meff::utils::Instructions::{REMOVE};
-use meff::network::{
-    send_delete_peer_request, send_play_request, send_read_request, push_music_to_database,
-};
+use meff::network::{send_delete_peer_request, send_play_request, send_read_request, push_music_to_database};
 use glib::{Sender};
 use meff::audio::MusicState::{PAUSE, PLAY, STOP};
 use meff::audio::MusicState;
+use std::collections::HashMap;
 
 //Music entertainment for friends application model
 #[derive(Clone)]
@@ -24,7 +23,7 @@ impl AppListener for MEFFM {
     }
 
     fn notify_status(&self, files: Vec<String>, name: String) {
-        unimplemented!()
+        println!("Received status");
     }
 
     fn file_status_changed(&mut self, name: String, instr: String) {
@@ -83,6 +82,10 @@ impl MEFFM {
 
             }
         }
+    }
+
+    pub fn status(&mut self) {
+        //send_status(&mut self.peer.as_ref().unwrap().clone())
     }
 
     pub fn play(&mut self) {

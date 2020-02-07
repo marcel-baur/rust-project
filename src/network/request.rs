@@ -15,12 +15,14 @@ use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
 
-pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer) {
+pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     if peer.database.data.contains_key(&key) {
         println!("File already exists in your database");
     } else {
         peer.process_store_request((key.clone(), value.clone()));
         println!("Saved file to database");
+        let key_clone = key.clone();
+        listener.file_status_changed(key_clone, "New".to_string());
         new_file_notification(key.clone(), peer);
 
         let redundant_target = other_random_target(&peer.network_table, peer.get_ip());

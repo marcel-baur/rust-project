@@ -257,6 +257,43 @@ fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<Ref
     list_box.add(&list_box_row);
 }
 
+fn show_status(meff: Rc<RefCell<MEFFM>>) {
+//    let status_window = gtk::Window::new(gtk::WindowType::Toplevel);
+//    status_window.set_position(WindowPosition::Center);
+//    status_window.set_size_request(400, 400);
+//
+//    let header = gtk::HeaderBar::new();
+//    header.set_title(Some("Status"));
+//    status_window.set_titlebar(Some(&header));
+//
+//    let list = meff.borrow_mut().status();
+//    let list_box = gtk::ListBox::new();
+//
+//    for name in list {
+//        println!("New element");
+//        let row = gtk::ListBoxRow::new();
+//        let label = gtk::Label::new(Some(&name));
+//        row.add(&label);
+//        row.show_all();
+//        list_box.add(&row);
+//    }
+//
+//    let close_button = gtk::Button::new_with_label("Close");
+//    close_button.set_halign(gtk::Align::Center);
+//    close_button.set_valign(gtk::Align::End);
+//
+//    close_button.connect_clicked(clone!(@weak status_window => move |_| {
+//        status_window.destroy();
+//    }));
+//
+//    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
+//    v_box.pack_start(&list_box, true, true, 0);
+//    v_box.pack_start(&close_button, true, true, 20);
+//
+//    status_window.add(&v_box);
+//    status_window.show_all();
+}
+
 fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<(String, String)>) {
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
@@ -267,6 +304,7 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let meff_clone_continue = Rc::clone(&meff_clone_stop);
     let meff_clone_remove = Rc::clone(&meff_clone_continue);
     let meff_clone_quit = Rc::clone(&meff_clone_remove);
+    let meff_clone_status = Rc::clone(&meff_clone_quit);
     let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
@@ -288,11 +326,19 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let file = MenuItem::new_with_label("File");
     let about = MenuItem::new_with_label("About");
     let quit = MenuItem::new_with_label("Quit");
+    let status = MenuItem::new_with_label("Status");
 
+    menu.append(&status);
     menu.append(&about);
     menu.append(&quit);
     file.set_submenu(Some(&menu));
     menu_bar.append(&file);
+
+    status.connect_activate(move |_| {
+        let meff_status = Rc::clone(&meff_clone_status);
+        show_status(meff_status);
+    });
+
 
     quit.connect_activate(clone!(@weak main_window => move |_| {
         let meff_quit = Rc::clone(&meff_clone_quit);
@@ -313,10 +359,6 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     gtk::WidgetExt::set_widget_name(&label2, "subheadline");
 
     label.set_margin_top(25);
-
-    let button = gtk::Button::new_with_label("Seach music");
-    //FOR CSS
-    gtk::WidgetExt::set_widget_name(&button, "button1");
 
     let upload_button = gtk::Button::new_with_label("Upload music");
     upload_button.set_margin_start(40);
@@ -349,8 +391,11 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
         }
             dialog.hide();
         });
-   
-    let stream_button = gtk::Button::new_with_label("Stream music");
+
+    let button = gtk::Button::new_with_label("Seach");
+    //FOR CSS
+    gtk::WidgetExt::set_widget_name(&button, "button1");
+    let stream_button = gtk::Button::new_with_label("Download");
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
     let textbox = gtk::Entry::new();
