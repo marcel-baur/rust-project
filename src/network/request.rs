@@ -192,7 +192,10 @@ pub fn exit_peer(addr: SocketAddr, peer: &mut Peer) {
         let network_table = &peer.network_table;
         if network_table.len() > 1 {
             for (song, _value) in database {
-                let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
+                let redundant_target = match other_random_target(network_table, peer.get_ip()) {
+                    Some(r) => r,
+                    None => {continue;} //TODO review
+                };
                 song_order_request(redundant_target, peer.ip_address, song.to_string());
             }
         }
