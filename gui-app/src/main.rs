@@ -308,6 +308,8 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let meff_clone_quit = Rc::clone(&meff);
     let meff_clone_status = Rc::clone(&meff);
     let meff_clone_stream = Rc::clone(&meff);
+    let meff_clone_download = Rc::clone(&meff);
+
     let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
@@ -399,13 +401,16 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
     let download_button = gtk::Button::new_with_label("Download");
     let stream_button = gtk::Button::new_with_label("Stream");
-    let textbox_clone = textbox.clone();
+    let textbox_clone_stream = textbox.clone();
+    let textbox_clone_button = textbox.clone();
     stream_button.connect_clicked(move |button| {
-        let title = textbox_clone.get_text().unwrap().as_str().to_string();
+        let title = textbox_clone_stream.get_text().unwrap().as_str().to_string();
         meff_clone_stream.borrow_mut().stream(title);
     });
+
     download_button.connect_clicked(move |_| {
-        println!("clicked");
+        let title = textbox_clone_button.get_text().unwrap().as_str().to_string();
+        meff_clone_download.borrow_mut().download(title);
     });
 
     let list_box = gtk::ListBoxBuilder::new().activate_on_single_click(true).build();

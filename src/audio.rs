@@ -5,6 +5,7 @@ use rodio::Sink;
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Cursor};
 use std::string::ToString;
+use std::fs;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum MusicState {
@@ -30,6 +31,15 @@ pub fn create_sink() -> Result<MusicPlayer, String> {
         is_playing: false,
         current_song_name: None,
     })
+}
+
+pub fn save_music_to_disk(music: Vec<u8>, name: &String) -> Result<(), String> {
+    println!("{}", "save_music_to_disk".to_string());
+    let path = format!("../file/{}.mp3", name);
+    match fs::write(path ,music) {
+        Ok(_) => return Ok(()),
+        Err(_e) => return Err("could not save file to disk".to_string()),
+    };
 }
 
 /// plays audio when mp3 is in database otherwise sends request to find file

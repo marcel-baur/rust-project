@@ -2,7 +2,7 @@ use meff::utils::AppListener;
 use meff::network;
 use std::net::SocketAddr;
 use meff::network::peer::Peer;
-use meff::utils::Instructions::{REMOVE};
+use meff::utils::Instructions::{REMOVE, GET};
 use meff::network::{send_delete_peer_request, send_play_request, send_read_request, push_music_to_database};
 use glib::{Sender};
 use meff::audio::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
@@ -102,6 +102,13 @@ impl MEFFM {
 
     pub fn stream(&mut self, search: String) {
         self.music_control(Some(search), PLAY);
+    }
+
+    pub fn download(&mut self, title: String) {
+        let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+        let mut peer_clone = peer_unlock.clone();
+        send_read_request(&mut peer_clone, &title, GET);
+        drop(peer_unlock);
     }
 
     pub fn play(&mut self, title: Option<String>) {
