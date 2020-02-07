@@ -23,9 +23,12 @@ pub fn json_string_to_network_table(json_string: String) -> HashMap<String, Sock
     let mut hashmap = HashMap::new();
     for info in info_array {
         let key = info.name;
-        let addr = match SocketAddr::from_str(info.address.as_str()){
+        let addr = match SocketAddr::from_str(info.address.as_str()) {
             Ok(a) => a,
-            Err(e) => {error!("Could not parse String to Socket Adresss {:?}", e); continue;}
+            Err(e) => {
+                error!("Could not parse String to Socket Adresss {:?}", e);
+                continue;
+            }
         };
         hashmap.insert(key, addr);
     }

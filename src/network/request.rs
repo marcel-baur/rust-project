@@ -259,9 +259,12 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
     let network_table = &peer.network_table;
     // TODO: REVIEW unwrap
     if peer.get_db().get_data().contains_key(&song_name) {
-        let redundant_target = match other_random_target(network_table, peer.get_ip()){
+        let redundant_target = match other_random_target(network_table, peer.get_ip()) {
             Some(r) => r,
-            None => {error!("Could not find a redundant target"); return;}
+            None => {
+                error!("Could not find a redundant target");
+                return;
+            }
         };
         song_order_request(redundant_target, peer.ip_address, song_name.to_string());
     } else {

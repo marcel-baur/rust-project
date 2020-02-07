@@ -10,23 +10,26 @@ use meff::network::{
 use meff::utils;
 use meff::utils::Instructions::{GET, REMOVE};
 use std::borrow::BorrowMut;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::io::stdin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::convert::TryFrom;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
+
     let i_clone = interaction_in_progress.clone();
+
     let arc_clone = arc.clone();
+
     let arc_clone2 = arc.clone();
+
     // Use the peer clone, drop the original alloc of the peer
-    let peer = match arc.lock() {
-        Ok(p) => p,
-        Err(e) => e.into_inner(),
-    };
+
+    let peer = arc.lock().unwrap();
+
     drop(peer);
     let _handle = match thread::Builder::new()
         .name("Interaction".to_string())
@@ -40,8 +43,11 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
             handle_user_input(&arc_clone2);
             i_clone.store(false, Ordering::SeqCst);
         }) {
-        Ok(h)=> h,
-        Err(_) => {error!("Failed to spawn thread"); return Err(Box::try_from("Failed to spwan thread".to_string()).unwrap())}
+        Ok(h) => h,
+        Err(_) => {
+            error!("Failed to spawn thread");
+            return Err(Box::try_from("Failed to spwan thread".to_string()).unwrap());
+        }
     };
 
     loop {
@@ -57,7 +63,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
     loop {
-        let peer = match arc.lock(){
+        let peer = match arc.lock() {
             Ok(p) => p,
             Err(e) => e.into_inner(),
         };

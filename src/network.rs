@@ -98,9 +98,11 @@ pub fn startup(
     let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) =
         mpsc::sync_channel(5);
     let sender_clone_peer = sender.clone();
-    let peer = match create_peer(own_name, port, sender_clone_peer){
+    let peer = match create_peer(own_name, port, sender_clone_peer) {
         Ok(p) => p,
-        Err(e) => {return Err(e);}
+        Err(e) => {
+            return Err(e);
+        }
     };
     let own_addr = peer.ip_address;
 
@@ -112,12 +114,13 @@ pub fn startup(
     let app_arc = Arc::new(Mutex::new(app));
     let app_arc_working = app_arc.clone();
 
-    let sink = Arc::new(Mutex::new(match create_sink(){
+    let sink = Arc::new(Mutex::new(match create_sink() {
         Ok(s) => s,
-        Err(e) => {return Err(e);}
+        Err(e) => {
+            return Err(e);
+        }
     }));
     let sink_arc_clone_working = sink.clone();
-
     let _working_thread = thread::Builder::new()
         .name("working_thread".to_string())
         .spawn(move || loop {
@@ -157,7 +160,9 @@ pub fn startup(
             };
         }) {
         Ok(s) => s,
-        Err(_e) => {return Err("Failed to spwan listener".to_string());}
+        Err(_e) => {
+            return Err("Failed to spwan listener".to_string());
+        }
     };
 
     let _peer_arc_clone_interact = peer_arc.clone();
@@ -182,7 +187,9 @@ pub fn startup(
             }
         }) {
         Ok(h) => h,
-        Err(_e) => {return Err("Failed to spawn shell".to_string());}
+        Err(_e) => {
+            return Err("Failed to spawn shell".to_string());
+        }
     };
 
     Ok(peer_arc_clone_return)
@@ -196,15 +203,18 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
         Err(e) => e.into_inner(),
     };
     let listen_ip = peer.ip_address;
-    let listener = match TcpListener::bind(&listen_ip){
+    drop(peer);
+    let listener = match TcpListener::bind(&listen_ip) {
         Ok(l) => l,
-        Err(_e) => {return Err("Could't bind TCP Listener.".to_string());}
+        Err(_e) => {
+            return Err("Could't bind TCP Listener.".to_string());
+        }
     };
     for stream in listener.incoming() {
         let mut buf = String::new();
         match stream {
             Ok(mut s) => {
-                if let Err(_e) = s.read_to_string(&mut buf){
+                if let Err(_e) = s.read_to_string(&mut buf) {
                     error!("Could not read the stream to a string.");
                 };
                 let des: Notification = match serde_json::from_str(&buf) {
@@ -215,7 +225,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
                         continue; // skip this stream
                     }
                 };
-                if let Err(_e) = sender_clone.send(des){
+                if let Err(_e) = sender_clone.send(des) {
                     error!("Could not send notification through the channel.");
                 };
             }
