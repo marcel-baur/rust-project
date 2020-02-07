@@ -135,15 +135,6 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                     );
                 }
             }
-            Some(&"stream") => {
-                if instructions.len() == 2 {
-                    println!("Not yet implemented.\n");
-                } else {
-                    println!(
-                        "You need to specify name of mp3 file. For more information type help.\n"
-                    );
-                }
-            }
             Some(&"pause") => {
                 send_play_request("", &mut peer_clone, PAUSE);
             }
@@ -161,7 +152,6 @@ pub fn show_help_instructions() {
                 status - show current state of peer\n\
                 push [mp3 name] [direction to mp3] - add mp3 to database\n\
                 get [mp3 name] - get mp3 file from database\n\
-                stream [mp3 name] - get mp3 stream from database\n\
                 remove [mp3 name] - deletes mp3 file from database\n\
                 play [mp3 name] - plays the audio of mp3 file\n\
                 exit - exit network and leave program\n\n
