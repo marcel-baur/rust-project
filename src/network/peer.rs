@@ -94,7 +94,7 @@ impl Peer {
             addresses.push(*val);
         }
         addresses.sort_by(|a, b| a.port().cmp(&b.port()));
-        return addresses;
+        addresses
     }
 
     /// returns the next four `SocketAddr` in the network_table
@@ -116,7 +116,7 @@ impl Peer {
             }
             successors.push(**addresses.get(i).unwrap());
         }
-        return successors;
+        successors
     }
 }
 

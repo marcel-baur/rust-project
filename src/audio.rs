@@ -44,7 +44,9 @@ pub fn play_music(peer: &mut Peer, name: &str, sink: &mut MusicPlayer) {
             return;
         }
     };
-    play_music_by_vec(sound_data.clone(), sink);
+    if let Err(e) = play_music_by_vec(sound_data.clone(), sink){
+        error!("Error while trying to play music {:?}", e);
+    };
 }
 
 pub fn pause_current_playing_music(sink: &mut MusicPlayer) {

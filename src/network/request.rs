@@ -191,7 +191,7 @@ pub fn exit_peer(addr: SocketAddr, peer: &mut Peer) {
         let database = peer.get_db().get_data();
         let network_table = &peer.network_table;
         if network_table.len() > 1 {
-            for (song, _value) in database {
+            for song in database.keys()  {
                 let redundant_target = match other_random_target(network_table, peer.get_ip()) {
                     Some(r) => r,
                     None => {continue;} //TODO review
@@ -218,7 +218,9 @@ pub fn exist_file_response(song_name: String, id: SystemTime, sender: SocketAddr
             peer.delete_handled_request(&id);
             send_file_request(sender, peer.ip_address, song_name.as_ref(), instr.clone());
         }
-        None => {}
+        None => {
+            info!("Did not find requested file");
+        }
     }
 }
 
@@ -254,7 +256,7 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
     }
 }
 
-pub fn delete_file_request(song_name: &String, peer: &mut Peer) {
+pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
     if peer.database.data.contains_key(song_name) {
         println!("Remove file {} from database", &song_name);
         peer.delete_file_from_database(song_name);

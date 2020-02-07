@@ -4,16 +4,16 @@ use colored::*;
 use meff::audio::MusicState::{PAUSE, PLAY, STOP};
 use meff::network::peer::Peer;
 use meff::network::{
-    send_delete_peer_request, send_play_request, send_read_request, send_status_request,
-    push_music_to_database
+    push_music_to_database, send_delete_peer_request, send_play_request, send_read_request,
+    send_status_request,
 };
 use meff::utils;
 use meff::utils::Instructions::{GET, REMOVE};
+use std::borrow::BorrowMut;
 use std::error::Error;
+use std::io::stdin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::borrow::BorrowMut;
-use std::io::stdin;
 use std::thread;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
@@ -49,7 +49,9 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
         let mut peer_clone = peer.clone();
         drop(peer);
         let buffer = &mut String::new();
-        stdin().read_line(buffer).unwrap();
+        if let Err(e) = stdin().read_line(buffer) {
+            error!("Failed to handle user input {:?}", e);
+        };
         let _ = buffer.trim_end();
         let buffer_iter = buffer.split_whitespace();
         let instructions: Vec<&str> = buffer_iter.collect();
@@ -62,8 +64,6 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"push") => {
                 if instructions.len() == 3 {
-                    //                let mutex = *peer.lock().unwrap();
-                    //                push_music_to_database(instructions[1], instructions[2], mutex);
                     match push_music_to_database(
                         instructions[1],
                         instructions[2],

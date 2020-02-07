@@ -3,7 +3,7 @@ use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::{thread, io, fs};
-use std::sync::mpsc::{ Receiver, SyncSender};
+use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::mpsc;
 
 mod handshake;
@@ -167,7 +167,7 @@ pub fn startup(
         })
         .unwrap();
 
-    return Ok(peer_arc_clone_return);
+    Ok(peer_arc_clone_return)
 }
 
 fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result<(), String> {
@@ -368,10 +368,16 @@ fn other_random_target(
     }
     let mut rng = rand::thread_rng();
     let mut index = rng.gen_range(0, network_table.len());
-    let mut target = network_table.values().nth(index).unwrap();
+    let mut target = match network_table.values().nth(index){
+        Some(t) => t,
+        None => {return None;}
+    };
     while target == own_ip {
         index = rng.gen_range(0, network_table.len());
-        target = network_table.values().nth(index).unwrap();
+        target = match network_table.values().nth(index){
+            Some(t) => t,
+            None => {return None;}
+        };
     }
     Some(*target)
 }
@@ -409,7 +415,9 @@ pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
         },
         from: peer.ip_address,
     };
-    peer.sender.send(not).unwrap();
+    if let Err(e) = peer.sender.send(not) {
+        error!("Could not send notification {:?}", e);
+    };
 }
 
 pub fn send_delete_peer_request(peer: &mut Peer) {
@@ -417,7 +425,9 @@ pub fn send_delete_peer_request(peer: &mut Peer) {
         content: Content::ExitPeer { addr: peer.ip_address },
         from: peer.ip_address,
     };
-    peer.sender.send(not).unwrap();
+    if let Err(e) = peer.sender.send(not) {
+        error!("Could not send notification {:?}", e);
+    };
 }
 
 pub fn send_status_request(target: SocketAddr, from: SocketAddr, peer: &mut Peer) {
@@ -467,7 +477,9 @@ pub fn send_play_request(name: &str, peer: &mut Peer, state: MusicState) {
         },
         from: peer.ip_address,
     };
-    peer.sender.send(not).unwrap()
+    if let Err(e) = peer.sender.send(not) {
+        error!("Could not send notification {:?}", e);
+    };
 }
 
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
@@ -555,7 +567,9 @@ pub fn push_music_to_database(
                     },
                     from: addr,
                 };
-                peer.sender.send(not).unwrap();
+                if let Err(e) = peer.sender.send(not) {
+                    error!("Could not send notification {:?}", e);
+                };
                 return Ok(());
             }
             Err(err) => {
