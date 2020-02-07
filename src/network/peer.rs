@@ -104,16 +104,32 @@ impl Peer {
             addresses.push(val);
         }
         addresses.sort_by(|a, b| a.port().cmp(&b.port()));
-        let index = addresses.iter().position(|&r| r == self.get_ip()).unwrap();
+        let own_index = match addresses.iter().position(|&r| r == self.get_ip()) {
+            None => {
+                error!("Own Peer SocketAddr is not in network_table");
+                0
+            }
+            Some(i) => i,
+        };
 
         let mut successors = Vec::new();
-        for i in index + 1..index + 4 {
+        for i in own_index + 1..own_index + 4 {
             if i >= addresses.len() {
                 let j = i - addresses.len();
-                successors.push(**addresses.get(j).unwrap());
+                successors.push(**match addresses.get(j) {
+                    None => {
+                        break;
+                    }
+                    Some(v) => v,
+                });
                 continue;
             }
-            successors.push(**addresses.get(i).unwrap());
+            successors.push(**match addresses.get(i) {
+                None => {
+                    break;
+                }
+                Some(v) => v,
+            });
         }
         successors
     }
