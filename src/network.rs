@@ -3,7 +3,7 @@ use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex};
 use std::{fs, io, thread};
 
 mod handshake;
@@ -160,9 +160,7 @@ pub fn startup(
             };
         }) {
         Ok(s) => s,
-        Err(e) => {
-            return Err("Failed to spawn listener".to_string());
-        }
+        Err(_e) => {return Err("Failed to spwan listener".to_string());}
     };
 
     let _peer_arc_clone_interact = peer_arc.clone();
@@ -187,11 +185,8 @@ pub fn startup(
             }
         }) {
         Ok(h) => h,
-        Err(e) => {
-            return Err("Failed to spawn shell".to_string());
-        }
+        Err(_e) => {return Err("Failed to spawn shell".to_string());}
     };
-    println!("Startup successful");
 
     Ok(peer_arc_clone_return)
 }
@@ -207,15 +202,13 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
     drop(peer);
     let listener = match TcpListener::bind(&listen_ip) {
         Ok(l) => l,
-        Err(e) => {
-            return Err("Could't bind TCP Listener.".to_string());
-        }
+        Err(_e) => {return Err("Could't bind TCP Listener.".to_string());}
     };
     for stream in listener.incoming() {
         let mut buf = String::new();
         match stream {
             Ok(mut s) => {
-                if let Err(e) = s.read_to_string(&mut buf) {
+                if let Err(_e) = s.read_to_string(&mut buf){
                     error!("Could not read the stream to a string.");
                 };
                 let des: Notification = match serde_json::from_str(&buf) {
@@ -226,7 +219,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
                         continue; // skip this stream
                     }
                 };
-                if let Err(e) = sender_clone.send(des) {
+                if let Err(_e) = sender_clone.send(des){
                     error!("Could not send notification through the channel.");
                 };
             }
