@@ -418,13 +418,16 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
         }
         if instr == "Delete" {
-            let _text_clone_2 = Rc::new(text);
+            let text_clone_2 = text.clone();
             for element in l_b_clone.get_children() {
-                let text = element.get_widget_name().unwrap().as_str().to_string().clone();
-                println!("{}", &text);
-                l_b_clone.remove(&element);
+                let element_clone = element.clone().downcast::<gtk::ListBoxRow>().unwrap();
+                let h_box = element_clone.get_child().clone().unwrap().downcast::<gtk::Box>().unwrap();
+                let button = h_box.get_children()[0].clone().downcast::<gtk::Button>().unwrap();
+                let title = button.get_label().unwrap().as_str().to_string();
+                if title == text_clone_2 {
+                    l_b_clone.remove(&element);
+                }
             }
-
         }
         glib::Continue(true)
 
