@@ -126,11 +126,6 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>)
                 meff.borrow_mut().start(name, port, addr);
                 startup_window.destroy();
             }
-
-            //startup_window.destroy();
-
-            //println!("{:?}  {:?}  {:?}", &name, &port, &ip);
-
         }
     }));
 
@@ -210,7 +205,6 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
             //Push music to database
             gtk::WidgetExt::set_widget_name(&entry, "entry_gray");
             meff.borrow_mut().push(song_path_clone, title);
-//            spinner.start();
             title_popup.destroy();
         }
     }));
@@ -377,8 +371,6 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     dialog.add_button("_Cancel", ResponseType::Cancel);
     dialog.add_button("_Open", ResponseType::Accept);
 
-//    let spinner = gtk::Spinner::new();
-
     upload_button
         .connect_clicked(move |_| {
             let meff_clone2 = Rc::clone(&meff);
@@ -401,10 +393,14 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
             dialog.hide();
         });
 
-    let button = gtk::Button::new_with_label("Seach");
-    //FOR CSS
-    gtk::WidgetExt::set_widget_name(&button, "button1");
-    let stream_button = gtk::Button::new_with_label("Download");
+    let download_button = gtk::Button::new_with_label("Download");
+    let stream_button = gtk::Button::new_with_label("Stream");
+    stream_button.connect_clicked(move |_| {
+        println!("clicked");
+    });
+    download_button.connect_clicked(move |_| {
+        println!("clicked");
+    });
 
     let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
     let textbox = gtk::Entry::new();
@@ -419,8 +415,6 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
             let clone = text.clone();
             let text_clone = Rc::new(clone);
             add_song_to_list(text_clone, &l_b_clone, meff_clone_3);
-//        spinner.stop();
-
         }
         if instr == "Delete" {
             let text_clone_2 = text.clone();
@@ -484,14 +478,9 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     gtk::WidgetExt::set_widget_name(&frame, "frame");
     let middle_sep = gtk::Separator::new(gtk::Orientation::Vertical);
 
-    //TODO: testen ob das bei anderen Rechnern richtig angezeigt wird
-    //let volume_button = gtk::VolumeButton::new();
-
-
     controller_box.pack_start(&play_music, false, true, 0);
     controller_box.pack_start(&pause_music, false, true, 0);
     controller_box.pack_start(&stop_music, false, true, 0);
-    //controller_box.pack_start(&volume_button, false, true, 0);
     controller_box.set_halign(gtk::Align::Center);
     controller_box.set_valign(gtk::Align::End);
 
@@ -506,13 +495,12 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
 
     v_box.pack_start(&h_box, false, true, 0);
-    v_box.pack_start(&button, false, false, 0);
+    v_box.pack_start(&download_button, false, false, 0);
     v_box.pack_start(&stream_button, false, false, 0);
 
     h_box_window.pack_start(&v_box, false, false, 10);
     h_box_window.pack_start(&middle_sep, false, false, 10);
     h_box_window.pack_start(&v_box2, true, true, 10);
-    //h_box_window.set_homogeneous(true);
 
     frame.add(&h_box_window);
 
@@ -548,7 +536,6 @@ fn main() {
     )
         .expect("Initialization failed...");
 
-    //let meff = Rc::new(RefCell::new(MEFFM::new()));
 
     application.connect_startup(|app| {
         // @TODO check if it is okay to create our application model here
