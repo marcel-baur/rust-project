@@ -40,7 +40,7 @@ fn main() {
                 .index(3),
         )
         .get_matches();
-    let name = matches.value_of("own-name").unwrap();
+    let name = matches.value_of("own-name").unwrap_or("Fridolin");
     let port = matches.value_of("port").unwrap_or("34521");
     if matches.is_present("ip-address") {
         // TODO: Join existing p2p network on given ip address

@@ -15,6 +15,7 @@ use std::io::stdin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::convert::TryFrom;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -25,7 +26,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let peer = match arc.lock() {
         Ok(p) => p,
         Err(e) => e.into_inner(),
-    };;
+    };
     drop(peer);
     let _handle = match thread::Builder::new()
         .name("Interaction".to_string())
@@ -33,14 +34,14 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
             let peer = match arc_clone.lock() {
                 Ok(p) => p,
                 Err(e) => e.into_inner(),
-            };;
+            };
             drop(peer);
             i_clone.store(true, Ordering::SeqCst);
             handle_user_input(&arc_clone2);
             i_clone.store(false, Ordering::SeqCst);
         }) {
         Ok(h)=> h,
-        Err(e) => {error!("Failed to spawn thread");}
+        Err(_) => {error!("Failed to spawn thread"); return Err(Box::try_from("Failed to spwan thread".to_string()).unwrap())}
     };
 
     loop {
