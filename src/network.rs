@@ -248,13 +248,14 @@ fn handle_notification(
     sink: &mut MusicPlayer,
     listener: &mut Box<dyn AppListener + Sync>,
 ) {
+    //dbg!(&notification);
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
             push_to_db(key, value, from, peer, listener);
         }
         Content::RedundantPushToDB { key, value, .. } => {
-            redundant_push_to_db(key, value, peer);
+            redundant_push_to_db(key, value, peer, listener);
         }
         Content::ChangePeerName { value } => {
             change_peer_name(value, sender, peer);
@@ -319,7 +320,7 @@ fn handle_notification(
         }
         Content::Heartbeat => {}
         Content::NewFileSaved {song_name} => {
-            //listener.file_status_changed(song_name, "New".to_string());
+            listener.file_status_changed(song_name, "New".to_string());
         }
     }
 }

@@ -14,6 +14,7 @@ use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
 use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
+use crate::network::notification::{Notification, Content};
 
 pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     if peer.database.data.contains_key(&key) {
@@ -23,7 +24,6 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
         println!("Saved file to database");
         let key_clone = key.clone();
         listener.file_status_changed(key_clone, "New".to_string());
-        new_file_notification(key.clone(), peer);
 
         let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
         match redundant_target {
@@ -49,8 +49,10 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
     }
 }
 
-pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer) {
+pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+    let key_clone = key.clone();
     peer.process_store_request((key, value));
+    listener.file_status_changed(key_clone, "New".to_string());
 }
 
 pub fn change_peer_name(value: String, sender: SocketAddr, peer: &mut Peer) {
@@ -257,14 +259,5 @@ pub fn delete_file_request(song_name: &String, peer: &mut Peer) {
     if peer.database.data.contains_key(song_name) {
         println!("Remove file {} from database", &song_name);
         peer.delete_file_from_database(song_name);
-    }
-}
-
-fn new_file_notification(song_name: String, peer: &mut Peer) {
-    let mut cloned_peer = peer.clone();
-    for addr in peer.network_table.values() {
-        if addr != cloned_peer.get_ip(){
-            send_new_file_notification(*addr, &song_name, &mut cloned_peer);
-        }
     }
 }
