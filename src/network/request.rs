@@ -152,29 +152,27 @@ pub fn get_file(instr: Instructions, key: String, sender: SocketAddr, peer: &mut
 
 pub fn get_file_response(
     instr: Instructions,
-    key: String,
+    key: &String,
     value: Vec<u8>,
     peer: &mut Peer,
     sink: &mut MusicPlayer,
-) {
+) -> Result<(), String> {
     match instr {
         PLAY => {
             //save to tmp and play audio
-            match play_music_by_vec(value, sink, key.clone()) {
-                Ok(_) => {}
-                Err(_) => {
-                    println!("Could not play the requested file {}", &key);
-                    error!("Failed to play music from {}", &key);
-                }
-            };
+            play_music_by_vec(value, sink, key.clone())
         }
         GET => {
             //Download mp3 file
+            return Ok(());
         }
         ORDER => {
             peer.process_store_request((key.clone(), value.clone()));
+            return Ok(());
         }
-        _ => {}
+        _ => {
+            return Err("Unknown command".to_string());
+        }
     }
 }
 

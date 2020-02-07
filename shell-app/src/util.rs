@@ -13,4 +13,10 @@ impl AppListener for Application {
     fn file_status_changed(&mut self, name: String, _instr: String) {
         println!("New file {} saved!", name);
     }
+
+    fn player_playing(&mut self, title: Option<String>) {
+        if let Some(name) = title {
+            println!("{} is playing!", name);
+        }
+    }
 }

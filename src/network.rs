@@ -324,7 +324,9 @@ fn handle_notification(
             get_file(instr, key, sender, peer);
         }
         Content::GetFileResponse { value, instr, key } => {
-            get_file_response(instr, key, value, peer, sink);
+            if get_file_response(instr, &key, value, peer, sink).is_ok() {
+                listener.player_playing(Some(key))
+            }
         }
         Content::DeleteFileRequest { song_name } => {
             delete_file_request(&song_name, peer);
