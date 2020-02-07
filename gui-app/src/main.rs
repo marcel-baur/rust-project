@@ -269,6 +269,10 @@ fn show_status(meff: Rc<RefCell<MEFFM>>) {
     let list = meff.borrow_mut().status();
     let list_box = gtk::ListBox::new();
 
+    let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+    gtk::WidgetExt::set_widget_name(&scrolled_window, "scrollview");
+    scrolled_window.add(&list_box);
+
     for (name, addr) in list {
         println!("New element");
         let row = gtk::ListBoxRow::new();
@@ -291,7 +295,7 @@ fn show_status(meff: Rc<RefCell<MEFFM>>) {
     }));
 
     let v_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    v_box.pack_start(&list_box, true, true, 0);
+    v_box.pack_start(&scrolled_window, true, true, 0);
     v_box.pack_start(&close_button, true, true, 20);
 
     status_window.add(&v_box);
