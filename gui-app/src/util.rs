@@ -2,7 +2,7 @@ use meff::utils::AppListener;
 use meff::network;
 use std::net::SocketAddr;
 use meff::network::peer::Peer;
-use meff::utils::Instructions::{REMOVE, GET};
+use meff::utils::Instructions::{REMOVE};
 use meff::network::{
     send_delete_peer_request, send_play_request, send_read_request, push_music_to_database,
 };
@@ -98,7 +98,7 @@ impl MEFFM {
     }
 
     pub fn get(&mut self) {
-        self.music_control(GET);
+        
     }
 
     pub fn quit(&mut self) {
