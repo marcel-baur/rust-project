@@ -258,40 +258,44 @@ fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<Ref
 }
 
 fn show_status(meff: Rc<RefCell<MEFFM>>) {
-//    let status_window = gtk::Window::new(gtk::WindowType::Toplevel);
-//    status_window.set_position(WindowPosition::Center);
-//    status_window.set_size_request(400, 400);
-//
-//    let header = gtk::HeaderBar::new();
-//    header.set_title(Some("Status"));
-//    status_window.set_titlebar(Some(&header));
-//
-//    let list = meff.borrow_mut().status();
-//    let list_box = gtk::ListBox::new();
-//
-//    for name in list {
-//        println!("New element");
-//        let row = gtk::ListBoxRow::new();
-//        let label = gtk::Label::new(Some(&name));
-//        row.add(&label);
-//        row.show_all();
-//        list_box.add(&row);
-//    }
-//
-//    let close_button = gtk::Button::new_with_label("Close");
-//    close_button.set_halign(gtk::Align::Center);
-//    close_button.set_valign(gtk::Align::End);
-//
-//    close_button.connect_clicked(clone!(@weak status_window => move |_| {
-//        status_window.destroy();
-//    }));
-//
-//    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
-//    v_box.pack_start(&list_box, true, true, 0);
-//    v_box.pack_start(&close_button, true, true, 20);
-//
-//    status_window.add(&v_box);
-//    status_window.show_all();
+    let status_window = gtk::Window::new(gtk::WindowType::Toplevel);
+    status_window.set_position(WindowPosition::Center);
+    status_window.set_size_request(400, 400);
+
+    let header = gtk::HeaderBar::new();
+    header.set_title(Some("Status"));
+    status_window.set_titlebar(Some(&header));
+
+    let list = meff.borrow_mut().status();
+    let list_box = gtk::ListBox::new();
+
+    for (name, addr) in list {
+        println!("New element");
+        let row = gtk::ListBoxRow::new();
+        let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        let label_ip = gtk::Label::new(Some(&addr.to_string()));
+        let label_name = gtk::Label::new(Some(&name));
+        h_box.pack_start(&label_name, true, true, 0);
+        h_box.pack_end(&label_ip, true, true, 0);
+        row.add(&h_box);
+        row.show_all();
+        list_box.add(&row);
+    }
+
+    let close_button = gtk::Button::new_with_label("Close");
+    close_button.set_halign(gtk::Align::Center);
+    close_button.set_valign(gtk::Align::End);
+
+    close_button.connect_clicked(clone!(@weak status_window => move |_| {
+        status_window.destroy();
+    }));
+
+    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    v_box.pack_start(&list_box, true, true, 0);
+    v_box.pack_start(&close_button, true, true, 20);
+
+    status_window.add(&v_box);
+    status_window.show_all();
 }
 
 fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<(String, String)>) {

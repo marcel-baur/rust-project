@@ -8,12 +8,14 @@ use glib::{Sender};
 use meff::audio::MusicState::{PAUSE, PLAY, STOP};
 use meff::audio::MusicState;
 use std::collections::HashMap;
+use std::sync::{Mutex, Arc};
+use gtk::AccelGroupExt;
 
 //Music entertainment for friends application model
 #[derive(Clone)]
 pub struct MEFFM {
     pub cur_selected_song: Option<String>,
-    pub peer: Option<Peer>,
+    pub peer: Option<Arc<Mutex<Peer>>>,
     pub sender: Option<Sender<(String, String)>>,
 }
 
@@ -31,6 +33,7 @@ impl AppListener for MEFFM {
         //@TODO remove unwrap
         self.sender.as_ref().unwrap().send((name, instr));
     }
+
 }
 
 impl MEFFM {
@@ -51,32 +54,39 @@ impl MEFFM {
                 return;
             } // error!("Could not join network {:?}", e);
         };
-        let peer_unlock = peer.lock().unwrap();
-        let mut peer_clone = peer_unlock.clone();
-        self.peer = Some(peer_clone);
+        self.peer = Some(peer);
     }
 
     pub fn push(&mut self, path: String, title: String) {
-        let ip = self.peer.as_ref().unwrap().ip_address;
-        let mut peer_clone = self.peer.as_ref().unwrap().clone();
+        let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+        let mut peer_clone = peer_unlock.clone();
+
+        let ip = peer_clone.ip_address;
         match push_music_to_database(&title, &path, ip,  &mut peer_clone) {
             Ok(_) => {}
             Err(e) => {
                 eprintln!("Failed to push {} to database", path);
             }
         };
+        drop(peer_unlock);
     }
 
     pub fn remove_title(&mut self, title: String) {
-        let mut peer = self.peer.as_ref().unwrap().clone();
-        send_read_request(&mut peer, &title, REMOVE);
+        let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+        let mut peer_clone = peer_unlock.clone();
+
+        send_read_request(&mut peer_clone, &title, REMOVE);
+        drop(peer_unlock);
     }
 
     fn music_control(&mut self, instr: MusicState) {
         match self.cur_selected_song.as_ref() {
             Some(song) => {
-                let mut peer_clone = self.peer.as_ref().unwrap().clone();
+                let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+                let mut peer_clone = peer_unlock.clone();
+
                 send_play_request(&song, &mut peer_clone, instr);
+                drop(peer_unlock);
             }
             None => {
 
@@ -84,8 +94,13 @@ impl MEFFM {
         }
     }
 
-    pub fn status(&mut self) {
-        //send_status(&mut self.peer.as_ref().unwrap().clone())
+    pub fn status(&mut self) -> HashMap<String, SocketAddr> {
+        let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+        let mut peer_clone = peer_unlock.clone();
+
+        let list = peer_clone.network_table;
+        drop(peer_unlock);
+        list
     }
 
     pub fn play(&mut self) {
@@ -105,8 +120,11 @@ impl MEFFM {
     }
 
     pub fn quit(&mut self) {
-        let mut peer = self.peer.as_ref().unwrap().clone();
-        send_delete_peer_request(&mut peer);
+        let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+        let mut peer_clone = peer_unlock.clone();
+
+        send_delete_peer_request(&mut peer_clone);
+        drop(peer_unlock);
     }
 }
 
