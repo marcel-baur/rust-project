@@ -3,7 +3,7 @@ use std::time;
 
 pub const THREAD_SLEEP_DURATION: time::Duration = time::Duration::from_millis(5000);
 
-pub const HEARTBEAT_SLEEP_DURATION: time::Duration = time::Duration::from_secs(10);
+pub const HEARTBEAT_SLEEP_DURATION: time::Duration = time::Duration::from_secs(100);
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub enum Instructions {
@@ -22,5 +22,5 @@ pub trait AppListener: Send {
     /// - `files` the files from the peer that sent the response
     /// - `name` the name of the peer that sent the response
     fn notify_status(&self, files: Vec<String>, name: String);
-    fn new_file_saved(&self, name: String);
+    fn file_status_changed(&mut self, name: String, instr: String);
 }

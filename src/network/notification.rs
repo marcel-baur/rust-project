@@ -6,13 +6,13 @@ use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::time::SystemTime;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Notification {
     pub content: Content,
     pub from: SocketAddr,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Content {
     PushToDB {
         key: String,

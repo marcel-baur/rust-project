@@ -3,14 +3,10 @@ use crate::network::send_read_request;
 use crate::utils::Instructions::PLAY;
 use rodio::Sink;
 use serde::{Deserialize, Serialize};
-use std::io::BufRead;
-use std::io::Read;
 use std::io::{BufReader, Cursor};
 use std::string::ToString;
-use std::sync::Arc;
-use std::{fs, thread};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum MusicState {
     PLAY,
     PAUSE,
@@ -44,7 +40,7 @@ pub fn play_music(peer: &mut Peer, name: &str, sink: &mut MusicPlayer) {
     let sound_data = match peer.get_db().data.get(name) {
         Some(data) => data,
         None => {
-            send_read_request(peer.ip_address, name, PLAY);
+            send_read_request(peer, name, PLAY);
             return;
         }
     };
@@ -71,6 +67,7 @@ pub fn play_music_by_vec(music: Vec<u8>, sink: &mut MusicPlayer) -> Result<(), S
         Ok(decoded_source) => decoded_source,
         Err(_e) => return Err("file could not be decoded. is it mp3?".to_string()),
     };
+    sink.sink.play();
     if sink.is_playing {
         sink.sink.append(source);
     } else {
