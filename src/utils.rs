@@ -23,4 +23,5 @@ pub trait AppListener: Send {
     /// - `name` the name of the peer that sent the response
     fn notify_status(&self, files: Vec<String>, name: String);
     fn file_status_changed(&mut self, name: String, instr: String);
+    fn player_playing(&mut self, title: Option<String>);
 }

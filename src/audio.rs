@@ -37,11 +37,11 @@ pub fn create_sink() -> Result<MusicPlayer, String> {
 ///
 /// * `name` - String including mp3 name (key in our database)
 ///
-pub fn play_music(peer: &mut Peer, name: Option<String>, sink: &mut MusicPlayer) -> Result<(), String> {
+pub fn play_music(peer: &mut Peer, name: &Option<String>, sink: &mut MusicPlayer) -> Result<(), String> {
     // we play sound when it is in our own database, otherwise we ask for the location
     let mut title = String::new();
     if let Some(song_name) = name {
-        title = song_name;
+        title = song_name.to_string();
     } else if let Some(song_name) = &sink.current_song_name {
         title = song_name.to_string();
     } else {
@@ -57,8 +57,7 @@ pub fn play_music(peer: &mut Peer, name: Option<String>, sink: &mut MusicPlayer)
         }
     };
 
-    play_music_by_vec(sound_data.clone(), sink, title);
-    Ok(())
+    play_music_by_vec(sound_data.clone(), sink, title)
 }
 
 pub fn pause_current_playing_music(sink: &mut MusicPlayer) -> Result<(), String> {

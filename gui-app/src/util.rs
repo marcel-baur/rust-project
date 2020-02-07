@@ -10,13 +10,14 @@ use meff::audio::MusicState;
 use std::collections::HashMap;
 use std::sync::{Mutex, Arc};
 use gtk::AccelGroupExt;
+use std::borrow::BorrowMut;
 
 //Music entertainment for friends application model
 #[derive(Clone)]
 pub struct MEFFM {
     pub peer: Option<Arc<Mutex<Peer>>>,
     pub sender: Option<Sender<(String, String)>>,
-    pub is_playing: bool,
+    pub is_playing: Arc<Mutex<bool>>,
 }
 
 impl AppListener for MEFFM {
@@ -34,11 +35,15 @@ impl AppListener for MEFFM {
         self.sender.as_ref().unwrap().send((name, instr));
     }
 
+    fn player_playing(&mut self, title: Option<String>) {
+        *self.is_playing.lock().unwrap() = true;
+    }
+
 }
 
 impl MEFFM {
     pub fn new() -> MEFFM {
-        MEFFM {peer: None, sender: None, is_playing: false}
+        MEFFM {peer: None, sender: None, is_playing: Arc::new(Mutex::new(false))}
     }
 
     pub fn set_sender(&mut self, sender: Sender<(String, String)>) {
@@ -96,15 +101,13 @@ impl MEFFM {
     }
 
     pub fn stream(&mut self, search: String) {
-        self.is_playing = true;
         self.music_control(Some(search), PLAY);
     }
 
     pub fn play(&mut self, title: Option<String>) {
-        if self.is_playing && title.is_none() {
+        if *self.is_playing.lock().unwrap() {
             self.music_control(None,CONTINUE);
         } else {
-            self.is_playing = true;
             self.music_control(title, PLAY);
         }
     }
@@ -114,7 +117,7 @@ impl MEFFM {
     }
 
     pub fn stop(&mut self) {
-        self.is_playing = false;
+        *self.is_playing.lock().unwrap() = false;
         self.music_control(None,STOP);
     }
 

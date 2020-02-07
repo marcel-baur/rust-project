@@ -351,10 +351,26 @@ fn handle_notification(
         }
         Content::PlayAudioRequest { name, state } => {
             match state {
-                MusicState::PLAY => play_music(peer, name, sink),
-                MusicState::PAUSE => pause_current_playing_music(sink),
-                MusicState::STOP => stop_current_playing_music(sink),
-                MusicState::CONTINUE => continue_paused_music(sink),
+                MusicState::PLAY => {
+                    if play_music(peer, &name, sink).is_ok() {
+                        listener.player_playing(name);
+                    }
+                },
+                MusicState::PAUSE => {
+                    if pause_current_playing_music(sink).is_ok() {
+                        println!("{}", "pause");
+                    }
+                },
+                MusicState::STOP => {
+                    if stop_current_playing_music(sink).is_ok() {
+                        println!("{}", "");
+                    }
+                },
+                MusicState::CONTINUE => {
+                    if continue_paused_music(sink).is_ok() {
+                        println!("{}", "continue");
+                    }
+                },
             };
         }
         Content::DroppedPeer { addr } => {
