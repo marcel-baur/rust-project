@@ -3,8 +3,6 @@ extern crate clap;
 extern crate log;
 extern crate log4rs;
 
-
-
 /// # MEFF peer to peer network library for music storage
 /// ## Usage
 /// Use the startup method in `network` to create or join a network
@@ -17,5 +15,3 @@ pub mod audio;
 pub mod database;
 pub mod network;
 pub mod utils;
-
-

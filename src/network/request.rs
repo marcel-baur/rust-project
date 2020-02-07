@@ -1,4 +1,4 @@
-use crate::audio::{ play_music_by_vec, MusicPlayer};
+use crate::audio::{play_music_by_vec, MusicPlayer};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table_request,
     send_table_request, send_table_to_all_peers, update_table_after_delete,
@@ -8,9 +8,12 @@ use crate::network::music_exchange::{
     send_get_file_reponse, song_order_request,
 };
 use crate::network::peer::Peer;
-use crate::network::{other_random_target, send_local_file_status, send_read_request, send_status_request, send_write_request, send_write_response, send_new_file_notification};
-use crate::utils::{Instructions, AppListener};
+use crate::network::{
+    other_random_target, send_local_file_status, send_new_file_notification, send_read_request,
+    send_status_request, send_write_request, send_write_response,
+};
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
+use crate::utils::{AppListener, Instructions};
 use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
@@ -101,7 +104,12 @@ pub fn request_for_table(value: String, sender: SocketAddr, peer: &mut Peer) {
     }
 }
 
-pub fn find_file(instr: Instructions, song_name: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn find_file(
+    instr: Instructions,
+    song_name: String,
+    peer: &mut Peer,
+    listener: &mut Box<dyn AppListener + Sync>,
+) {
     // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
     // @TODO in this case we need to remove the request?
     if peer.get_db().get_data().contains_key(&song_name) {
@@ -191,10 +199,12 @@ pub fn exit_peer(addr: SocketAddr, peer: &mut Peer) {
         let database = peer.get_db().get_data();
         let network_table = &peer.network_table;
         if network_table.len() > 1 {
-            for song in database.keys()  {
+            for song in database.keys() {
                 let redundant_target = match other_random_target(network_table, peer.get_ip()) {
                     Some(r) => r,
-                    None => {continue;} //TODO review
+                    None => {
+                        continue;
+                    } //TODO review
                 };
                 song_order_request(redundant_target, peer.ip_address, song.to_string());
             }
@@ -266,7 +276,7 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
 fn new_file_notification(song_name: String, peer: &mut Peer) {
     let mut cloned_peer = peer.clone();
     for addr in peer.network_table.values() {
-        if addr != cloned_peer.get_ip(){
+        if addr != cloned_peer.get_ip() {
             send_new_file_notification(*addr, &song_name, &mut cloned_peer);
         }
     }

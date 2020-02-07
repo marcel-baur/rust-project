@@ -1,10 +1,10 @@
-use std::io::{Read, ErrorKind};
+use std::io::{ErrorKind, Read};
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
-use std::sync::{Arc, Mutex};
-use std::{thread, io, fs};
-use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, SyncSender};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::{fs, io, thread};
 
 mod handshake;
 mod music_exchange;
@@ -95,7 +95,8 @@ pub fn startup(
     ip_address: Option<SocketAddr>,
     app: Box<dyn AppListener + Sync>,
 ) -> Result<Arc<Mutex<Peer>>, String> {
-    let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) = mpsc::sync_channel(5);
+    let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) =
+        mpsc::sync_channel(5);
     let sender_clone_peer = sender.clone();
     let peer = create_peer(own_name, port, sender_clone_peer).unwrap();
     let own_addr = peer.ip_address;
@@ -111,25 +112,32 @@ pub fn startup(
     let sink = Arc::new(Mutex::new(create_sink().unwrap()));
     let sink_arc_clone_working = sink.clone();
 
-    let _working_thread = thread::Builder::new().name("working_thread".to_string()).spawn(
-        move || {
-            loop {
-                let ele = receiver.recv();
-                match ele {
-                    Ok(not) => {
-                        let mut peer = peer_arc_clone_working.lock().unwrap();
-                        let mut app = app_arc_working.lock().unwrap();
-                        let mut sink = sink_arc_clone_working.lock().unwrap();
-                        println!("handle notification");
-                        handle_notification(not, &mut peer, &mut sink, &mut app);
-                    },
-                    Err(e) => {
-                        println!("error {}", e);
-                    }
+    let _working_thread = thread::Builder::new()
+        .name("working_thread".to_string())
+        .spawn(move || loop {
+            let ele = receiver.recv();
+            match ele {
+                Ok(not) => {
+                    let mut peer = match peer_arc_clone_working.lock() {
+                        Ok(p) => p,
+                        Err(e) => e.into_inner(),
+                    };
+                    let mut app = match app_arc_working.lock() {
+                        Ok(a) => a,
+                        Err(e) => e.into_inner(),
+                    };
+                    let mut sink = match sink_arc_clone_working.lock() {
+                        Ok(s) => s,
+                        Err(e) => e.into_inner(),
+                    };
+                    println!("handle notification");
+                    handle_notification(not, &mut peer, &mut sink, &mut app);
+                }
+                Err(e) => {
+                    println!("error {}", e);
                 }
             }
-        }
-    );
+        });
 
     let sender_clone = sender.clone();
     let _listener = thread::Builder::new()
@@ -173,7 +181,11 @@ pub fn startup(
 fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result<(), String> {
     let clone = arc.clone();
     let sender_clone = sender.clone();
-    let listen_ip = clone.lock().unwrap().ip_address;
+    let peer = match clone.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
+    let listen_ip = peer.ip_address;
     let listener = TcpListener::bind(&listen_ip).unwrap();
     for stream in listener.incoming() {
         let mut buf = String::new();
@@ -203,7 +215,10 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
 fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     loop {
         thread::sleep(HEARTBEAT_SLEEP_DURATION);
-        let peer = arc.lock().unwrap();
+        let peer = match arc.lock() {
+            Ok(p) => p,
+            Err(e) => e.into_inner(),
+        };
         let mut peer_clone = peer.clone();
         drop(peer);
         let network_size = peer_clone.network_table.len();
@@ -318,7 +333,7 @@ fn handle_notification(
             dropped_peer(addr, peer);
         }
         Content::Heartbeat => {}
-        Content::NewFileSaved {song_name} => {
+        Content::NewFileSaved { song_name } => {
             listener.file_status_changed(song_name, "New".to_string());
         }
     }
@@ -368,15 +383,19 @@ fn other_random_target(
     }
     let mut rng = rand::thread_rng();
     let mut index = rng.gen_range(0, network_table.len());
-    let mut target = match network_table.values().nth(index){
+    let mut target = match network_table.values().nth(index) {
         Some(t) => t,
-        None => {return None;}
+        None => {
+            return None;
+        }
     };
     while target == own_ip {
         index = rng.gen_range(0, network_table.len());
-        target = match network_table.values().nth(index){
+        target = match network_table.values().nth(index) {
             Some(t) => t,
-            None => {return None;}
+            None => {
+                return None;
+            }
         };
     }
     Some(*target)
@@ -422,7 +441,9 @@ pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
 
 pub fn send_delete_peer_request(peer: &mut Peer) {
     let not = Notification {
-        content: Content::ExitPeer { addr: peer.ip_address },
+        content: Content::ExitPeer {
+            addr: peer.ip_address,
+        },
         from: peer.ip_address,
     };
     if let Err(e) = peer.sender.send(not) {
@@ -521,7 +542,7 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
 /// - `target`: `SocketAddr` of the Peer that should receive the notification
 /// - `file_name`: name of the file as string
 /// - `peer`: the local `Peer`
-pub fn send_new_file_notification (target: SocketAddr, file_name: &str, peer: &mut Peer) {
+pub fn send_new_file_notification(target: SocketAddr, file_name: &str, peer: &mut Peer) {
     let stream = match TcpStream::connect(target) {
         Ok(s) => s,
         Err(_e) => {
@@ -530,7 +551,9 @@ pub fn send_new_file_notification (target: SocketAddr, file_name: &str, peer: &m
         }
     };
     let not = Notification {
-        content: Content::NewFileSaved {song_name: file_name.to_string()},
+        content: Content::NewFileSaved {
+            song_name: file_name.to_string(),
+        },
         from: *peer.get_ip(),
     };
     if let Err(_e) = serde_json::to_writer(&stream, &not) {

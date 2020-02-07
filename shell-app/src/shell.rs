@@ -22,21 +22,32 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let arc_clone = arc.clone();
     let arc_clone2 = arc.clone();
     // Use the peer clone, drop the original alloc of the peer
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };;
     drop(peer);
-    let _handle = thread::Builder::new()
+    let _handle = match thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
-            let peer = arc_clone.lock().unwrap();
+            let peer = match arc_clone.lock() {
+                Ok(p) => p,
+                Err(e) => e.into_inner(),
+            };;
             drop(peer);
             i_clone.store(true, Ordering::SeqCst);
             handle_user_input(&arc_clone2);
             i_clone.store(false, Ordering::SeqCst);
-        })
-        .unwrap();
+        }) {
+        Ok(h)=> h,
+        Err(e) => {error!("Failed to spawn thread");}
+    };
 
     loop {
-        let peer = arc.lock().unwrap();
+        let peer = match arc.lock() {
+            Ok(p) => p,
+            Err(e) => e.into_inner(),
+        };
         let _peer_clone = peer.clone();
         drop(peer);
         thread::sleep(utils::THREAD_SLEEP_DURATION);
@@ -45,7 +56,10 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
     loop {
-        let peer = arc.lock().unwrap();
+        let peer = match arc.lock(){
+            Ok(p) => p,
+            Err(e) => e.into_inner(),
+        };
         let mut peer_clone = peer.clone();
         drop(peer);
         let buffer = &mut String::new();
@@ -155,7 +169,10 @@ pub fn show_help_instructions() {
 }
 
 fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
     let peer_clone = peer.clone();
     drop(peer);
     let nwt = peer_clone.network_table;
@@ -179,7 +196,10 @@ fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
 /// # Arguments:
 /// * `peer` - the local `Peer`
 fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
     let peer_clone = peer.clone();
     drop(peer);
     let db = peer_clone.get_db().get_data();
@@ -199,7 +219,10 @@ fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
 /// # Arguments
 /// * `peer` - the local `Peer`
 fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
     let peer_clone = peer.clone();
     let mut peer_clone2 = peer.clone();
     drop(peer);
