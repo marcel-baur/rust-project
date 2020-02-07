@@ -1,12 +1,7 @@
 extern crate clap;
 #[macro_use]
-extern crate prettytable;
-#[macro_use]
 extern crate log;
 extern crate log4rs;
-use clap::{App, Arg};
-use std::net::SocketAddr;
-
 
 /// # MEFF peer to peer network library for music storage
 /// ## Usage
@@ -20,5 +15,3 @@ pub mod audio;
 pub mod database;
 pub mod network;
 pub mod utils;
-
-

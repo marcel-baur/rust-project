@@ -1,44 +1,60 @@
 use prettytable::format;
 extern crate colored;
 use colored::*;
-use meff::audio::MusicState::{CONTINUE, PAUSE, PLAY, STOP};
+use meff::audio::MusicState::{PAUSE, PLAY, STOP};
 use meff::network::peer::Peer;
 use meff::network::{
-    send_delete_peer_request, send_play_request, send_read_request, send_status_request,
-    send_write_request,
+    push_music_to_database, send_delete_peer_request, send_play_request, send_read_request,
+    send_status_request,
 };
 use meff::utils;
 use meff::utils::Instructions::{GET, REMOVE};
+use std::borrow::BorrowMut;
+use std::convert::TryFrom;
 use std::error::Error;
-use std::fs;
-use std::io::{stdin, ErrorKind};
-use std::net::SocketAddr;
-use std::path::Path;
+use std::io::stdin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::{io, thread};
+use std::thread;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
+
     let i_clone = interaction_in_progress.clone();
+
     let arc_clone = arc.clone();
+
     let arc_clone2 = arc.clone();
+
     // Use the peer clone, drop the original alloc of the peer
+
     let peer = arc.lock().unwrap();
+
     drop(peer);
-    let _handle = thread::Builder::new()
+    let _handle = match thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
-            let peer = arc_clone.lock().unwrap();
+            let peer = match arc_clone.lock() {
+                Ok(p) => p,
+                Err(e) => e.into_inner(),
+            };
             drop(peer);
             i_clone.store(true, Ordering::SeqCst);
             handle_user_input(&arc_clone2);
             i_clone.store(false, Ordering::SeqCst);
-        })
-        .unwrap();
+        }) {
+        Ok(h) => h,
+        Err(_) => {
+            error!("Failed to spawn thread");
+            return Err(Box::try_from("Failed to spwan thread".to_string()).unwrap());
+        }
+    };
 
     loop {
-        let peer = arc.lock().unwrap();
+        let peer = match arc.lock() {
+            Ok(p) => p,
+            Err(e) => e.into_inner(),
+        };
         let _peer_clone = peer.clone();
         drop(peer);
         thread::sleep(utils::THREAD_SLEEP_DURATION);
@@ -47,11 +63,16 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
     loop {
-        let peer = arc.lock().unwrap();
+        let peer = match arc.lock() {
+            Ok(p) => p,
+            Err(e) => e.into_inner(),
+        };
         let mut peer_clone = peer.clone();
         drop(peer);
         let buffer = &mut String::new();
-        stdin().read_line(buffer).unwrap();
+        if let Err(e) = stdin().read_line(buffer) {
+            error!("Failed to handle user input {:?}", e);
+        };
         let _ = buffer.trim_end();
         let buffer_iter = buffer.split_whitespace();
         let instructions: Vec<&str> = buffer_iter.collect();
@@ -64,13 +85,11 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"push") => {
                 if instructions.len() == 3 {
-                    //                let mutex = *peer.lock().unwrap();
-                    //                push_music_to_database(instructions[1], instructions[2], mutex);
                     match push_music_to_database(
                         instructions[1],
                         instructions[2],
                         peer_clone.ip_address,
-                        &mut peer_clone,
+                        peer_clone.borrow_mut(),
                     ) {
                         Ok(_) => {}
                         Err(e) => {
@@ -89,7 +108,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"get") => {
                 if instructions.len() == 2 {
-                    send_read_request(peer_clone.ip_address, instructions[1], GET);
+                    send_read_request(&mut peer_clone, instructions[1], GET);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -98,7 +117,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"exit") => {
                 println!("You are leaving the network.");
-                send_delete_peer_request(peer_clone.ip_address);
+                send_delete_peer_request(&mut peer_clone);
                 //TODO: stop steams
             }
             Some(&"status") => {
@@ -108,23 +127,14 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"play") => {
                 if instructions.len() == 2 {
-                    send_play_request(instructions[1], peer_clone.ip_address, PLAY);
+                    send_play_request(Some(instructions[1].to_string()), &mut peer_clone, PLAY);
                 } else {
                     println!("File name is missing. For more information type help.\n");
                 }
             }
             Some(&"remove") => {
                 if instructions.len() == 2 {
-                    send_read_request(peer_clone.ip_address, instructions[1], REMOVE);
-                } else {
-                    println!(
-                        "You need to specify name of mp3 file. For more information type help.\n"
-                    );
-                }
-            }
-            Some(&"stream") => {
-                if instructions.len() == 2 {
-                    println!("Not yet implemented.\n");
+                    send_read_request(&mut peer_clone, instructions[1], REMOVE);
                 } else {
                     println!(
                         "You need to specify name of mp3 file. For more information type help.\n"
@@ -132,15 +142,11 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 }
             }
             Some(&"pause") => {
-                send_play_request("", peer_clone.ip_address, PAUSE);
+                send_play_request(None, &mut peer_clone, PAUSE);
             }
             Some(&"stop") => {
-                send_play_request("", peer_clone.ip_address, STOP);
+                send_play_request(None, &mut peer_clone, STOP);
             }
-            Some(&"continue") => {
-                send_play_request("", peer_clone.ip_address, CONTINUE);
-            }
-
             _ => println!("No valid instructions. Try help!\n"),
         }
     }
@@ -152,7 +158,6 @@ pub fn show_help_instructions() {
                 status - show current state of peer\n\
                 push [mp3 name] [direction to mp3] - add mp3 to database\n\
                 get [mp3 name] - get mp3 file from database\n\
-                stream [mp3 name] - get mp3 stream from database\n\
                 remove [mp3 name] - deletes mp3 file from database\n\
                 play [mp3 name] - plays the audio of mp3 file\n\
                 exit - exit network and leave program\n\n
@@ -160,47 +165,11 @@ pub fn show_help_instructions() {
     print!("{}", info);
 }
 
-/// Function to check file path to mp3 and saves to db afterwards
-/// # Arguments:
-///
-/// * `name` - String including mp3 name (key in our database)
-/// * `file_path` - Path to the mp3 file
-/// * `peer` - Peer
-///
-/// # Returns:
-/// Result //@TODO
-pub fn push_music_to_database(
-    name: &str,
-    file_path: &str,
-    addr: SocketAddr,
-    peer: &mut Peer,
-) -> Result<(), io::Error> {
-    // get mp3 file
-    let path = Path::new(file_path);
-    if path.exists() {
-        let read_result = fs::read(path);
-        match read_result {
-            Ok(content) => {
-                println!("Pushing... This can take a while");
-                //@TODO save to database
-                //                peer.get_db().add_file(name, content);
-                //                peer.store((name.parse().unwrap(), content));
-                send_write_request(addr, addr, (name.to_string(), content), false, peer);
-                return Ok(());
-            }
-            Err(err) => {
-                println!("Error while parsing file");
-                return Err(err);
-            }
-        }
-    } else {
-        println!("The file could not be found at this path: {:?}", path);
-    }
-    Err(io::Error::new(ErrorKind::NotFound, "File Path not found!"))
-}
-
 fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
     let peer_clone = peer.clone();
     drop(peer);
     let nwt = peer_clone.network_table;
@@ -224,7 +193,10 @@ fn print_peer_status(arc: &Arc<Mutex<Peer>>) {
 /// # Arguments:
 /// * `peer` - the local `Peer`
 fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
     let peer_clone = peer.clone();
     drop(peer);
     let db = peer_clone.get_db().get_data();
@@ -244,7 +216,10 @@ fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
 /// # Arguments
 /// * `peer` - the local `Peer`
 fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
     let peer_clone = peer.clone();
     let mut peer_clone2 = peer.clone();
     drop(peer);

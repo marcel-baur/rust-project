@@ -6,13 +6,13 @@ use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::time::SystemTime;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Notification {
     pub content: Content,
     pub from: SocketAddr,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Content {
     PushToDB {
         key: String,
@@ -74,7 +74,7 @@ pub enum Content {
         name: String,
     },
     PlayAudioRequest {
-        name: String,
+        name: Option<String>,
         state: MusicState,
     },
     DroppedPeer {
@@ -87,9 +87,6 @@ pub enum Content {
     DeleteFileRequest {
         song_name: String,
     },
-    NewFileSaved {
-        song_name: String,
-    }
 }
 
 pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
