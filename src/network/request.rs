@@ -1,4 +1,4 @@
-use crate::audio::{ play_music_by_vec, MusicPlayer};
+use crate::audio::{play_music_by_vec, MusicPlayer};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table_request,
     send_table_request, send_table_to_all_peers, update_table_after_delete,
@@ -8,9 +8,12 @@ use crate::network::music_exchange::{
     send_get_file_reponse, song_order_request,
 };
 use crate::network::peer::Peer;
-use crate::network::{other_random_target, send_local_file_status, send_read_request, send_status_request, send_write_request};
-use crate::utils::{Instructions, AppListener};
+use crate::network::{
+    other_random_target, send_local_file_status, send_read_request,
+    send_status_request, send_write_request,
+};
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
+use crate::utils::{AppListener, Instructions};
 use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
@@ -97,7 +100,12 @@ pub fn request_for_table(value: String, sender: SocketAddr, peer: &mut Peer) {
     }
 }
 
-pub fn find_file(instr: Instructions, song_name: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn find_file(
+    instr: Instructions,
+    song_name: String,
+    peer: &mut Peer,
+    listener: &mut Box<dyn AppListener + Sync>,
+) {
     // @TODO there is no feedback when audio does not exist in "global" database (there is only the existsFile response, when file exists in database? change?
     // @TODO in this case we need to remove the request?
     if peer.get_db().get_data().contains_key(&song_name) {
@@ -187,8 +195,13 @@ pub fn exit_peer(addr: SocketAddr, peer: &mut Peer) {
         let database = peer.get_db().get_data();
         let network_table = &peer.network_table;
         if network_table.len() > 1 {
-            for (song, _value) in database {
-                let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
+            for song in database.keys() {
+                let redundant_target = match other_random_target(network_table, peer.get_ip()) {
+                    Some(r) => r,
+                    None => {
+                        continue;
+                    } //TODO review
+                };
                 song_order_request(redundant_target, peer.ip_address, song.to_string());
             }
         }
@@ -211,7 +224,9 @@ pub fn exist_file_response(song_name: String, id: SystemTime, sender: SocketAddr
             peer.delete_handled_request(&id);
             send_file_request(sender, peer.ip_address, song_name.as_ref(), instr.clone());
         }
-        None => {}
+        None => {
+            info!("Did not find requested file");
+        }
     }
 }
 
@@ -240,14 +255,20 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
     let network_table = &peer.network_table;
     // TODO: REVIEW unwrap
     if peer.get_db().get_data().contains_key(&song_name) {
-        let redundant_target = other_random_target(network_table, peer.get_ip()).unwrap();
+        let redundant_target = match other_random_target(network_table, peer.get_ip()) {
+            Some(r) => r,
+            None => {
+                error!("Could not find a redundant target");
+                return;
+            }
+        };
         song_order_request(redundant_target, peer.ip_address, song_name.to_string());
     } else {
         send_read_request(peer, &song_name, Instructions::ORDER)
     }
 }
 
-pub fn delete_file_request(song_name: &String, peer: &mut Peer) {
+pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
     if peer.database.data.contains_key(song_name) {
         println!("Remove file {} from database", &song_name);
         peer.delete_file_from_database(song_name);

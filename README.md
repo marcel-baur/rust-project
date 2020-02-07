@@ -36,7 +36,6 @@ Use following command to join:
 - `push [mp3 name] [direction to mp3]` - add mp3 to database
 - `get [mp3 name]` - download the mp3 file from database
 - `play [mp3 name]` - download the mp3 file from the database and play it
-- `stream [mp3 name]` - get mp3 stream from database. The file won’t be downloaded, only streamed.
 - `remove [mp3 name]` - deletes mp3 file from database
 - `exit` - exit network
 
@@ -82,8 +81,7 @@ Use following command to join:
 ## What are the next steps?
 - Some more error handling
 - Load management
-- Streaming
-- Maybe a GUI
+- a GUI
 - Debugging and testing
 
 ## Participants

@@ -1,12 +1,12 @@
 use crate::database::Database;
 use crate::network::get_own_ip_address;
+use crate::network::notification::Notification;
 use crate::utils::Instructions;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
+use std::sync::mpsc::SyncSender;
 use std::time::SystemTime;
-use std::sync::mpsc::{ SyncSender};
-use crate::network::notification::Notification;
 
 /// Represents a Peer in the network
 #[derive(Clone)]
@@ -30,7 +30,7 @@ impl Peer {
         onw_name: &str,
         network_table: HashMap<String, SocketAddr>,
         open_request_table: HashMap<SystemTime, Instructions>,
-        sender: SyncSender<Notification>
+        sender: SyncSender<Notification>,
     ) -> Peer {
         Peer {
             name: onw_name.to_string(),
@@ -38,7 +38,7 @@ impl Peer {
             network_table,
             database: Database::new(),
             open_request_table,
-            sender
+            sender,
         }
     }
 
@@ -79,7 +79,6 @@ impl Peer {
 
     pub fn delete_file_from_database(&mut self, song_name: &str) {
         self.database.data.remove(song_name);
-
     }
 
     pub fn drop_peer_by_ip(&mut self, addr: &SocketAddr) {
@@ -98,7 +97,7 @@ impl Peer {
             addresses.push(*val);
         }
         addresses.sort_by(|a, b| a.port().cmp(&b.port()));
-        return addresses;
+        addresses
     }
 
     /// returns the next four `SocketAddr` in the network_table
@@ -109,18 +108,34 @@ impl Peer {
             addresses.push(val);
         }
         addresses.sort_by(|a, b| a.port().cmp(&b.port()));
-        let index = addresses.iter().position(|&r| r == self.get_ip()).unwrap();
+        let own_index = match addresses.iter().position(|&r| r == self.get_ip()) {
+            None => {
+                error!("Own Peer SocketAddr is not in network_table");
+                0
+            }
+            Some(i) => i,
+        };
 
         let mut successors = Vec::new();
-        for i in index + 1..index + 4 {
+        for i in own_index + 1..own_index + 4 {
             if i >= addresses.len() {
                 let j = i - addresses.len();
-                successors.push(**addresses.get(j).unwrap());
+                successors.push(**match addresses.get(j) {
+                    None => {
+                        break;
+                    }
+                    Some(v) => v,
+                });
                 continue;
             }
-            successors.push(**addresses.get(i).unwrap());
+            successors.push(**match addresses.get(i) {
+                None => {
+                    break;
+                }
+                Some(v) => v,
+            });
         }
-        return successors;
+        successors
     }
 }
 
@@ -131,7 +146,11 @@ impl Peer {
 ///
 /// # Returns:
 /// A new `Peer` if successful, error string if failed
-pub fn create_peer(onw_name: &str, port: &str, sender: SyncSender<Notification>) -> Result<Peer, String> {
+pub fn create_peer(
+    onw_name: &str,
+    port: &str,
+    sender: SyncSender<Notification>,
+) -> Result<Peer, String> {
     let peer_socket_addr = match get_own_ip_address(port) {
         Ok(val) => val,
         Err(error_message) => return Err(error_message),
@@ -144,7 +163,7 @@ pub fn create_peer(onw_name: &str, port: &str, sender: SyncSender<Notification>)
         onw_name,
         network_table,
         open_request_table,
-        sender
+        sender,
     );
     Ok(peer)
 }

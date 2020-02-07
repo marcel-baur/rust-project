@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Database {
     pub data: HashMap<String, Vec<u8>>,
 }
+
 impl Database {
     pub fn new() -> Database {
         Database {

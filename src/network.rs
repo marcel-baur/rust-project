@@ -1,10 +1,10 @@
-use std::io::{Read, ErrorKind};
+use std::io::{ErrorKind, Read};
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
-use std::sync::{Arc, Mutex};
-use std::{thread, io, fs};
-use std::sync::mpsc::{ Receiver, SyncSender};
 use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, SyncSender};
+use std::sync::{Arc, Mutex};
+use std::{fs, io, thread};
 
 mod handshake;
 mod music_exchange;
@@ -95,9 +95,15 @@ pub fn startup(
     ip_address: Option<SocketAddr>,
     app: Box<dyn AppListener + Sync>,
 ) -> Result<Arc<Mutex<Peer>>, String> {
-    let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) = mpsc::sync_channel(5);
+    let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) =
+        mpsc::sync_channel(5);
     let sender_clone_peer = sender.clone();
-    let peer = create_peer(own_name, port, sender_clone_peer).unwrap();
+    let peer = match create_peer(own_name, port, sender_clone_peer) {
+        Ok(p) => p,
+        Err(e) => {
+            return Err(e);
+        }
+    };
     let own_addr = peer.ip_address;
 
     let peer_arc = Arc::new(Mutex::new(peer));
@@ -108,31 +114,42 @@ pub fn startup(
     let app_arc = Arc::new(Mutex::new(app));
     let app_arc_working = app_arc.clone();
 
-    let sink = Arc::new(Mutex::new(create_sink().unwrap()));
+    let sink = Arc::new(Mutex::new(match create_sink() {
+        Ok(s) => s,
+        Err(e) => {
+            return Err(e);
+        }
+    }));
     let sink_arc_clone_working = sink.clone();
-
-    let _working_thread = thread::Builder::new().name("working_thread".to_string()).spawn(
-        move || {
-            loop {
-                let ele = receiver.recv();
-                match ele {
-                    Ok(not) => {
-                        let mut peer = peer_arc_clone_working.lock().unwrap();
-                        let mut app = app_arc_working.lock().unwrap();
-                        let mut sink = sink_arc_clone_working.lock().unwrap();
-                        handle_notification(not, &mut peer, &mut sink, &mut app);
-                        drop(peer);
-                    },
-                    Err(e) => {
-                        println!("error {}", e);
-                    }
+    let _working_thread = thread::Builder::new()
+        .name("working_thread".to_string())
+        .spawn(move || loop {
+            let ele = receiver.recv();
+            match ele {
+                Ok(not) => {
+                    let mut peer = match peer_arc_clone_working.lock() {
+                        Ok(p) => p,
+                        Err(e) => e.into_inner(),
+                    };
+                    let mut app = match app_arc_working.lock() {
+                        Ok(a) => a,
+                        Err(e) => e.into_inner(),
+                    };
+                    let mut sink = match sink_arc_clone_working.lock() {
+                        Ok(s) => s,
+                        Err(e) => e.into_inner(),
+                    };
+                    println!("handle notification");
+                    handle_notification(not, &mut peer, &mut sink, &mut app);
+                }
+                Err(e) => {
+                    println!("error {}", e);
                 }
             }
-        }
-    );
+        });
 
     let sender_clone = sender.clone();
-    let _listener = thread::Builder::new()
+    let _listener = match thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
             match listen_tcp(peer_arc_clone_listen, sender_clone) {
@@ -141,8 +158,12 @@ pub fn startup(
                     eprintln!("Failed to spawn listener");
                 }
             };
-        })
-        .unwrap();
+        }) {
+        Ok(s) => s,
+        Err(_e) => {
+            return Err("Failed to spwan listener".to_string());
+        }
+    };
 
     let _peer_arc_clone_interact = peer_arc.clone();
     let peer_arc_clone_heartbeat = peer_arc.clone();
@@ -157,29 +178,45 @@ pub fn startup(
         }
     }
 
-    let _heartbeat = thread::Builder::new()
+    let _heartbeat = match thread::Builder::new()
         .name("Heartbeat".to_string())
         .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
             Ok(_) => {}
             Err(_) => {
                 eprintln!("Failed to spawn shell");
             }
-        })
-        .unwrap();
+        }) {
+        Ok(h) => h,
+        Err(_e) => {
+            return Err("Failed to spawn shell".to_string());
+        }
+    };
 
-    return Ok(peer_arc_clone_return);
+    Ok(peer_arc_clone_return)
 }
 
 fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result<(), String> {
     let clone = arc.clone();
     let sender_clone = sender.clone();
-    let listen_ip = clone.lock().unwrap().ip_address;
-    let listener = TcpListener::bind(&listen_ip).unwrap();
+    let peer = match clone.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner(),
+    };
+    let listen_ip = peer.ip_address;
+    drop(peer);
+    let listener = match TcpListener::bind(&listen_ip) {
+        Ok(l) => l,
+        Err(_e) => {
+            return Err("Could't bind TCP Listener.".to_string());
+        }
+    };
     for stream in listener.incoming() {
         let mut buf = String::new();
         match stream {
             Ok(mut s) => {
-                s.read_to_string(&mut buf).unwrap();
+                if let Err(_e) = s.read_to_string(&mut buf) {
+                    error!("Could not read the stream to a string.");
+                };
                 let des: Notification = match serde_json::from_str(&buf) {
                     Ok(val) => val,
                     Err(e) => {
@@ -188,7 +225,9 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
                         continue; // skip this stream
                     }
                 };
-                sender_clone.send(des).unwrap();
+                if let Err(_e) = sender_clone.send(des) {
+                    error!("Could not send notification through the channel.");
+                };
             }
             Err(_e) => {
                 println!("could not read stream");
@@ -203,7 +242,10 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
 fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
     loop {
         thread::sleep(HEARTBEAT_SLEEP_DURATION);
-        let peer = arc.lock().unwrap();
+        let peer = match arc.lock() {
+            Ok(p) => p,
+            Err(e) => e.into_inner(),
+        };
         let mut peer_clone = peer.clone();
         drop(peer);
         let network_size = peer_clone.network_table.len();
@@ -366,10 +408,20 @@ fn other_random_target(
     }
     let mut rng = rand::thread_rng();
     let mut index = rng.gen_range(0, network_table.len());
-    let mut target = network_table.values().nth(index).unwrap();
+    let mut target = match network_table.values().nth(index) {
+        Some(t) => t,
+        None => {
+            return None;
+        }
+    };
     while target == own_ip {
         index = rng.gen_range(0, network_table.len());
-        target = network_table.values().nth(index).unwrap();
+        target = match network_table.values().nth(index) {
+            Some(t) => t,
+            None => {
+                return None;
+            }
+        };
     }
     Some(*target)
 }
@@ -384,15 +436,21 @@ pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
         },
         from: peer.ip_address,
     };
-    peer.sender.send(not).unwrap();
+    if let Err(e) = peer.sender.send(not) {
+        error!("Could not send notification {:?}", e);
+    };
 }
 
 pub fn send_delete_peer_request(peer: &mut Peer) {
     let not = Notification {
-        content: Content::ExitPeer { addr: peer.ip_address },
+        content: Content::ExitPeer {
+            addr: peer.ip_address,
+        },
         from: peer.ip_address,
     };
-    peer.sender.send(not).unwrap();
+    if let Err(e) = peer.sender.send(not) {
+        error!("Could not send notification {:?}", e);
+    };
 }
 
 pub fn send_status_request(target: SocketAddr, from: SocketAddr, peer: &mut Peer) {
@@ -442,7 +500,9 @@ pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicStat
         },
         from: peer.ip_address,
     };
-    peer.sender.send(not).unwrap()
+    if let Err(e) = peer.sender.send(not) {
+        error!("Could not send notification {:?}", e);
+    };
 }
 
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
@@ -509,7 +569,9 @@ pub fn push_music_to_database(
                     },
                     from: addr,
                 };
-                peer.sender.send(not).unwrap();
+                if let Err(e) = peer.sender.send(not) {
+                    error!("Could not send notification {:?}", e);
+                };
                 return Ok(());
             }
             Err(err) => {
