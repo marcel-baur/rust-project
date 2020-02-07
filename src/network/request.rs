@@ -8,7 +8,7 @@ use crate::network::music_exchange::{
     send_get_file_reponse, song_order_request,
 };
 use crate::network::peer::Peer;
-use crate::network::{other_random_target, send_local_file_status, send_read_request, send_status_request, send_write_request, send_write_response, send_new_file_notification};
+use crate::network::{other_random_target, send_local_file_status, send_read_request, send_status_request, send_write_request};
 use crate::utils::{Instructions, AppListener};
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
 use std::net::SocketAddr;
@@ -38,14 +38,6 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
             }
             None => println!("Only peer in network. No redundancy possible"),
         };
-        match from.parse::<SocketAddr>() {
-            Ok(target_address) => {
-                send_write_response(target_address, *peer.get_ip(), key.clone(), peer);
-            }
-            Err(e) => {
-                dbg!(e);
-            }
-        }
     }
 }
 

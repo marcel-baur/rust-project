@@ -319,9 +319,6 @@ fn handle_notification(
             dropped_peer(addr, peer);
         }
         Content::Heartbeat => {}
-        Content::NewFileSaved {song_name} => {
-            listener.file_status_changed(song_name, "New".to_string());
-        }
     }
 }
 
@@ -377,29 +374,6 @@ fn other_random_target(
     Some(*target)
 }
 
-pub fn send_write_response(target: SocketAddr, origin: SocketAddr, key: String, peer: &mut Peer) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            handle_lost_connection(target, peer);
-            return;
-        }
-    };
-
-    let not = Notification {
-        content: Content::NewFileSaved {
-            song_name: key.to_string(),
-        },
-        from: origin,
-    };
-    match serde_json::to_writer(&stream, &not) {
-        Ok(_ser) => {}
-        Err(e) => {
-            error!("Could not serialize {:?}, Error: {:?}", &not, e);
-            println!("Failed to serialize Response {:?}", &not);
-        }
-    };
-}
 
 /// Communicate to the listener that we want to find the location of a given file
 pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
@@ -505,27 +479,6 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
     }
 }
 
-/// Send a notification to the peer at `target` that a new file has been saved.
-/// # Parameters:
-/// - `target`: `SocketAddr` of the Peer that should receive the notification
-/// - `file_name`: name of the file as string
-/// - `peer`: the local `Peer`
-pub fn send_new_file_notification (target: SocketAddr, file_name: &str, peer: &mut Peer) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            handle_lost_connection(target, peer);
-            return;
-        }
-    };
-    let not = Notification {
-        content: Content::NewFileSaved {song_name: file_name.to_string()},
-        from: *peer.get_ip(),
-    };
-    if let Err(_e) = serde_json::to_writer(&stream, &not) {
-        println!("Failed to serialize SendRequest {:?}", &not);
-    }
-}
 
 /// Function to check file path to mp3 and saves to db afterwards
 /// # Arguments:

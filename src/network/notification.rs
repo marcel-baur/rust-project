@@ -87,9 +87,6 @@ pub enum Content {
     DeleteFileRequest {
         song_name: String,
     },
-    NewFileSaved {
-        song_name: String,
-    }
 }
 
 pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
