@@ -160,7 +160,9 @@ pub fn startup(
             };
         }) {
         Ok(s) => s,
-        Err(_e) => {return Err("Failed to spwan listener".to_string());}
+        Err(_e) => {
+            return Err("Failed to spwan listener".to_string());
+        }
     };
 
     let _peer_arc_clone_interact = peer_arc.clone();
@@ -185,7 +187,9 @@ pub fn startup(
             }
         }) {
         Ok(h) => h,
-        Err(_e) => {return Err("Failed to spawn shell".to_string());}
+        Err(_e) => {
+            return Err("Failed to spawn shell".to_string());
+        }
     };
 
     Ok(peer_arc_clone_return)
@@ -202,13 +206,15 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
     drop(peer);
     let listener = match TcpListener::bind(&listen_ip) {
         Ok(l) => l,
-        Err(_e) => {return Err("Could't bind TCP Listener.".to_string());}
+        Err(_e) => {
+            return Err("Could't bind TCP Listener.".to_string());
+        }
     };
     for stream in listener.incoming() {
         let mut buf = String::new();
         match stream {
             Ok(mut s) => {
-                if let Err(_e) = s.read_to_string(&mut buf){
+                if let Err(_e) = s.read_to_string(&mut buf) {
                     error!("Could not read the stream to a string.");
                 };
                 let des: Notification = match serde_json::from_str(&buf) {
@@ -219,7 +225,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
                         continue; // skip this stream
                     }
                 };
-                if let Err(_e) = sender_clone.send(des){
+                if let Err(_e) = sender_clone.send(des) {
                     error!("Could not send notification through the channel.");
                 };
             }
