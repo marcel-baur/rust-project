@@ -109,7 +109,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
             }
             Some(&"play") => {
                 if instructions.len() == 2 {
-                    send_play_request(instructions[1], &mut peer_clone, PLAY);
+                    send_play_request(Some(instructions[1].to_string()), &mut peer_clone, PLAY);
                 } else {
                     println!("File name is missing. For more information type help.\n");
                 }
@@ -133,10 +133,10 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 }
             }
             Some(&"pause") => {
-                send_play_request("", &mut peer_clone, PAUSE);
+                send_play_request(None, &mut peer_clone, PAUSE);
             }
             Some(&"stop") => {
-                send_play_request("", &mut peer_clone, STOP);
+                send_play_request(None, &mut peer_clone, STOP);
             }
             _ => println!("No valid instructions. Try help!\n"),
         }

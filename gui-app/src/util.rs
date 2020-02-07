@@ -5,7 +5,7 @@ use meff::network::peer::Peer;
 use meff::utils::Instructions::{REMOVE};
 use meff::network::{send_delete_peer_request, send_play_request, send_read_request, push_music_to_database};
 use glib::{Sender};
-use meff::audio::MusicState::{PAUSE, PLAY, STOP};
+use meff::audio::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
 use meff::audio::MusicState;
 use std::collections::HashMap;
 use std::sync::{Mutex, Arc};
@@ -14,9 +14,9 @@ use gtk::AccelGroupExt;
 //Music entertainment for friends application model
 #[derive(Clone)]
 pub struct MEFFM {
-    pub cur_selected_song: Option<String>,
     pub peer: Option<Arc<Mutex<Peer>>>,
     pub sender: Option<Sender<(String, String)>>,
+    pub is_playing: bool,
 }
 
 impl AppListener for MEFFM {
@@ -38,7 +38,7 @@ impl AppListener for MEFFM {
 
 impl MEFFM {
     pub fn new() -> MEFFM {
-        MEFFM { cur_selected_song: None, peer: None, sender: None}
+        MEFFM {peer: None, sender: None, is_playing: false}
     }
 
     pub fn set_sender(&mut self, sender: Sender<(String, String)>) {
@@ -79,19 +79,11 @@ impl MEFFM {
         drop(peer_unlock);
     }
 
-    fn music_control(&mut self, instr: MusicState) {
-        match self.cur_selected_song.as_ref() {
-            Some(song) => {
-                let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
-                let mut peer_clone = peer_unlock.clone();
-
-                send_play_request(&song, &mut peer_clone, instr);
-                drop(peer_unlock);
-            }
-            None => {
-
-            }
-        }
+    fn music_control(&mut self, song: Option<String>, instr: MusicState) {
+        let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+        let mut peer_clone = peer_unlock.clone();
+        send_play_request(song, &mut peer_clone, instr);
+        drop(peer_unlock);
     }
 
     pub fn status(&mut self) -> HashMap<String, SocketAddr> {
@@ -103,20 +95,27 @@ impl MEFFM {
         list
     }
 
-    pub fn play(&mut self) {
-        self.music_control(PLAY);
+    pub fn stream(&mut self, search: String) {
+        self.is_playing = true;
+        self.music_control(Some(search), PLAY);
+    }
+
+    pub fn play(&mut self, title: Option<String>) {
+        if self.is_playing && title.is_none() {
+            self.music_control(None,CONTINUE);
+        } else {
+            self.is_playing = true;
+            self.music_control(title, PLAY);
+        }
     }
 
     pub fn pause(&mut self) {
-        self.music_control(PAUSE);
+        self.music_control(None,PAUSE);
     }
 
     pub fn stop(&mut self) {
-        self.music_control(STOP);
-    }
-
-    pub fn get(&mut self) {
-        
+        self.is_playing = false;
+        self.music_control(None,STOP);
     }
 
     pub fn quit(&mut self) {

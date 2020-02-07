@@ -74,7 +74,7 @@ pub enum Content {
         name: String,
     },
     PlayAudioRequest {
-        name: String,
+        name: Option<String>,
         state: MusicState,
     },
     DroppedPeer {

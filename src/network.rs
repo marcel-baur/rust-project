@@ -120,8 +120,8 @@ pub fn startup(
                         let mut peer = peer_arc_clone_working.lock().unwrap();
                         let mut app = app_arc_working.lock().unwrap();
                         let mut sink = sink_arc_clone_working.lock().unwrap();
-                        println!("handle notification");
                         handle_notification(not, &mut peer, &mut sink, &mut app);
+                        drop(peer);
                     },
                     Err(e) => {
                         println!("error {}", e);
@@ -309,7 +309,7 @@ fn handle_notification(
         }
         Content::PlayAudioRequest { name, state } => {
             match state {
-                MusicState::PLAY => play_music(peer, name.as_str(), sink),
+                MusicState::PLAY => play_music(peer, name, sink),
                 MusicState::PAUSE => pause_current_playing_music(sink),
                 MusicState::STOP => stop_current_playing_music(sink),
                 MusicState::CONTINUE => continue_paused_music(sink),
@@ -434,10 +434,10 @@ fn send_local_file_status(
     tcp_request_with_notification(target, not);
 }
 
-pub fn send_play_request(name: &str, peer: &mut Peer, state: MusicState) {
+pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicState) {
     let not = Notification {
         content: Content::PlayAudioRequest {
-            name: name.to_string(),
+            name,
             state,
         },
         from: peer.ip_address,

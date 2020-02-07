@@ -152,7 +152,7 @@ pub fn get_file_response(
     match instr {
         PLAY => {
             //save to tmp and play audio
-            match play_music_by_vec(value, sink) {
+            match play_music_by_vec(value, sink, key.clone()) {
                 Ok(_) => {}
                 Err(_) => {
                     println!("Could not play the requested file {}", &key);

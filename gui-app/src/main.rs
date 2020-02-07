@@ -231,17 +231,16 @@ fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<Ref
     trash_button.set_image(Some(&image_delete));
 
     let song_clone_1 = song_name.clone();
+    let song_clone_2 = song_name.clone();
     let meff_clone = meff.clone();
+    let meff_clone2 = meff_clone.clone();
     trash_button.connect_clicked(move |_| {
         meff_clone.borrow_mut().remove_title(song_clone_1.to_string());
     });
 
-    let song_clone_2 = song_name.clone();
-    let meff_clone_2 = meff.clone();
-    let meff_clone_3 = meff_clone_2.clone();
+    let meff_clone_3 = meff_clone2.clone();
     label_button.connect_clicked( move |_| {
-        meff_clone_2.borrow_mut().cur_selected_song = Some(song_clone_2.to_string());
-        meff_clone_3.borrow_mut().play();
+        meff_clone_3.borrow_mut().play(Some(song_clone_2.to_string()));
     });
 
     h_box.pack_start(&label_button, true, true, 0);
@@ -300,14 +299,15 @@ fn show_status(meff: Rc<RefCell<MEFFM>>) {
 fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<(String, String)>) {
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
-    let meff_clone_l = Rc::clone(&meff_clone);
-    let meff_clone_play = Rc::clone(&meff_clone_l);
-    let meff_clone_pause = Rc::clone(&meff_clone_play);
-    let meff_clone_stop = Rc::clone(&meff_clone_pause);
-    let meff_clone_continue = Rc::clone(&meff_clone_stop);
-    let meff_clone_remove = Rc::clone(&meff_clone_continue);
-    let meff_clone_quit = Rc::clone(&meff_clone_remove);
-    let meff_clone_status = Rc::clone(&meff_clone_quit);
+    let meff_clone_l = Rc::clone(&meff);
+    let meff_clone_play = Rc::clone(&meff);
+    let meff_clone_pause = Rc::clone(&meff);
+    let meff_clone_stop = Rc::clone(&meff);
+    let meff_clone_continue = Rc::clone(&meff);
+    let meff_clone_remove = Rc::clone(&meff);
+    let meff_clone_quit = Rc::clone(&meff);
+    let meff_clone_status = Rc::clone(&meff);
+    let meff_clone_stream = Rc::clone(&meff);
     let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
@@ -393,18 +393,20 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
             dialog.hide();
         });
 
+    let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+    let textbox = gtk::Entry::new();
+    let h_box_label = Label::new(Some("Title"));
+
     let download_button = gtk::Button::new_with_label("Download");
     let stream_button = gtk::Button::new_with_label("Stream");
-    stream_button.connect_clicked(move |_| {
-        println!("clicked");
+    let textbox_clone = textbox.clone();
+    stream_button.connect_clicked(move |button| {
+        let title = textbox_clone.get_text().unwrap().as_str().to_string();
+        meff_clone_stream.borrow_mut().stream(title);
     });
     download_button.connect_clicked(move |_| {
         println!("clicked");
     });
-
-    let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-    let textbox = gtk::Entry::new();
-    let h_box_label = Label::new(Some("Title"));
 
     let list_box = gtk::ListBoxBuilder::new().activate_on_single_click(true).build();
     let l_b_clone = list_box.clone();
@@ -450,9 +452,7 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
     play_music.connect_clicked(move |_| {
         let meff_clone_4 = Rc::clone(&meff_clone_play);
-        meff_clone_4.borrow_mut().play();
-
-
+        meff_clone_4.borrow_mut().play(None);
     });
 
     pause_music.connect_clicked(move |_| {
@@ -463,9 +463,6 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     stop_music.connect_clicked(move |_| {
         let meff_clone_6 = Rc::clone(&meff_clone_stop);
         meff_clone_6.borrow_mut().stop();
-
-        let meff_clone_7 = Rc::clone(&meff_clone_remove);
-        meff_clone_7.borrow_mut().cur_selected_song = None;
     });
 
     let scrolled_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
