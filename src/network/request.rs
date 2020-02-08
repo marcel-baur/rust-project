@@ -1,4 +1,4 @@
-use crate::audio::{play_music_by_vec, MusicPlayer};
+use crate::audio::{play_music_by_vec,save_music_to_disk,MusicPlayer};
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table_request,
     send_table_request, send_table_to_all_peers, update_table_after_delete,
@@ -18,6 +18,7 @@ use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
 use crate::network::notification::{Notification, Content};
+use crate::utils::ListenerInstr::{NEW, DELETE};
 
 pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     if peer.database.data.contains_key(&key) {
@@ -26,7 +27,7 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
         peer.process_store_request((key.clone(), value.clone()));
         println!("Saved file to database");
         let key_clone = key.clone();
-        listener.file_status_changed(key_clone, "New".to_string());
+        listener.file_status_changed(key_clone, NEW);
 
         let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
         match redundant_target {
@@ -47,7 +48,7 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
 pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     let key_clone = key.clone();
     peer.process_store_request((key, value));
-    listener.file_status_changed(key_clone, "New".to_string());
+    listener.file_status_changed(key_clone, NEW);
 }
 
 pub fn change_peer_name(value: String, sender: SocketAddr, peer: &mut Peer) {
@@ -112,7 +113,7 @@ pub fn find_file(
         if instr == REMOVE {
             peer.delete_file_from_database(&song_name);
             let song_clone = song_name.clone();
-            listener.file_status_changed(song_clone, "Delete".to_string());
+            listener.file_status_changed(song_clone, DELETE);
             println!("Remove file {} from database", &song_name);
 
             let id = SystemTime::now();
@@ -151,30 +152,28 @@ pub fn get_file(instr: Instructions, key: String, sender: SocketAddr, peer: &mut
 }
 
 pub fn get_file_response(
-    instr: Instructions,
-    key: String,
+    instr: &Instructions,
+    key: &String,
     value: Vec<u8>,
     peer: &mut Peer,
     sink: &mut MusicPlayer,
-) {
+) -> Result<(), String> {
     match instr {
         PLAY => {
             //save to tmp and play audio
-            match play_music_by_vec(value, sink, key.clone()) {
-                Ok(_) => {}
-                Err(_) => {
-                    println!("Could not play the requested file {}", &key);
-                    error!("Failed to play music from {}", &key);
-                }
-            };
+            play_music_by_vec(value, sink, key.clone())
         }
         GET => {
-            //Download mp3 file
+            save_music_to_disk(value, key);
+            return Ok(());
         }
         ORDER => {
             peer.process_store_request((key.clone(), value.clone()));
+            return Ok(());
         }
-        _ => {}
+        _ => {
+            return Err("Unknown command".to_string());
+        }
     }
 }
 
