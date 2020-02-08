@@ -122,7 +122,6 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             Some(&"status") => {
                 print_peer_status(&arc);
                 print_local_db_status(&arc);
-                print_existing_files(&arc);
             }
             Some(&"play") => {
                 if instructions.len() == 2 {
@@ -213,25 +212,6 @@ fn print_local_db_status(arc: &Arc<Mutex<Peer>>) {
         "Current state of local database".to_string(),
         local_data
     );
-}
-
-/// Print the name of all existing files in the database
-/// # Arguments
-/// * `peer` - the local `Peer`
-fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
-    let peer = match arc.lock() {
-        Ok(p) => p,
-        Err(e) => e.into_inner(),
-    };
-    let peer_clone = peer.clone();
-    let mut peer_clone2 = peer.clone();
-    drop(peer);
-    for v in peer_clone.network_table.values() {
-        if *v == *peer_clone.get_ip() {
-            continue;
-        }
-//        send_status_request(*v, *peer_clone.get_ip(), &mut peer_clone2);
-    }
 }
 
 /// Print the name of all files from another peer
