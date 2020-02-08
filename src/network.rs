@@ -395,7 +395,7 @@ fn handle_notification(
                 },
                 MusicState::STOP => {
                     if stop_current_playing_music(sink).is_ok() {
-                        println!("{}", "");
+                        listener.player_stopped();
                     }
                 },
                 MusicState::CONTINUE => {

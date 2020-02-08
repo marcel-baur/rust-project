@@ -39,6 +39,10 @@ impl AppListener for MEFFM {
         *self.is_playing.lock().unwrap() = true;
     }
 
+    fn player_stopped(&mut self) {
+        *self.is_playing.lock().unwrap() = false;
+    }
+
 }
 
 impl MEFFM {

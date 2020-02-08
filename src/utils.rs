@@ -30,5 +30,8 @@ pub trait AppListener: Send {
     /// - `name` the name of the peer that sent the response
     fn notify_status(&self, files: Vec<String>, name: String);
     fn file_status_changed(&mut self, name: String, instr: ListenerInstr);
+    /// Notify the application that the player started playing
     fn player_playing(&mut self, title: Option<String>);
+    /// Notify the application that the player has stopped (no other song in queue)
+    fn player_stopped(&mut self);
 }

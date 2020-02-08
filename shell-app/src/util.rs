@@ -29,4 +29,8 @@ impl AppListener for Application {
             println!("{} is playing!", name);
         }
     }
+
+    fn player_stopped(&mut self) {
+        println!("player stopped");
+    }
 }
