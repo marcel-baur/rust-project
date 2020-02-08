@@ -4,14 +4,14 @@ use crate::util::Application;
 use clap::{App, Arg};
 use meff::network;
 use meff::network::peer::Peer;
+use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::io::Error;
 use std::net::SocketAddr;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::borrow::Borrow;
 
 #[macro_use]
 extern crate log;
@@ -67,7 +67,9 @@ fn main() {
                 return;
             }
         }
-        let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
+        let appl = Application {
+            is_playing: Arc::new(Mutex::new(false)),
+        };
         let appl_rc = Rc::new(RefCell::new(appl.clone()));
         let appl_clone = appl_rc.clone();
         let peer = match network::startup(name, port, Some(addr), Box::new(appl)) {
@@ -79,7 +81,9 @@ fn main() {
         };
         startup(peer, appl_clone);
     } else {
-        let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
+        let appl = Application {
+            is_playing: Arc::new(Mutex::new(false)),
+        };
         let appl_rc = Rc::new(RefCell::new(appl.clone()));
         let appl_clone = appl_rc.clone();
         let peer = match network::startup(name, port, None, Box::new(appl)) {
