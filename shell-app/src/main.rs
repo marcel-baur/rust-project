@@ -67,7 +67,8 @@ fn main() {
         let appl = Application {};
         let peer = match network::startup(name, port, Some(addr), Box::new(appl)) {
             Ok(p) => p,
-            Err(_e) => {
+            Err(e) => {
+                println!("{}", e);
                 return;
             } // error!("Could not join network {:?}", e);
         };
@@ -77,7 +78,8 @@ fn main() {
 
         let peer = match network::startup(name, port, None, Box::new(appl)) {
             Ok(p) => p,
-            Err(_e) => {
+            Err(e) => {
+                println!("{}", e);
                 return;
             } // error!("Could not join network {:?}", e);
         };

@@ -36,6 +36,17 @@ use request::{
 use std::collections::HashMap;
 use std::path::Path;
 
+fn validate_port(port: &str) -> Result<&str, String> {
+    if let Err(e) = port.parse::<u32>() {
+        return Err("The supplied port is not numeric".to_string());
+    }
+    if port.len() != 4 {
+        return Err("The supplied port does not have four digits".to_string());
+    }
+    // TODO: Port range for exam.
+    Ok(port)
+}
+
 #[cfg(target_os = "macos")]
 pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     let ifs = match get_if_addrs::get_if_addrs() {
@@ -51,6 +62,9 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
         "Local ip address not found".to_string()
     };
     println!("Local IP Address: {}", this_ipv4);
+    if let Err(e) = validate_port(&port) {
+        return Err(e);
+    }
     let ipv4_port = format!("{}:{}", this_ipv4, port);
     let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
         Ok(val) => val,
@@ -68,6 +82,9 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     };
     println!("Local IP Address: {}", this_ipv4);
     let ipv4_port = format!("{}:{}", this_ipv4, port);
+    if let Err(e) = validate_port(&port) {
+        return Err(e);
+    }
     let peer_socket_addr = match ipv4_port.parse::<SocketAddr>() {
         Ok(val) => val,
         Err(e) => return Err("Could not parse ip address to SocketAddr".to_string()),
