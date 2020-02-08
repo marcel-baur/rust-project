@@ -6,46 +6,49 @@ use glib::{Sender};
 use meff::interface::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
 use std::collections::HashMap;
 use std::sync::{Mutex, Arc};
-use gtk::AccelGroupExt;
-use std::borrow::BorrowMut;
-use gdk::enums::key::{p, e};
 
 //Music entertainment for friends application model
 #[derive(Clone)]
-pub struct MEFFM {
+pub struct Model {
     pub peer: Option<Arc<Mutex<Peer>>>,
     pub sender: Option<Sender<(String, ListenerInstr)>>,
     pub is_playing: Arc<Mutex<bool>>,
 }
 
-impl AppListener for MEFFM {
+impl AppListener for Model {
     fn notify(&self) {
         println!("Hello world");
     }
 
+    #[allow(unused_variables)]
     fn notify_status(&self, files: Vec<String>, name: String) {
         println!("Received status");
     }
 
+    #[allow(unused_variables)]
     fn file_status_changed(&mut self, name: String, instr: ListenerInstr) {
-        println!("new_file_saved");
         //@TODO remove unwrap
-        self.sender.as_ref().unwrap().send((name, instr));
+        match self.sender.as_ref().unwrap().send((name, instr)) {
+            Ok(_) => println!("file status changed"),
+            Err(_) => println!("file status changed error")
+        }
     }
 
+    #[allow(unused_variables)]
     fn player_playing(&mut self, title: Option<String>) {
         *self.is_playing.lock().unwrap() = true;
     }
 
+    #[allow(unused_variables)]
     fn player_stopped(&mut self) {
         *self.is_playing.lock().unwrap() = false;
     }
 
 }
 
-impl MEFFM {
-    pub fn new() -> MEFFM {
-        MEFFM {peer: None, sender: None, is_playing: Arc::new(Mutex::new(false))}
+impl Model {
+    pub fn new() -> Model {
+        Model {peer: None, sender: None, is_playing: Arc::new(Mutex::new(false))}
     }
 
     pub fn set_sender(&mut self, sender: Sender<(String, ListenerInstr)>) {
@@ -93,7 +96,7 @@ impl MEFFM {
 
     pub fn status(&mut self) -> HashMap<String, SocketAddr> {
         let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
-        let mut peer_clone = peer_unlock.clone();
+        let peer_clone = peer_unlock.clone();
 
         let list = peer_clone.network_table;
         drop(peer_unlock);
