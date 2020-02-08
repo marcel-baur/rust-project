@@ -2,7 +2,7 @@ use crate::database::Database;
 use crate::network::{get_own_ip_address, push_music_to_database, send_read_request, send_play_request, send_delete_peer_request};
 use crate::network::notification::{Content};
 use serde::{Deserialize, Serialize};
-use crate::utils::{Instructions, AppListener};
+use crate::utils::AppListener;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
@@ -24,6 +24,21 @@ pub enum MusicState {
 pub struct Notification {
     pub content: Content,
     pub from: SocketAddr,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+pub enum Instructions {
+    PLAY,
+    GET,
+    ORDER,
+    REMOVE,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+pub enum ListenerInstr {
+    NEW,
+    DELETE,
+    DOWNLOAD,
 }
 
 /// Represents a Peer in the network

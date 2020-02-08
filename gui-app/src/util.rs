@@ -1,7 +1,6 @@
-use meff::utils::{AppListener, ListenerInstr};
+use meff::utils::AppListener;
 use std::net::SocketAddr;
-use meff::interface::{Peer, MusicState, start, music_request, upload_music, music_control, delete_peer};
-use meff::utils::Instructions::{REMOVE, GET};
+use meff::interface::{Peer, MusicState, start, music_request, upload_music, music_control, delete_peer, ListenerInstr};
 use glib::{Sender};
 use meff::interface::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
 use std::collections::HashMap;
@@ -9,6 +8,7 @@ use std::sync::{Mutex, Arc};
 use gtk::AccelGroupExt;
 use std::borrow::BorrowMut;
 use gdk::enums::key::{p, e};
+use meff::interface::Instructions::{REMOVE, GET};
 
 //Music entertainment for friends application model
 #[derive(Clone)]

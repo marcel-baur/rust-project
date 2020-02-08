@@ -1,7 +1,7 @@
 use crate::interface::MusicState;
 use crate::network::response::Message;
 use crate::interface::*;
-use crate::utils::Instructions;
+use crate::interface::Instructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::process;

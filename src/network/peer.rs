@@ -1,7 +1,7 @@
 use crate::database::Database;
 use crate::network::get_own_ip_address;
 use crate::interface::Notification;
-use crate::utils::Instructions;
+use crate::interface::Instructions;
 use crate::interface::Peer;
 use std::collections::HashMap;
 use std::net::SocketAddr;

@@ -1,6 +1,6 @@
 use crate::interface::Peer;
 use crate::network::send_read_request;
-use crate::utils::Instructions::PLAY;
+use crate::interface::Instructions::PLAY;
 use rodio::Sink;
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Cursor};

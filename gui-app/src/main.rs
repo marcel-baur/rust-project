@@ -19,8 +19,9 @@ use std::net::SocketAddr;
 use std::env::args;
 use std::rc::Rc;
 use std::cell::RefCell;
-use meff::utils::ListenerInstr::{DOWNLOAD, DELETE, NEW};
-use meff::utils::ListenerInstr;
+use meff::interface::ListenerInstr;
+use meff::interface::ListenerInstr::{NEW, DELETE, DOWNLOAD};
+
 
 mod util;
 

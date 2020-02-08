@@ -24,7 +24,7 @@ use crate::audio::{
     stop_current_playing_music, MusicPlayer,
 };
 
-use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
+use crate::utils::{AppListener, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
 use crate::interface::*;
@@ -37,7 +37,7 @@ use request::{
 };
 use std::collections::HashMap;
 use std::path::Path;
-use crate::utils::ListenerInstr::{DELETE, DOWNLOAD};
+use crate::interface::ListenerInstr;
 
 fn validate_port(port: &str) -> Result<&str, String> {
     if let Err(e) = port.parse::<u32>() {
@@ -348,7 +348,7 @@ fn handle_notification(
                         listener.player_playing(Some(key))
                     }
                     Instructions::GET => {
-                        listener.file_status_changed(key, DOWNLOAD);
+                        listener.file_status_changed(key, ListenerInstr::DOWNLOAD);
                     }
                     Instructions::ORDER => {
                         listener.player_playing(Some(key))
@@ -360,7 +360,7 @@ fn handle_notification(
         }
         Content::DeleteFileRequest { song_name } => {
             delete_file_request(&song_name, peer);
-            listener.file_status_changed(song_name, DELETE);
+            listener.file_status_changed(song_name, ListenerInstr::DELETE);
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
