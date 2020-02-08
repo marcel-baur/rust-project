@@ -258,34 +258,6 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     title_popup.show_all();
 }
 
-fn show_download_message() {
-    let message = gtk::Window::new(gtk::WindowType::Toplevel);
-    message.set_position(WindowPosition::Center);
-    message.set_size_request(400, 200);
-
-    let header = gtk::HeaderBar::new();
-    header.set_title(Some("Info"));
-    message.set_titlebar(Some(&header));
-
-    let label = gtk::Label::new(Some("Downloaded file successfully."));
-    label.set_halign(gtk::Align::Center);
-    label.set_margin_top(20);
-
-    let ok_button = gtk::Button::new_with_label("Ok");
-    ok_button.set_halign(gtk::Align::Center);
-    ok_button.set_valign(gtk::Align::End);
-
-    ok_button.connect_clicked(clone!(@weak message => move |_| {
-        message.destroy();
-    }));
-
-    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
-    v_box.pack_start(&label, true, true, 0);
-    v_box.pack_start(&ok_button, true, true, 20);
-
-    message.add(&v_box);
-    message.show_all();
-}
 
 fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<RefCell<MEFFM>>) {
     let list_box_row = gtk::ListBoxRow::new();
@@ -507,8 +479,8 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
             }
         }
         if instr == DOWNLOAD {
-            show_download_message()
-//            let dialog = gtk::MessageDialog::new(Some(&window_ref), gtk::DialogFlags::MODAL, MessageType::Info, ButtonsType::Ok, "Downloaded file successfully.");
+            let message = "Downloaded file successfully.";
+            display_message(message);
         }
         glib::Continue(true)
 
