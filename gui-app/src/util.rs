@@ -1,4 +1,4 @@
-use meff::utils::AppListener;
+use meff::utils::{AppListener, ListenerInstr};
 use meff::network;
 use std::net::SocketAddr;
 use meff::network::peer::Peer;
@@ -16,7 +16,7 @@ use std::borrow::BorrowMut;
 #[derive(Clone)]
 pub struct MEFFM {
     pub peer: Option<Arc<Mutex<Peer>>>,
-    pub sender: Option<Sender<(String, String)>>,
+    pub sender: Option<Sender<(String, ListenerInstr)>>,
     pub is_playing: Arc<Mutex<bool>>,
 }
 
@@ -29,7 +29,7 @@ impl AppListener for MEFFM {
         println!("Received status");
     }
 
-    fn file_status_changed(&mut self, name: String, instr: String) {
+    fn file_status_changed(&mut self, name: String, instr: ListenerInstr) {
         println!("new_file_saved");
         //@TODO remove unwrap
         self.sender.as_ref().unwrap().send((name, instr));
@@ -46,7 +46,7 @@ impl MEFFM {
         MEFFM {peer: None, sender: None, is_playing: Arc::new(Mutex::new(false))}
     }
 
-    pub fn set_sender(&mut self, sender: Sender<(String, String)>) {
+    pub fn set_sender(&mut self, sender: Sender<(String, ListenerInstr)>) {
         self.sender = Some(sender);
     }
 
