@@ -225,6 +225,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
     let listener = match TcpListener::bind(&listen_ip) {
         Ok(l) => l,
         Err(_e) => {
+            println!("Error here {:?}", _e);
             return Err("Could't bind TCP Listener.".to_string());
         }
     };
@@ -314,8 +315,8 @@ fn handle_notification(
         Content::PushToDB { key, value, from } => {
             push_to_db(key, value, from, peer, listener);
         }
-        Content::RedundantPushToDB { key, value, .. } => {
-            redundant_push_to_db(key, value, peer, listener);
+        Content::RedundantPushToDB { key, value, from } => {
+            redundant_push_to_db(key, value, peer, listener, from);
         }
         Content::ChangePeerName { value } => {
             change_peer_name(value, sender, peer);

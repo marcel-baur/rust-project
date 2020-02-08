@@ -12,8 +12,8 @@ extern crate meff;
 use gio::prelude::*;
 use glib::{clone, Receiver};
 use gtk::prelude::*;
-use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType, DialogFlags, ButtonsType, MessageType};
-use crate::util::{MEFFM};
+use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
+use crate::util::{Model};
 use std::net::SocketAddr;
 
 use std::env::args;
@@ -52,7 +52,7 @@ const STYLE: &str = "
     border-color: #B8B8B8;
 }";
 
-fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>) -> gtk::Window {
+fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<Model>>) -> gtk::Window {
     let startup_window = gtk::Window::new(gtk::WindowType::Toplevel);
     startup_window.set_position(WindowPosition::Center);
     startup_window.set_size_request(550, 300);
@@ -219,7 +219,7 @@ fn create_entry_with_label(text: &str, entry: gtk::Entry) -> gtk::Box {
     h_box
 }
 
-fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
+fn add_music_title(song_path: String, meff: Rc<RefCell<Model>>) {
     let title_popup = gtk::Window::new(gtk::WindowType::Toplevel);
     title_popup.set_position(WindowPosition::Center);
     title_popup.set_size_request(400, 200);
@@ -260,7 +260,7 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
 }
 
 
-fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<RefCell<MEFFM>>) {
+fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<RefCell<Model>>) {
     let list_box_row = gtk::ListBoxRow::new();
     list_box_row.set_selectable(false);
 
@@ -294,7 +294,7 @@ fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<Ref
     list_box.add(&list_box_row);
 }
 
-fn show_status(meff: Rc<RefCell<MEFFM>>) {
+fn show_status(meff: Rc<RefCell<Model>>) {
     let status_window = gtk::Window::new(gtk::WindowType::Toplevel);
     status_window.set_position(WindowPosition::Center);
     status_window.set_size_request(400, 400);
@@ -340,15 +340,13 @@ fn show_status(meff: Rc<RefCell<MEFFM>>) {
 }
 
 
-fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<(String, ListenerInstr)>) {
+fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: Receiver<(String, ListenerInstr)>) {
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
     let meff_clone_l = Rc::clone(&meff);
     let meff_clone_play = Rc::clone(&meff);
     let meff_clone_pause = Rc::clone(&meff);
     let meff_clone_stop = Rc::clone(&meff);
-    let meff_clone_continue = Rc::clone(&meff);
-    let meff_clone_remove = Rc::clone(&meff);
     let meff_clone_quit = Rc::clone(&meff);
     let meff_clone_status = Rc::clone(&meff);
     let meff_clone_stream = Rc::clone(&meff);
@@ -447,7 +445,7 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let stream_button = gtk::Button::new_with_label("Stream");
     let textbox_clone_stream = textbox.clone();
     let textbox_clone_button = textbox.clone();
-    stream_button.connect_clicked(move |button| {
+    stream_button.connect_clicked(move |_| {
         let title = textbox_clone_stream.get_text().unwrap().as_str().to_string();
         meff_clone_stream.borrow_mut().stream(title);
     });
@@ -588,8 +586,7 @@ fn main() {
 
 
     application.connect_startup(|app| {
-        // @TODO check if it is okay to create our application model here
-        let meff = Rc::new(RefCell::new(MEFFM::new()));
+        let meff = Rc::new(RefCell::new(Model::new()));
         let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
         meff.borrow_mut().set_sender(tx);
         // The CSS "magic" happens here.
@@ -610,5 +607,4 @@ fn main() {
     });
 
     application.run(&args().collect::<Vec<_>>());
-    print!("run");
 }

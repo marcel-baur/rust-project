@@ -1,19 +1,21 @@
 use prettytable::format;
 extern crate colored;
 use colored::*;
+use meff::interface::{Peer, upload_music, music_request, delete_peer, music_control, ListenerInstr};
+use meff::utils;
 use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::io::stdin;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::util::Application;
 use meff::utils::{HEARTBEAT_SLEEP_DURATION, THREAD_SLEEP_DURATION};
-use meff::interface::{Peer, MusicState, start, music_request, upload_music, music_control, delete_peer, ListenerInstr};
 use meff::interface::Instructions::{REMOVE, GET};
 use meff::interface::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
-
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -229,7 +231,8 @@ fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
         if *v == *peer_clone.get_ip() {
             continue;
         }
-        //send_status_request(*v, *peer_clone.get_ip(), &mut peer_clone2);
+//        send_status_request(*v, *peer_clone.get_ip(), &mut peer_clone2);
+
     }
 }
 

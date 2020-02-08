@@ -29,6 +29,7 @@ impl Peer {
             database: Database::new(),
             open_request_table,
             sender,
+            redundancy_table: HashMap::new(),
         }
     }
 
