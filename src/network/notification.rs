@@ -4,7 +4,7 @@ use crate::utils::Instructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::process;
-use std::time::SystemTime;
+use std::time::{SystemTime, Duration};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Notification {
@@ -90,14 +90,13 @@ pub enum Content {
 }
 
 pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
-    let stream = match TcpStream::connect(target) {
+    let stream = match TcpStream::connect_timeout(&target, Duration::new(1, 1)) {
         Ok(s) => s,
         Err(_e) => {
             handle_error(notification.content, target);
             return;
         }
     };
-
     let not = notification;
 
     match serde_json::to_writer(&stream, &not) {
