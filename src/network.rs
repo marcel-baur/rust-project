@@ -35,6 +35,7 @@ use request::{
 };
 use std::collections::HashMap;
 use std::path::Path;
+use crate::utils::ListenerInstr::{DELETE, DOWNLOAD};
 
 fn validate_port(port: &str) -> Result<&str, String> {
     if let Err(e) = port.parse::<u32>() {
@@ -341,11 +342,25 @@ fn handle_notification(
             get_file(instr, key, sender, peer);
         }
         Content::GetFileResponse { value, instr, key } => {
-            get_file_response(instr, key, value, peer, sink);
+            if get_file_response(&instr, &key, value, peer, sink).is_ok() {
+                match instr {
+                    Instructions::PLAY => {
+                        listener.player_playing(Some(key))
+                    }
+                    Instructions::GET => {
+                        listener.file_status_changed(key, DOWNLOAD);
+                    }
+                    Instructions::ORDER => {
+                        listener.player_playing(Some(key))
+                    }
+                    _ => {}
+                }
+
+            }
         }
         Content::DeleteFileRequest { song_name } => {
             delete_file_request(&song_name, peer);
-            listener.file_status_changed(song_name, "Delete".to_string());
+            listener.file_status_changed(song_name, DELETE);
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {

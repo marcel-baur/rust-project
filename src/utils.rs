@@ -13,6 +13,13 @@ pub enum Instructions {
     REMOVE,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+pub enum ListenerInstr {
+    NEW,
+    DELETE,
+    DOWNLOAD,
+}
+
 /// The trait that needs to be implemented for the listener in the application that uses this
 /// library. Its functions are used to communicate network events.
 pub trait AppListener: Send {
@@ -22,6 +29,6 @@ pub trait AppListener: Send {
     /// - `files` the files from the peer that sent the response
     /// - `name` the name of the peer that sent the response
     fn notify_status(&self, files: Vec<String>, name: String);
-    fn file_status_changed(&mut self, name: String, instr: String);
+    fn file_status_changed(&mut self, name: String, instr: ListenerInstr);
     fn player_playing(&mut self, title: Option<String>);
 }
