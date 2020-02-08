@@ -11,6 +11,7 @@ use std::time::SystemTime;
 use std::io;
 use crate::network;
 use std::sync::{Arc, Mutex};
+use std::hash::Hash;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum MusicState {
@@ -35,6 +36,7 @@ pub struct Peer {
     pub database: Database,
     pub open_request_table: HashMap<SystemTime, Instructions>,
     pub sender: SyncSender<Notification>,
+    pub redundancy_table: HashMap<SocketAddr, Vec<String>>
 }
 
 pub fn delete_peer(peer: &mut Peer) {

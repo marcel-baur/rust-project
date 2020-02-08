@@ -2,8 +2,8 @@ extern crate meff;
 use crate::shell::spawn_shell;
 use crate::util::Application;
 use clap::{App, Arg};
-use meff::network;
-use meff::network::peer::Peer;
+use meff::interface;
+use meff::interface::{Peer, start};
 use std::net::SocketAddr;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -64,7 +64,7 @@ fn main() {
         }
         let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
         let appl_rc = Arc::new(Mutex::new(appl.clone()));
-        let peer = match network::startup(name, port, Some(addr), Box::new(appl)) {
+        let peer = match start(Box::new(appl), name.to_string(), port.to_string(), Some(addr)) {
             Ok(p) => p,
             Err(e) => {
                 println!("{}", e);
@@ -75,7 +75,7 @@ fn main() {
     } else {
         let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
         let appl_rc = Arc::new(Mutex::new(appl.clone()));
-        let peer = match network::startup(name, port, None, Box::new(appl)) {
+        let peer = match start(Box::new(appl), name.to_string(), port.to_string(), None ) {
             Ok(p) => p,
             Err(e) => {
                 println!("{}", e);
