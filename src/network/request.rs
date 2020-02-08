@@ -295,11 +295,6 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
 
 pub fn redistribute_files (addr: SocketAddr, peer: &mut Peer) {
     if peer.network_table.len() > 1 {
-//        for value in peer.network_table.values() {
-//            if *value != addr {
-//                update_table_after_delete(*value, addr, &peer.name);
-//            }
-//        }
         let database = peer.get_db().get_data();
         let mut redundant_table = &peer.redundancy_table;
         let network_table = &peer.network_table;
