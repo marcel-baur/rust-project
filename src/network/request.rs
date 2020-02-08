@@ -265,6 +265,8 @@ pub fn self_status_request(peer: &mut Peer) {
 pub fn dropped_peer(addr: SocketAddr, peer: &mut Peer) {
     println!("Peer at {:?} was dropped", addr);
     peer.drop_peer_by_ip(&addr);
+
+    redistribute_files(addr, peer);
 }
 
 pub fn order_song_request(song_name: String, peer: &mut Peer) {
@@ -288,5 +290,34 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
     if peer.database.data.contains_key(song_name) {
         println!("Remove file {} from database", &song_name);
         peer.delete_file_from_database(song_name);
+    }
+}
+
+pub fn redistribute_files (addr: SocketAddr, peer: &mut Peer) {
+    if peer.network_table.len() > 1 {
+//        for value in peer.network_table.values() {
+//            if *value != addr {
+//                update_table_after_delete(*value, addr, &peer.name);
+//            }
+//        }
+        let database = peer.get_db().get_data();
+        let mut redundant_table = &peer.redundancy_table;
+        let network_table = &peer.network_table;
+        let song_list = match redundant_table.get(&addr) {
+            Some(s) => s,
+            None => {return;}
+        };
+        if network_table.len() > 1 {
+            for song in song_list {
+                let redundant_target = match other_random_target(network_table, peer.get_ip()) {
+                    Some(r) => r,
+                    None => {
+                        continue;
+                    } //TODO review
+                };
+                song_order_request(redundant_target, peer.ip_address, song.to_string());
+            }
+        }
+        peer.redundancy_table.remove(&addr);
     }
 }
