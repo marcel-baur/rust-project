@@ -11,7 +11,8 @@ extern crate log4rs;
 /// the `AppListener` trait from `utils`. The library will communicate network events through that
 /// object using the listener pattern.
 ///
-pub mod audio;
-pub mod database;
-pub mod network;
+pub(self) mod audio;
+pub(self) mod database;
+pub(self) mod network;
 pub mod utils;
+pub mod interface;

@@ -1,16 +1,15 @@
 use meff::utils::{AppListener, ListenerInstr};
-use meff::network;
 use std::net::SocketAddr;
-use meff::network::peer::Peer;
+use meff::interface::{Peer, MusicState, start};
 use meff::utils::Instructions::{REMOVE, GET};
-use meff::network::{send_delete_peer_request, send_play_request, send_read_request, push_music_to_database};
+use meff::interface::{send_delete_peer_request, send_play_request, send_read_request, push_music_to_database};
 use glib::{Sender};
-use meff::audio::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
-use meff::audio::MusicState;
+use meff::interface::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
 use std::collections::HashMap;
 use std::sync::{Mutex, Arc};
 use gtk::AccelGroupExt;
 use std::borrow::BorrowMut;
+use gdk::enums::key::{p, e};
 
 //Music entertainment for friends application model
 #[derive(Clone)]
@@ -56,14 +55,12 @@ impl MEFFM {
 
     //@TODO return result
     pub fn start(&mut self, name: String, port: String, ip: Option<SocketAddr>) -> Result<(), String> {
-        let peer = match network::startup(&name, &port, ip, Box::new(self.clone())) {
-            Ok(p) => p,
-            Err(_e) => {
-                //@TODO exit programm
-                return Err("start".to_string());
-            } // error!("Could not join network {:?}", e);
-        };
-        self.peer = Some(peer);
+        let clone = Box::new(self.clone());
+        let peer = start(clone, name, port, ip);
+        if peer.is_err() {
+            return Err(peer.err().unwrap());
+        }
+        self.peer = Some(peer.ok().unwrap());
         Ok(())
     }
 

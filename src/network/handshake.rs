@@ -1,5 +1,5 @@
 use crate::network::notification::*;
-use crate::network::peer::Peer;
+use crate::interface::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;

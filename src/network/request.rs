@@ -7,7 +7,7 @@ use crate::network::music_exchange::{
     delete_redundant_song_request, read_file_exist, send_exist_response, send_file_request,
     send_get_file_reponse, song_order_request,
 };
-use crate::network::peer::Peer;
+use crate::interface::Peer;
 use crate::network::{
     other_random_target, send_local_file_status, send_read_request,
     send_status_request, send_write_request,
@@ -17,7 +17,8 @@ use crate::utils::{AppListener, Instructions};
 use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
-use crate::network::notification::{Notification, Content};
+use crate::interface::Notification;
+use crate::network::notification::{Content};
 use crate::utils::ListenerInstr::{NEW, DELETE};
 
 pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {

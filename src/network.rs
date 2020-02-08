@@ -5,11 +5,12 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
 use std::{fs, io, thread};
+use crate::interface::*;
 
 mod handshake;
 mod music_exchange;
-mod notification;
-pub mod peer;
+pub(crate) mod notification;
+mod peer;
 mod request;
 mod response;
 
@@ -20,13 +21,14 @@ use rand::Rng;
 
 use crate::audio::{
     continue_paused_music, create_sink, pause_current_playing_music, play_music,
-    stop_current_playing_music, MusicPlayer, MusicState,
+    stop_current_playing_music, MusicPlayer,
 };
 
 use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
-use peer::{create_peer, Peer};
+use crate::interface::*;
+use peer::{create_peer};
 use request::{
     change_peer_name, delete_file_request, delete_from_network, dropped_peer, exist_file,
     exist_file_response, exit_peer, find_file, get_file, get_file_response, order_song_request,

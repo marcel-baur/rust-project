@@ -1,23 +1,13 @@
 use crate::database::Database;
 use crate::network::get_own_ip_address;
-use crate::network::notification::Notification;
+use crate::interface::Notification;
 use crate::utils::Instructions;
+use crate::interface::Peer;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
 use std::sync::mpsc::SyncSender;
 use std::time::SystemTime;
-
-/// Represents a Peer in the network
-#[derive(Clone)]
-pub struct Peer {
-    pub name: String,
-    pub ip_address: SocketAddr,
-    pub network_table: HashMap<String, SocketAddr>,
-    pub database: Database,
-    pub open_request_table: HashMap<SystemTime, Instructions>,
-    pub sender: SyncSender<Notification>,
-}
 
 impl Peer {
     /// Creates a new `Peer`

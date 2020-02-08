@@ -1,16 +1,11 @@
-use crate::audio::MusicState;
+use crate::interface::MusicState;
 use crate::network::response::Message;
+use crate::interface::*;
 use crate::utils::Instructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::time::{SystemTime, Duration};
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Notification {
-    pub content: Content,
-    pub from: SocketAddr,
-}
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Content {
