@@ -1,6 +1,8 @@
 use crate::shell;
-use meff::utils::{AppListener, ListenerInstr};
+use meff::utils::AppListener;
 use std::sync::{Arc, Mutex};
+use meff::interface::ListenerInstr;
+
 
 #[derive(Clone)]
 pub struct Application {

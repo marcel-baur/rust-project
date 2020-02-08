@@ -1,14 +1,6 @@
 use prettytable::format;
 extern crate colored;
 use colored::*;
-use meff::audio::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
-use meff::network::peer::Peer;
-use meff::network::{
-    push_music_to_database, send_delete_peer_request, send_play_request, send_read_request,
-    send_status_request,
-};
-use meff::utils;
-use meff::utils::Instructions::{GET, REMOVE};
 use std::borrow::BorrowMut;
 use std::convert::TryFrom;
 use std::error::Error;
@@ -17,6 +9,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::util::Application;
+use meff::utils::{HEARTBEAT_SLEEP_DURATION, THREAD_SLEEP_DURATION};
+use meff::interface::{Peer, MusicState, start, music_request, upload_music, music_control, delete_peer, ListenerInstr};
+use meff::interface::Instructions::{REMOVE, GET};
+use meff::interface::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
+
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -52,7 +49,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
         };
         let _peer_clone = peer.clone();
         drop(peer);
-        thread::sleep(utils::THREAD_SLEEP_DURATION);
+        thread::sleep(THREAD_SLEEP_DURATION);
     }
 }
 
@@ -86,7 +83,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             }
             Some(&"push") => {
                 if instructions.len() == 3 {
-                    match push_music_to_database(
+                    match upload_music(
                         instructions[1],
                         instructions[2],
                         peer_clone.ip_address,
@@ -109,7 +106,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             }
             Some(&"get") => {
                 if instructions.len() == 2 {
-                    send_read_request(&mut peer_clone, instructions[1], GET);
+                    music_request(&mut peer_clone, instructions[1], GET);
                 } else {
                     println!(
                         "You need to specify name and filepath. For more information type help.\n"
@@ -118,7 +115,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             }
             Some(&"exit") => {
                 println!("You are leaving the network.");
-                send_delete_peer_request(&mut peer_clone);
+                delete_peer(&mut peer_clone);
                 //TODO: stop steams
             }
             Some(&"status") => {
@@ -128,10 +125,10 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             }
             Some(&"play") => {
                 if instructions.len() == 2 {
-                    send_play_request(Some(instructions[1].to_string()), &mut peer_clone, PLAY);
+                    music_control(Some(instructions[1].to_string()), &mut peer_clone, PLAY);
                 } else {
                     if *model_clone.is_playing.lock().unwrap() {
-                        send_play_request(None, &mut peer_clone, CONTINUE);
+                        music_control(None, &mut peer_clone, CONTINUE);
                     } else {
                         println!("File name is missing. For more information type help.\n");
                     }
@@ -139,7 +136,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             }
             Some(&"remove") => {
                 if instructions.len() == 2 {
-                    send_read_request(&mut peer_clone, instructions[1], REMOVE);
+                    music_request(&mut peer_clone, instructions[1], REMOVE);
                 } else {
                     println!(
                         "You need to specify name of mp3 file. For more information type help.\n"
@@ -147,10 +144,10 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
                 }
             }
             Some(&"pause") => {
-                send_play_request(None, &mut peer_clone, PAUSE);
+                music_control(None, &mut peer_clone, PAUSE);
             }
             Some(&"stop") => {
-                send_play_request(None, &mut peer_clone, STOP);
+                music_control(None, &mut peer_clone, STOP);
             }
             _ => println!("No valid instructions. Try help!\n"),
         }
@@ -232,7 +229,7 @@ fn print_existing_files(arc: &Arc<Mutex<Peer>>) {
         if *v == *peer_clone.get_ip() {
             continue;
         }
-        send_status_request(*v, *peer_clone.get_ip(), &mut peer_clone2);
+        //send_status_request(*v, *peer_clone.get_ip(), &mut peer_clone2);
     }
 }
 
