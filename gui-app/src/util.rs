@@ -1,8 +1,8 @@
-use meff::utils::AppListener;
+use meff::utils::{AppListener, ListenerInstr};
 use meff::network;
 use std::net::SocketAddr;
 use meff::network::peer::Peer;
-use meff::utils::Instructions::{REMOVE};
+use meff::utils::Instructions::{REMOVE, GET};
 use meff::network::{send_delete_peer_request, send_play_request, send_read_request, push_music_to_database};
 use glib::{Sender};
 use meff::audio::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
@@ -16,7 +16,7 @@ use std::borrow::BorrowMut;
 #[derive(Clone)]
 pub struct MEFFM {
     pub peer: Option<Arc<Mutex<Peer>>>,
-    pub sender: Option<Sender<(String, String)>>,
+    pub sender: Option<Sender<(String, ListenerInstr)>>,
     pub is_playing: Arc<Mutex<bool>>,
 }
 
@@ -29,7 +29,7 @@ impl AppListener for MEFFM {
         println!("Received status");
     }
 
-    fn file_status_changed(&mut self, name: String, instr: String) {
+    fn file_status_changed(&mut self, name: String, instr: ListenerInstr) {
         println!("new_file_saved");
         //@TODO remove unwrap
         self.sender.as_ref().unwrap().send((name, instr));
@@ -39,6 +39,10 @@ impl AppListener for MEFFM {
         *self.is_playing.lock().unwrap() = true;
     }
 
+    fn player_stopped(&mut self) {
+        *self.is_playing.lock().unwrap() = false;
+    }
+
 }
 
 impl MEFFM {
@@ -46,7 +50,7 @@ impl MEFFM {
         MEFFM {peer: None, sender: None, is_playing: Arc::new(Mutex::new(false))}
     }
 
-    pub fn set_sender(&mut self, sender: Sender<(String, String)>) {
+    pub fn set_sender(&mut self, sender: Sender<(String, ListenerInstr)>) {
         self.sender = Some(sender);
     }
 
@@ -101,6 +105,13 @@ impl MEFFM {
 
     pub fn stream(&mut self, search: String) {
         self.music_control(Some(search), PLAY);
+    }
+
+    pub fn download(&mut self, title: String) {
+        let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
+        let mut peer_clone = peer_unlock.clone();
+        send_read_request(&mut peer_clone, &title, GET);
+        drop(peer_unlock);
     }
 
     pub fn play(&mut self, title: Option<String>) {

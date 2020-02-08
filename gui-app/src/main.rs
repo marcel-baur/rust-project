@@ -19,6 +19,8 @@ use std::net::SocketAddr;
 use std::env::args;
 use std::rc::Rc;
 use std::cell::RefCell;
+use meff::utils::ListenerInstr::{DOWNLOAD, DELETE, NEW};
+use meff::utils::ListenerInstr;
 
 mod util;
 
@@ -256,6 +258,35 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<MEFFM>>) {
     title_popup.show_all();
 }
 
+fn show_download_message() {
+    let message = gtk::Window::new(gtk::WindowType::Toplevel);
+    message.set_position(WindowPosition::Center);
+    message.set_size_request(400, 200);
+
+    let header = gtk::HeaderBar::new();
+    header.set_title(Some("Info"));
+    message.set_titlebar(Some(&header));
+
+    let label = gtk::Label::new(Some("Downloaded file successfully."));
+    label.set_halign(gtk::Align::Center);
+    label.set_margin_top(20);
+
+    let ok_button = gtk::Button::new_with_label("Ok");
+    ok_button.set_halign(gtk::Align::Center);
+    ok_button.set_valign(gtk::Align::End);
+
+    ok_button.connect_clicked(clone!(@weak message => move |_| {
+        message.destroy();
+    }));
+
+    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
+    v_box.pack_start(&label, true, true, 0);
+    v_box.pack_start(&ok_button, true, true, 20);
+
+    message.add(&v_box);
+    message.show_all();
+}
+
 fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<RefCell<MEFFM>>) {
     let list_box_row = gtk::ListBoxRow::new();
     list_box_row.set_selectable(false);
@@ -335,7 +366,8 @@ fn show_status(meff: Rc<RefCell<MEFFM>>) {
     status_window.show_all();
 }
 
-fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<(String, String)>) {
+
+fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: Receiver<(String, ListenerInstr)>) {
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
     let meff_clone_l = Rc::clone(&meff);
@@ -347,6 +379,8 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
     let meff_clone_quit = Rc::clone(&meff);
     let meff_clone_status = Rc::clone(&meff);
     let meff_clone_stream = Rc::clone(&meff);
+    let meff_clone_download = Rc::clone(&meff);
+
     let startup_window = build_startup(&main_window, meff_clone);
 
     main_window.set_position(WindowPosition::Center);
@@ -438,26 +472,29 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
 
     let download_button = gtk::Button::new_with_label("Download");
     let stream_button = gtk::Button::new_with_label("Stream");
-    let textbox_clone = textbox.clone();
+    let textbox_clone_stream = textbox.clone();
+    let textbox_clone_button = textbox.clone();
     stream_button.connect_clicked(move |button| {
-        let title = textbox_clone.get_text().unwrap().as_str().to_string();
+        let title = textbox_clone_stream.get_text().unwrap().as_str().to_string();
         meff_clone_stream.borrow_mut().stream(title);
     });
+
     download_button.connect_clicked(move |_| {
-        println!("clicked");
+        let title = textbox_clone_button.get_text().unwrap().as_str().to_string();
+        meff_clone_download.borrow_mut().download(title);
     });
 
     let list_box = gtk::ListBoxBuilder::new().activate_on_single_click(true).build();
     let l_b_clone = list_box.clone();
 
     receiver.attach(None, move |(text, instr)| {
-        if instr == "New" {
+        if instr == NEW {
             let meff_clone_3 = Rc::clone(&meff_clone_l);
             let clone = text.clone();
             let text_clone = Rc::new(clone);
             add_song_to_list(text_clone, &l_b_clone, meff_clone_3);
         }
-        if instr == "Delete" {
+        if instr == DELETE {
             let text_clone_2 = text.clone();
             for element in l_b_clone.get_children() {
                 let element_clone = element.clone().downcast::<gtk::ListBoxRow>().unwrap();
@@ -468,6 +505,10 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<MEFFM>>, receiver: 
                     l_b_clone.remove(&element);
                 }
             }
+        }
+        if instr == DOWNLOAD {
+            show_download_message()
+//            let dialog = gtk::MessageDialog::new(Some(&window_ref), gtk::DialogFlags::MODAL, MessageType::Info, ButtonsType::Ok, "Downloaded file successfully.");
         }
         glib::Continue(true)
 
