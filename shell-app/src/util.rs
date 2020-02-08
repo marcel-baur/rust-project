@@ -29,8 +29,4 @@ impl AppListener for Application {
             println!("{} is playing!", name);
         }
     }
-
-    fn player_playing(&mut self, title: Option<String>) {
-        println!("TODO!");
-    }
 }
