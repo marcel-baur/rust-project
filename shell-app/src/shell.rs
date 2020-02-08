@@ -1,7 +1,7 @@
 use prettytable::format;
 extern crate colored;
 use colored::*;
-use meff::audio::MusicState::{PAUSE, PLAY, STOP};
+use meff::audio::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
 use meff::network::peer::Peer;
 use meff::network::{
     push_music_to_database, send_delete_peer_request, send_play_request, send_read_request,
@@ -16,8 +16,11 @@ use std::io::stdin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::rc::Rc;
+use std::cell::RefCell;
+use crate::util::Application;
 
-pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
+pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Rc<RefCell<Application>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
 
     let i_clone = interaction_in_progress.clone();
@@ -25,8 +28,6 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>) -> Result<(), Box<dyn Error>> {
     let arc_clone = arc.clone();
 
     let arc_clone2 = arc.clone();
-
-    // Use the peer clone, drop the original alloc of the peer
 
     let peer = arc.lock().unwrap();
 
@@ -129,6 +130,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 if instructions.len() == 2 {
                     send_play_request(Some(instructions[1].to_string()), &mut peer_clone, PLAY);
                 } else {
+                    send_play_request(None, &mut peer_clone, CONTINUE);
                     println!("File name is missing. For more information type help.\n");
                 }
             }
