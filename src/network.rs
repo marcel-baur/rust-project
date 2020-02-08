@@ -55,7 +55,7 @@ pub fn get_own_ip_address(port: &str) -> Result<SocketAddr, String> {
     };
     let if_options = ifs
         .into_iter()
-        .find(|i| i.name == "en0".to_string() && i.addr.ip().is_ipv4());
+        .find(|i| i.name == "en0" && i.addr.ip().is_ipv4());
     let this_ipv4: String = if let Some(interface) = if_options {
         interface.addr.ip().to_string()
     } else {
