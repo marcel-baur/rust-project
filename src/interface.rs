@@ -1,5 +1,5 @@
 use crate::database::Database;
-use crate::network::get_own_ip_address;
+use crate::network::{get_own_ip_address, push_music_to_database, send_read_request, send_play_request, send_delete_peer_request};
 use crate::network::notification::{Content};
 use serde::{Deserialize, Serialize};
 use crate::utils::{Instructions, AppListener};
@@ -37,19 +37,19 @@ pub struct Peer {
     pub sender: SyncSender<Notification>,
 }
 
-pub fn send_delete_peer_request(peer: &mut Peer) {
+pub fn delete_peer(peer: &mut Peer) {
     send_delete_peer_request(peer)
 }
 
-pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicState) {
+pub fn music_control(name: Option<String>, peer: &mut Peer, state: MusicState) {
     send_play_request(name, peer, state)
 }
 
-pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
+pub fn music_request(peer: &mut Peer, name: &str, instr: Instructions) {
     send_read_request(peer, name, instr)
 }
 
-pub fn push_music_to_database(
+pub fn upload_music(
     name: &str,
     file_path: &str,
     addr: SocketAddr,
@@ -59,7 +59,8 @@ pub fn push_music_to_database(
 }
 
 pub fn start(module: Box<dyn AppListener + Sync>, name: String, port: String, ip: Option<SocketAddr>) -> Result<Arc<Mutex<Peer>>, String> {
-    match network::startup(&name, &port, ip, module) {
+    let clone = Arc::new(Mutex::new(module));
+    match network::startup(&name, &port, ip, clone) {
         Ok(p) => Ok(p),
         Err(e) => Err(e)
     }

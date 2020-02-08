@@ -1,8 +1,7 @@
 use meff::utils::{AppListener, ListenerInstr};
 use std::net::SocketAddr;
-use meff::interface::{Peer, MusicState, start};
+use meff::interface::{Peer, MusicState, start, music_request, upload_music, music_control, delete_peer};
 use meff::utils::Instructions::{REMOVE, GET};
-use meff::interface::{send_delete_peer_request, send_play_request, send_read_request, push_music_to_database};
 use glib::{Sender};
 use meff::interface::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
 use std::collections::HashMap;
@@ -53,7 +52,6 @@ impl MEFFM {
         self.sender = Some(sender);
     }
 
-    //@TODO return result
     pub fn start(&mut self, name: String, port: String, ip: Option<SocketAddr>) -> Result<(), String> {
         let clone = Box::new(self.clone());
         let peer = start(clone, name, port, ip);
@@ -69,7 +67,7 @@ impl MEFFM {
         let mut peer_clone = peer_unlock.clone();
 
         let ip = peer_clone.ip_address;
-        match push_music_to_database(&title, &path, ip,  &mut peer_clone) {
+        match upload_music(&title, &path, ip,  &mut peer_clone) {
             Ok(_) => {}
             Err(_) => {
                 eprintln!("Failed to push {} to database", path);
@@ -82,14 +80,14 @@ impl MEFFM {
         let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
         let mut peer_clone = peer_unlock.clone();
 
-        send_read_request(&mut peer_clone, &title, REMOVE);
+        music_request(&mut peer_clone, &title, REMOVE);
         drop(peer_unlock);
     }
 
     fn music_control(&mut self, song: Option<String>, instr: MusicState) {
         let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
         let mut peer_clone = peer_unlock.clone();
-        send_play_request(song, &mut peer_clone, instr);
+        music_control(song, &mut peer_clone, instr);
         drop(peer_unlock);
     }
 
@@ -109,7 +107,7 @@ impl MEFFM {
     pub fn download(&mut self, title: String) {
         let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
         let mut peer_clone = peer_unlock.clone();
-        send_read_request(&mut peer_clone, &title, GET);
+        music_request(&mut peer_clone, &title, GET);
         drop(peer_unlock);
     }
 
@@ -134,7 +132,7 @@ impl MEFFM {
         let peer_unlock = self.peer.as_ref().unwrap().lock().unwrap();
         let mut peer_clone = peer_unlock.clone();
 
-        send_delete_peer_request(&mut peer_clone);
+        delete_peer(&mut peer_clone);
         drop(peer_unlock);
     }
 }

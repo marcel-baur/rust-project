@@ -113,7 +113,7 @@ pub fn startup(
     own_name: &str,
     port: &str,
     ip_address: Option<SocketAddr>,
-    app: Box<dyn AppListener + Sync>,
+    app_arc: Arc<Mutex<Box<dyn AppListener + Sync>>>,
 ) -> Result<Arc<Mutex<Peer>>, String> {
     let (sender, receiver): (SyncSender<Notification>, Receiver<Notification>) =
         mpsc::sync_channel(5);
@@ -130,8 +130,6 @@ pub fn startup(
     let peer_arc_clone_listen = peer_arc.clone();
     let peer_arc_clone_return = peer_arc.clone();
     let peer_arc_clone_working = peer_arc.clone();
-
-    let app_arc = Arc::new(Mutex::new(app));
     let app_arc_working = app_arc.clone();
 
     let sink = Arc::new(Mutex::new(match create_sink() {
