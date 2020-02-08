@@ -16,19 +16,13 @@ use std::io::stdin;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::rc::Rc;
-use std::cell::RefCell;
 use crate::util::Application;
 
-pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Rc<RefCell<Application>>) -> Result<(), Box<dyn Error>> {
+pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
-
     let i_clone = interaction_in_progress.clone();
-
     let arc_clone = arc.clone();
-
     let arc_clone2 = arc.clone();
-
     let peer = arc.lock().unwrap();
 
     drop(peer);
@@ -41,7 +35,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Rc<RefCell<Application>>) -> Re
             };
             drop(peer);
             i_clone.store(true, Ordering::SeqCst);
-            handle_user_input(&arc_clone2);
+            handle_user_input(&arc_clone2, &model);
             i_clone.store(false, Ordering::SeqCst);
         }) {
         Ok(h) => h,
@@ -62,14 +56,20 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Rc<RefCell<Application>>) -> Re
     }
 }
 
-pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
+pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>) {
     loop {
         let peer = match arc.lock() {
             Ok(p) => p,
             Err(e) => e.into_inner(),
         };
+        let model = match model.lock() {
+            Ok(m) => m,
+            Err(e) => e.into_inner(),
+        };
+        let model_clone = model.clone();
         let mut peer_clone = peer.clone();
         drop(peer);
+        drop(model);
         let buffer = &mut String::new();
         if let Err(e) = stdin().read_line(buffer) {
             error!("Failed to handle user input {:?}", e);
@@ -130,8 +130,11 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>) {
                 if instructions.len() == 2 {
                     send_play_request(Some(instructions[1].to_string()), &mut peer_clone, PLAY);
                 } else {
-                    send_play_request(None, &mut peer_clone, CONTINUE);
-                    println!("File name is missing. For more information type help.\n");
+                    if *model_clone.is_playing.lock().unwrap() {
+                        send_play_request(None, &mut peer_clone, CONTINUE);
+                    } else {
+                        println!("File name is missing. For more information type help.\n");
+                    }
                 }
             }
             Some(&"remove") => {

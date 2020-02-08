@@ -54,15 +54,16 @@ impl MEFFM {
         self.sender = Some(sender);
     }
 
-    pub fn start(&mut self, name: String, port: String, ip: Option<SocketAddr>) -> Result<(), String> {
+    //@TODO return result
+    pub fn start(&mut self, name: String, port: String, ip: Option<SocketAddr>) {
         let peer = match network::startup(&name, &port, ip, Box::new(self.clone())) {
             Ok(p) => p,
-            Err(e) => {
-                return Err(e)
-            }
+            Err(_e) => {
+                //@TODO exit programm
+                return;
+            } // error!("Could not join network {:?}", e);
         };
         self.peer = Some(peer);
-        return Ok(());
     }
 
     pub fn push(&mut self, path: String, title: String) {

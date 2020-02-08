@@ -4,14 +4,8 @@ use crate::util::Application;
 use clap::{App, Arg};
 use meff::network;
 use meff::network::peer::Peer;
-use std::io::Error;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::thread::JoinHandle;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::borrow::Borrow;
 
 #[macro_use]
 extern crate log;
@@ -68,8 +62,7 @@ fn main() {
             }
         }
         let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
-        let appl_rc = Rc::new(RefCell::new(appl.clone()));
-        let appl_clone = appl_rc.clone();
+        let appl_rc = Arc::new(Mutex::new(appl.clone()));
         let peer = match network::startup(name, port, Some(addr), Box::new(appl)) {
             Ok(p) => p,
             Err(e) => {
@@ -77,11 +70,10 @@ fn main() {
                 return;
             } // error!("Could not join network {:?}", e);
         };
-        startup(peer, appl_clone);
+        startup(peer, appl_rc);
     } else {
         let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
-        let appl_rc = Rc::new(RefCell::new(appl.clone()));
-        let appl_clone = appl_rc.clone();
+        let appl_rc = Arc::new(Mutex::new(appl.clone()));
         let peer = match network::startup(name, port, None, Box::new(appl)) {
             Ok(p) => p,
             Err(e) => {
@@ -89,13 +81,12 @@ fn main() {
                 return;
             } // error!("Could not join network {:?}", e);
         };
-        startup(peer, appl_clone);
+        startup(peer, appl_rc);
     }
 }
 
-fn startup(peer: Arc<Mutex<Peer>>, model: Rc<RefCell<Application>>) {
-    let model_clone = Rc::clone(&model);
-    match spawn_shell(peer, model_clone) {
+fn startup(peer: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) {
+    match spawn_shell(peer, model) {
         Ok(_) => {}
         Err(_) => {
             eprintln!("Failed to spawn shell");
