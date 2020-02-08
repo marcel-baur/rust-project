@@ -12,7 +12,7 @@ extern crate meff;
 use gio::prelude::*;
 use glib::{clone, Receiver};
 use gtk::prelude::*;
-use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType};
+use gtk::{AboutDialog, AccelFlags, AccelGroup, ApplicationWindow, Label, Menu, MenuBar, MenuItem, WindowPosition, FileChooserDialog, FileChooserAction, ResponseType, DialogFlags, ButtonsType, MessageType};
 use crate::util::{MEFFM};
 use std::net::SocketAddr;
 
@@ -109,8 +109,12 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>)
             set_entry_border(&port, &port_entry_create);
 
             if !name.is_empty() && !port.is_empty() {
-                meff.borrow_mut().start(name, port, None);
-                startup_window.destroy();
+                match meff.borrow_mut().start(name, port, None) {
+                    Ok(_) => { startup_window.destroy(); }
+                    Err(e) => {
+                        display_message(&e);
+                    }
+                }
             }
         } else {
             let name = name_entry_join.get_text().unwrap().as_str().to_string().clone();
@@ -123,8 +127,12 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>)
 
             if !name.is_empty() && !port.is_empty() && !ip.is_empty() {
                 let addr = verify_ip(&ip);
-                meff.borrow_mut().start(name, port, addr);
-                startup_window.destroy();
+                match meff.borrow_mut().start(name, port, addr) {
+                    Ok(_) => { startup_window.destroy(); }
+                    Err(e) => {
+                        display_message(&e);
+                    }
+                }
             }
         }
     }));
@@ -149,6 +157,37 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<MEFFM>>)
 
     startup_window.add(&v_box);
     startup_window
+}
+
+fn display_message(message: &str) {
+    let message_window = gtk::Window::new(gtk::WindowType::Toplevel);
+    message_window.set_position(WindowPosition::Center);
+    message_window.set_size_request(400, 200);
+
+    let header = gtk::HeaderBar::new();
+    header.set_title(Some("Info"));
+    message_window.set_titlebar(Some(&header));
+
+    let label = gtk::Label::new(Some(message));
+    label.set_halign(gtk::Align::Center);
+    label.set_margin_top(20);
+
+    let button = gtk::Button::new_with_label("Ok");
+    button.set_halign(gtk::Align::Center);
+    button.set_valign(gtk::Align::End);
+
+    let v_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
+    v_box.pack_start(&label, true, true, 0);
+    v_box.pack_start(&button, true, true, 20);
+
+    message_window.add(&v_box);
+    message_window.show_all();
+    message_window.set_modal(true);
+
+    button.connect_clicked(move |_| {
+        message_window.destroy();
+    });
+
 }
 
 fn verify_ip(addr: &String) -> Option<SocketAddr> {
