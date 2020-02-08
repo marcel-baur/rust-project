@@ -310,7 +310,6 @@ fn show_status(meff: Rc<RefCell<Model>>) {
     scrolled_window.add(&list_box);
 
     for (name, addr) in list {
-        println!("New element");
         let row = gtk::ListBoxRow::new();
         let h_box = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         let label_ip = gtk::Label::new(Some(&addr.to_string()));

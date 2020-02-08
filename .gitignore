@@ -160,3 +160,4 @@ Cargo.lock
 # logs
 /log/
 gui-app/target
+server-library/target
