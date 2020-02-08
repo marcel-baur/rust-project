@@ -1,7 +1,8 @@
 use prettytable::format;
 extern crate colored;
+use crate::util::Application;
 use colored::*;
-use meff::audio::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
+use meff::audio::MusicState::{CONTINUE, PAUSE, PLAY, STOP};
 use meff::network::peer::Peer;
 use meff::network::{
     push_music_to_database, send_delete_peer_request, send_play_request, send_read_request,
@@ -10,9 +11,11 @@ use meff::network::{
 use meff::utils;
 use meff::utils::Instructions::{GET, REMOVE};
 use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::io::stdin;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;

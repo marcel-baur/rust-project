@@ -5,6 +5,7 @@ use clap::{App, Arg};
 use meff::network;
 use meff::network::peer::Peer;
 use std::net::SocketAddr;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 #[macro_use]

@@ -40,16 +40,31 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
                     true,
                     peer,
                 );
+                let mut peer_clone = peer.clone();
+                match peer.redundancy_table.get_mut(&target) {
+                    Some(p) => p.push(key),
+                    None => {peer.redundancy_table.insert(target.clone(), vec![key]);}
+                }
             }
             None => println!("Only peer in network. No redundancy possible"),
         };
     }
 }
 
-pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>, from: String) {
     let key_clone = key.clone();
+    let key_redundant_clone = key.clone();
     peer.process_store_request((key, value));
     listener.file_status_changed(key_clone, NEW);
+    let from_address = match from.parse::<SocketAddr>() {
+        Ok(a) => a,
+        Err(_e) => {error!("Could not parse senders address to SocketAddr"); return;}
+    };
+
+    match peer.redundancy_table.get_mut(&from_address) {
+        Some(p) => p.push(key_redundant_clone),
+        None => {peer.redundancy_table.insert(from_address, vec![key_redundant_clone]);}
+    }
 }
 
 pub fn change_peer_name(value: String, sender: SocketAddr, peer: &mut Peer) {
@@ -249,6 +264,8 @@ pub fn self_status_request(peer: &mut Peer) {
 pub fn dropped_peer(addr: SocketAddr, peer: &mut Peer) {
     println!("Peer at {:?} was dropped", addr);
     peer.drop_peer_by_ip(&addr);
+
+    redistribute_files(addr, peer);
 }
 
 pub fn order_song_request(song_name: String, peer: &mut Peer) {
@@ -272,5 +289,29 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
     if peer.database.data.contains_key(song_name) {
         println!("Remove file {} from database", &song_name);
         peer.delete_file_from_database(song_name);
+    }
+}
+
+pub fn redistribute_files (addr: SocketAddr, peer: &mut Peer) {
+    if peer.network_table.len() > 1 {
+        let database = peer.get_db().get_data();
+        let mut redundant_table = &peer.redundancy_table;
+        let network_table = &peer.network_table;
+        let song_list = match redundant_table.get(&addr) {
+            Some(s) => s,
+            None => {return;}
+        };
+        if network_table.len() > 1 {
+            for song in song_list {
+                let redundant_target = match other_random_target(network_table, peer.get_ip()) {
+                    Some(r) => r,
+                    None => {
+                        continue;
+                    } //TODO review
+                };
+                song_order_request(redundant_target, peer.ip_address, song.to_string());
+            }
+        }
+        peer.redundancy_table.remove(&addr);
     }
 }
