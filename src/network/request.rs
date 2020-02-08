@@ -39,16 +39,33 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
                     true,
                     peer,
                 );
+                let mut peer_clone = peer.clone();
+                match peer.redundancy_table.get_mut(&target) {
+                    Some(p) => p.push(key),
+                    None => {peer.redundancy_table.insert(target.clone(), vec![key]);}
+                }
+                println!("{:?}", peer.redundancy_table.get(&target));
             }
             None => println!("Only peer in network. No redundancy possible"),
         };
     }
 }
 
-pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>, from: String) {
     let key_clone = key.clone();
+    let key_redundant_clone = key.clone();
     peer.process_store_request((key, value));
     listener.file_status_changed(key_clone, NEW);
+    let from_address = match from.parse::<SocketAddr>() {
+        Ok(a) => a,
+        Err(_e) => {error!("Could not parse senders address to SocketAddr"); return;}
+    };
+
+    match peer.redundancy_table.get_mut(&from_address) {
+        Some(p) => p.push(key_redundant_clone),
+        None => {peer.redundancy_table.insert(from_address, vec![key_redundant_clone]);}
+    }
+    println!("{:?}", peer.redundancy_table.get(&from_address));
 }
 
 pub fn change_peer_name(value: String, sender: SocketAddr, peer: &mut Peer) {

@@ -17,6 +17,7 @@ pub struct Peer {
     pub database: Database,
     pub open_request_table: HashMap<SystemTime, Instructions>,
     pub sender: SyncSender<Notification>,
+    pub redundancy_table: HashMap<SocketAddr, Vec<String>>,
 }
 
 impl Peer {
@@ -39,6 +40,7 @@ impl Peer {
             database: Database::new(),
             open_request_table,
             sender,
+            redundancy_table: HashMap::new(),
         }
     }
 
