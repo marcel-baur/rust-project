@@ -9,6 +9,9 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::borrow::Borrow;
 
 #[macro_use]
 extern crate log;
@@ -64,7 +67,9 @@ fn main() {
                 return;
             }
         }
-        let appl = Application {};
+        let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
+        let appl_rc = Rc::new(RefCell::new(appl.clone()));
+        let appl_clone = appl_rc.clone();
         let peer = match network::startup(name, port, Some(addr), Box::new(appl)) {
             Ok(p) => p,
             Err(e) => {
@@ -72,10 +77,11 @@ fn main() {
                 return;
             } // error!("Could not join network {:?}", e);
         };
-        startup(peer);
+        startup(peer, appl_clone);
     } else {
-        let appl = Application {};
-
+        let appl = Application { is_playing: Arc::new(Mutex::new(false)) };
+        let appl_rc = Rc::new(RefCell::new(appl.clone()));
+        let appl_clone = appl_rc.clone();
         let peer = match network::startup(name, port, None, Box::new(appl)) {
             Ok(p) => p,
             Err(e) => {
@@ -83,27 +89,16 @@ fn main() {
                 return;
             } // error!("Could not join network {:?}", e);
         };
-        startup(peer);
+        startup(peer, appl_clone);
     }
 }
 
-fn startup(peer: Arc<Mutex<Peer>>) {
-    let interact = match thread::Builder::new()
-        .name("Interact".to_string())
-        .spawn(move || match spawn_shell(peer) {
-            Ok(_) => {}
-            Err(_) => {
-                eprintln!("Failed to spawn shell");
-            }
-        }) {
-        Ok(i) => i,
-        Err(e) => {
-            error!("Error while trying to spawn Interact Thread: {:?}", e);
-            return;
+fn startup(peer: Arc<Mutex<Peer>>, model: Rc<RefCell<Application>>) {
+    let model_clone = Rc::clone(&model);
+    match spawn_shell(peer, model_clone) {
+        Ok(_) => {}
+        Err(_) => {
+            eprintln!("Failed to spawn shell");
         }
-    };
-    if let Err(e) = interact.join() {
-        error!("Could not join Interact thread {:?}", e);
-        return;
     };
 }

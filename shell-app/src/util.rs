@@ -1,7 +1,11 @@
 use crate::shell;
 use meff::utils::{AppListener, ListenerInstr};
+use std::sync::{Arc, Mutex};
 
-pub struct Application {}
+#[derive(Clone)]
+pub struct Application {
+    pub is_playing: Arc<Mutex<bool>>,
+}
 
 impl AppListener for Application {
     fn notify(&self) {
@@ -28,9 +32,10 @@ impl AppListener for Application {
         if let Some(name) = title {
             println!("{} is playing!", name);
         }
+        *self.is_playing.lock().unwrap() = true;
     }
 
     fn player_stopped(&mut self) {
-        println!("player stopped");
+        *self.is_playing.lock().unwrap() = false;
     }
 }
