@@ -71,7 +71,7 @@ impl MEFFM {
         let ip = peer_clone.ip_address;
         match push_music_to_database(&title, &path, ip,  &mut peer_clone) {
             Ok(_) => {}
-            Err(e) => {
+            Err(_) => {
                 eprintln!("Failed to push {} to database", path);
             }
         };
