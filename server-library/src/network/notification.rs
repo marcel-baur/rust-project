@@ -85,7 +85,7 @@ pub enum Content {
 }
 
 pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
-    let stream = match TcpStream::connect(&target) { //, Duration::new(30, 1)) {
+    let stream = match TcpStream::connect_timeout(&target, Duration::new(30, 1)) {
         Ok(s) => s,
         Err(_e) => {
             println!("{:?}", _e);
