@@ -102,11 +102,11 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<Model>>)
 
     let stack_clone = stack.clone();
     start_button.connect_clicked(clone!(@weak startup_window => move |_| {
-        let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string().clone();
+        let current_stack = stack_clone.get_visible_child_name().unwrap().as_str().to_string();
 
         if current_stack == "create" {
-            let name = name_entry_create.get_text().unwrap().as_str().to_string().clone();
-            let port = port_entry_create.get_text().unwrap().as_str().to_string().clone();
+            let name = name_entry_create.get_text().unwrap().as_str().to_string();
+            let port = port_entry_create.get_text().unwrap().as_str().to_string();
             set_entry_border(&name, &name_entry_create);
             set_entry_border(&port, &port_entry_create);
 
@@ -119,9 +119,9 @@ fn build_startup(main_window: &gtk::ApplicationWindow, meff: Rc<RefCell<Model>>)
                 }
             }
         } else {
-            let name = name_entry_join.get_text().unwrap().as_str().to_string().clone();
-            let port = port_entry_join.get_text().unwrap().as_str().to_string().clone();
-            let ip = ip_entry_join.get_text().unwrap().as_str().to_string().clone();
+            let name = name_entry_join.get_text().unwrap().as_str().to_string();
+            let port = port_entry_join.get_text().unwrap().as_str().to_string();
+            let ip = ip_entry_join.get_text().unwrap().as_str().to_string();
 
             set_entry_border(&name, &name_entry_join);
             set_entry_border(&port, &port_entry_join);
@@ -192,7 +192,7 @@ fn display_message(message: &str) {
 
 }
 
-fn verify_ip(addr: &String) -> Option<SocketAddr> {
+fn verify_ip(addr: &str) -> Option<SocketAddr> {
     match addr.parse::<SocketAddr>() {
         Ok(socket_addr) => Some(socket_addr),
         Err(_) => None
@@ -237,7 +237,7 @@ fn add_music_title(song_path: String, meff: Rc<RefCell<Model>>) {
     ok_button.set_valign(gtk::Align::End);
 
     ok_button.connect_clicked(clone!(@weak title_popup => move |_| {
-        let title = entry.get_text().unwrap().as_str().to_string().clone();
+        let title = entry.get_text().unwrap().as_str().to_string();
         let song_path_clone = song_path.clone();
 
         if title.is_empty() {
@@ -273,16 +273,13 @@ fn add_song_to_list(song_name: Rc<String>, list_box: &gtk::ListBox, meff: Rc<Ref
     trash_button.set_image(Some(&image_delete));
 
     let song_clone_1 = song_name.clone();
-    let song_clone_2 = song_name.clone();
-    let meff_clone = meff.clone();
-    let meff_clone2 = meff_clone.clone();
+    let meff_clone2 = meff.clone();
     trash_button.connect_clicked(move |_| {
-        meff_clone.borrow_mut().remove_title(song_clone_1.to_string());
+        meff.borrow_mut().remove_title(song_clone_1.to_string());
     });
 
-    let meff_clone_3 = meff_clone2.clone();
     label_button.connect_clicked( move |_| {
-        meff_clone_3.borrow_mut().play(Some(song_clone_2.to_string()));
+        meff_clone2.borrow_mut().play(Some(song_name.to_string()));
     });
 
     h_box.pack_start(&label_button, true, true, 0);
@@ -421,12 +418,9 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: 
             }
             ResponseType::Accept => {
                 let file = dialog.get_filename();
-                match file {
-                    Some(file) =>  {
-                        let file_path = file.into_os_string().into_string().unwrap().clone();
+                if let Some(file) = file {
+                        let file_path = file.into_os_string().into_string().unwrap();
                         add_music_title(file_path, meff_clone2);
-                    },
-                    _ => {},
                 }
             }
             _ => {}
@@ -463,13 +457,12 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: 
             add_song_to_list(text_clone, &l_b_clone, meff_clone_3);
         }
         if instr == DELETE {
-            let text_clone_2 = text.clone();
             for element in l_b_clone.get_children() {
                 let element_clone = element.clone().downcast::<gtk::ListBoxRow>().unwrap();
                 let h_box = element_clone.get_child().clone().unwrap().downcast::<gtk::Box>().unwrap();
                 let button = h_box.get_children()[0].clone().downcast::<gtk::Button>().unwrap();
                 let title = button.get_label().unwrap().as_str().to_string();
-                if title == text_clone_2 {
+                if title == text {
                     l_b_clone.remove(&element);
                 }
             }

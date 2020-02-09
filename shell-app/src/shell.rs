@@ -7,15 +7,12 @@ use std::borrow::BorrowMut;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::io::stdin;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::util::Application;
 use meff::interface::MusicState::{PAUSE, STOP, CONTINUE, PLAY};
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Result<(), Box<dyn Error>> {
-    let interaction_in_progress = Arc::new(AtomicBool::new(false));
-    let i_clone = interaction_in_progress.clone();
     let arc_clone = arc.clone();
     let arc_clone2 = arc.clone();
     let peer = match arc.lock() {
@@ -25,16 +22,14 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
 
     drop(peer);
     let handle = match thread::Builder::new()
-        .name("Interaction".to_string())
+        .name("Interaction".to_string()
         .spawn(move || loop {
             let peer = match arc_clone.lock() {
                 Ok(p) => p,
                 Err(e) => e.into_inner(),
             };
             drop(peer);
-            i_clone.store(true, Ordering::SeqCst);
             handle_user_input(&arc_clone2, &model);
-            i_clone.store(false, Ordering::SeqCst);
         }) {
         Ok(h) => h,
         Err(_) => {

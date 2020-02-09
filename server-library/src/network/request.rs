@@ -39,7 +39,7 @@ pub fn push_to_db(
                 send_write_request(
                     target,
                     *peer.get_ip(),
-                    (key.clone(), value.clone()),
+                    (key.clone(), value),
                     true,
                     peer,
                 );
@@ -201,7 +201,7 @@ pub fn get_file_response(
             Ok(())
         }
         ORDER => {
-            peer.process_store_request((key.to_string(), value.clone()));
+            peer.process_store_request((key.to_string(), value));
             Ok(())
         }
         _ => Err("Unknown command".to_string()),
@@ -293,7 +293,7 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
                 return;
             }
         };
-        song_order_request(redundant_target, peer.ip_address, song_name.to_string());
+        song_order_request(redundant_target, peer.ip_address, song_name);
     } else {
         send_read_request(peer, &song_name, FileInstructions::ORDER)
     }
