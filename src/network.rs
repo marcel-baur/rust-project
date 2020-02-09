@@ -45,7 +45,6 @@ fn validate_port(port: &str) -> Result<&str, String> {
     if port.len() != 4 {
         return Err("The supplied port does not have four digits".to_string());
     }
-    // TODO: Port range for exam.
     Ok(port)
 }
 
@@ -558,7 +557,6 @@ pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicStat
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
     //    peer.drop_peer_by_ip(&addr);
     let mut cloned_peer = peer.clone();
-    // TODO: Send notification to other peers that this peer was dropped
     for other_addr in peer.network_table.values() {
         if *other_addr != addr {
             send_dropped_peer_notification(*other_addr, addr, &mut cloned_peer)
@@ -597,7 +595,7 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
 /// * `peer` - Peer
 ///
 /// # Returns:
-/// Result //@TODO
+/// Result
 pub fn push_music_to_database(
     name: &str,
     file_path: &str,

@@ -156,8 +156,6 @@ pub fn find_file(
                     delete_redundant_song_request(*value, peer.ip_address, &song_name);
                 }
             }
-        } else if instr == PLAY {
-            // TODO: play music if file in own database
         }
     } else {
         let id = SystemTime::now();
@@ -231,7 +229,7 @@ pub fn exit_peer(addr: SocketAddr, peer: &mut Peer) {
                     Some(r) => r,
                     None => {
                         continue;
-                    } //TODO review
+                    }
                 };
                 song_order_request(redundant_target, peer.ip_address, song.to_string());
             }
@@ -286,7 +284,6 @@ pub fn dropped_peer(addr: SocketAddr, peer: &mut Peer) {
 
 pub fn order_song_request(song_name: String, peer: &mut Peer) {
     let network_table = &peer.network_table;
-    // TODO: REVIEW unwrap
     if peer.get_db().get_data().contains_key(&song_name) {
         let redundant_target = match other_random_target(network_table, peer.get_ip()) {
             Some(r) => r,
@@ -325,7 +322,7 @@ pub fn redistribute_files(addr: SocketAddr, peer: &mut Peer) {
                     Some(r) => r,
                     None => {
                         continue;
-                    } //TODO review
+                    }
                 };
                 song_order_request(redundant_target, peer.ip_address, song.to_string());
             }
