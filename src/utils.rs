@@ -21,7 +21,6 @@ pub enum FileStatus {
     DOWNLOAD,
 }
 
-// TODO download function
 /// The trait that needs to be implemented for the listener in the application that uses this
 /// library. Its functions are used to communicate network events.
 pub trait AppListener: Send {
@@ -30,7 +29,7 @@ pub trait AppListener: Send {
     /// - `files` the files from the peer that sent the response
     /// - `name` the name of the peer that sent the response
     fn notify_status(&self, files: Vec<String>, name: String);
-    /// Notify if a file was changed in the local peer database
+    /// Notify if a file was changed in the local peer database or was downloaded
     fn local_database_changed(&mut self, name: String, instr: FileStatus);
     /// Notify the application that the player started playing
     /// # Parameters

@@ -165,20 +165,14 @@ pub fn startup(
         });
 
     let sender_clone = sender.clone();
-    let _listener = match thread::Builder::new()
+    if let Err(e) = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            match listen_tcp(peer_arc_clone_listen, sender_clone) {
-                Ok(_) => {}
-                Err(_) => {
-                    eprintln!("Failed to spawn listener");
-                }
+            if let Err(_) = listen_tcp(peer_arc_clone_listen, sender_clone) {
+                Err("Failed to spawn listener".to_string())
             };
         }) {
-        Ok(s) => s,
-        Err(_e) => {
-            return Err("Failed to spwan listener".to_string());
-        }
+        Err(format!("{:?}", e))
     };
 
     let _peer_arc_clone_interact = peer_arc.clone();
