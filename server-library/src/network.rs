@@ -19,10 +19,7 @@ extern crate rand;
 
 use rand::Rng;
 
-use crate::audio::{
-    continue_paused_music, create_sink, pause_current_playing_music, play_music,
-    stop_current_playing_music, MusicPlayer,
-};
+
 
 use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
@@ -37,7 +34,7 @@ use request::{
 };
 use std::collections::HashMap;
 use std::path::Path;
-use crate::utils::ListenerInstr::{DELETE, DOWNLOAD};
+use crate::utils::ListenerInstr::{DELETE, DOWNLOAD, NEW};
 
 fn validate_port(port: &str) -> Result<&str, String> {
     if let Err(e) = port.parse::<u32>() {
@@ -336,9 +333,11 @@ fn handle_notification(
                     Instructions::GET => {
                         listener.file_status_changed(key, DOWNLOAD);
                     }
+                    Instructions::ORDER => {
+                        listener.file_status_changed(key, NEW);
+                    }
                     _ => {}
                 }
-
             }
         }
         Content::DeleteFileRequest { song_name } => {
