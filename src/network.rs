@@ -5,7 +5,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
-use std::{fs, io, thread};
+use std::{fs, io, thread, process};
 
 mod handshake;
 mod music_exchange;
@@ -167,8 +167,9 @@ pub fn startup(
     match thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            if let Err(_) = listen_tcp(peer_arc_clone_listen, sender_clone) {
-                println!("Failed to spawn listener")
+            if let Err(e) = listen_tcp(peer_arc_clone_listen, sender_clone) {
+                println!("Failed to create connection: {:?}", e);
+                process::exit(1);
             };
         }) {
         Err(e) => {println!("{:?}", e);}
@@ -214,7 +215,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
     let listener = match TcpListener::bind(&listen_ip) {
         Ok(l) => l,
         Err(_e) => {
-            println!("Error here {:?}", _e);
+            println!("Error: {:?}", _e);
             return Err("Could't bind TCP Listener.".to_string());
         }
     };
