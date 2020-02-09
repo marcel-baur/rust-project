@@ -60,7 +60,13 @@ pub fn send_get_file_reponse(
         from,
     };
 
-    tcp_request_with_notification(target, not);
+    if let Err(e) = thread::Builder::new()
+        .name("send_get_file_reponse_thread".to_string())
+        .spawn(move || {
+            tcp_request_with_notification(target, not);
+        }) {
+        error!("could not spwan request_thread");
+    }
 }
 
 pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: String) {
