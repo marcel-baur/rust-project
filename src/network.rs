@@ -420,30 +420,36 @@ pub fn send_write_request(
     redundant: bool,
     peer: &mut Peer,
 ) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            handle_lost_connection(target, peer);
-            return;
-        }
-    };
-    if let true = redundant {
-        let not = Notification {
-            content: Content::RedundantPushToDB {
-                key: data.0,
-                value: data.1,
-                from: origin.to_string(),
-            },
-            from: origin,
-        };
-        match serde_json::to_writer(&stream, &not) {
-            Ok(ser) => ser,
-            Err(e) => {
-                error!("Could not serialize {:?}, Error: {:?}", &not, e);
-                println!("Failed to serialize SendRequest {:?}", &not);
+    let arc_peer = Arc::new(Mutex::new(peer.clone()));
+    thread::Builder::new()
+        .name("request_thread".to_string())
+        .spawn(move || {
+            let mut peer_lock = arc_peer.lock().unwrap();
+            let stream = match TcpStream::connect(target) {
+                Ok(s) => s,
+                Err(_e) => {
+                    handle_lost_connection(target, &mut peer_lock);
+                    return;
+                }
+            };
+            if let true = redundant {
+                let not = Notification {
+                    content: Content::RedundantPushToDB {
+                        key: data.0,
+                        value: data.1,
+                        from: origin.to_string(),
+                    },
+                    from: origin,
+                };
+                match serde_json::to_writer(&stream, &not) {
+                    Ok(ser) => ser,
+                    Err(e) => {
+                        error!("Could not serialize {:?}, Error: {:?}", &not, e);
+                        println!("Failed to serialize SendRequest {:?}", &not);
+                    }
+                };
             }
-        };
-    }
+        });
 }
 
 /// Selects a random `SocketAddr` from the `network_table` that is not equal to `own_ip`. Returns
