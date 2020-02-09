@@ -18,10 +18,13 @@ is decoupled from the database thread and could be exchanged with a GUI.
 
 Users will be able to choose what to do with the music by either downloading it to their drive or streaming it through the network.
 
+## Usage
 
-## How to build the project
+There are two ways to use the MEFF-Application:
 
-If you want create a new peer network use the following command:
+#### Shell-App
+
+If you want create a new peer network using the following command:
 
 `cargo run <your name> <port>`
 
@@ -30,14 +33,28 @@ Use following command to join:
 
 `cargo run <your name> <port> <ip-address>`
 
-## Usage
+The application can now be used with following commands: 
+
 - `help` - get the instruction menu
 - `status` - show current state of peer
 - `push [mp3 name] [direction to mp3]` - add mp3 to database
 - `get [mp3 name]` - download the mp3 file from database
-- `play [mp3 name]` - download the mp3 file from the database and play it
 - `remove [mp3 name]` - deletes mp3 file from database
 - `exit` - exit network
+
+#### GUI-App
+
+To make the app easier to use we have created a GUI implemented with the gtk library.
+Downloading, streaming or playing the music is now controlled by a simple user interface.
+
+Similar to the shell app, the app can be started either by joining an existing network or creating a new network.
+
+The interface is divided into two parts:
+- The right side contains a list of your own songs. These can be deleted, played, paused and stopped. 
+- On the left side, there are commands concerning the other peers in the network.
+    - The download button saves a specific song from other peers in your database. 
+    - The streaming button plays the song from others.
+
 
 ## Crates used:
 
@@ -57,32 +74,19 @@ Use following command to join:
     
     colored
     
-    rodio
-    
     log
-    
+   
     log4rs
-
-## What is already working?
-- Creates a peer when starting program
-- Peer creates network if needed
-- Peer joins network if network exists
-- Handshake (exchanging network table) between peers
-- Reading mp3 file and convert it to byte array
-- Sending mp3 files through network and saving to database
-- Find the peer which stores a certain mp3 file
-- Heartbeat
-- Redundancy for saving files
-- Get a file and play it
-- Error handling has greatly improved
-- Remove files from database
-- Exit network and redistribute files from database
-
-## What are the next steps?
-- Some more error handling
-- Load management
-- a GUI
-- Debugging and testing
+    
+    gtk
+    
+    gio
+    
+    gdk
+    
+    glib-sys 
+    
+    glib
 
 ## Participants
 - Marcel Baur
