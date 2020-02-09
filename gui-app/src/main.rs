@@ -19,8 +19,8 @@ use std::net::SocketAddr;
 use std::env::args;
 use std::rc::Rc;
 use std::cell::RefCell;
-use meff::utils::ListenerInstr::{DOWNLOAD, DELETE, NEW};
-use meff::utils::ListenerInstr;
+use meff::utils::FileStatus::{DOWNLOAD, DELETE, NEW};
+use meff::utils::FileStatus;
 
 mod util;
 
@@ -338,7 +338,7 @@ fn show_status(meff: Rc<RefCell<Model>>) {
 }
 
 
-fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: Receiver<(String, ListenerInstr)>) {
+fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: Receiver<(String, FileStatus)>) {
     let main_window = ApplicationWindow::new(application);
     let meff_clone = Rc::clone(&meff);
     let meff_clone_l = Rc::clone(&meff);

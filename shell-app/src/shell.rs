@@ -19,7 +19,10 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
     let i_clone = interaction_in_progress.clone();
     let arc_clone = arc.clone();
     let arc_clone2 = arc.clone();
-    let peer = arc.lock().unwrap();
+    let peer = match arc.lock() {
+        Ok(p) => p,
+        Err(e) => e.into_inner()
+    };
 
     drop(peer);
     let _handle = match thread::Builder::new()

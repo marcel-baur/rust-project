@@ -24,8 +24,8 @@ use crate::audio::{
     stop_current_playing_music, MusicPlayer,
 };
 
-use crate::utils::ListenerInstr::{DELETE, DOWNLOAD, NEW};
-use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
+use crate::utils::FileStatus::{DELETE, DOWNLOAD, NEW};
+use crate::utils::{AppListener, FileInstructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
 use peer::create_peer;
@@ -341,12 +341,12 @@ fn handle_notification(
         Content::GetFileResponse { value, instr, key } => {
             if get_file_response(&instr, &key, value, peer, sink).is_ok() {
                 match instr {
-                    Instructions::PLAY => listener.player_playing(Some(key)),
-                    Instructions::GET => {
-                        listener.file_status_changed(key, DOWNLOAD);
+                    FileInstructions::PLAY => listener.player_playing(Some(key)),
+                    FileInstructions::GET => {
+                        listener.local_database_changed(key, DOWNLOAD);
                     }
-                    Instructions::ORDER => {
-                        listener.file_status_changed(key, NEW);
+                    FileInstructions::ORDER => {
+                        listener.local_database_changed(key, NEW);
                     }
                     _ => {}
                 }
@@ -354,7 +354,7 @@ fn handle_notification(
         }
         Content::DeleteFileRequest { song_name } => {
             delete_file_request(&song_name, peer);
-            listener.file_status_changed(song_name, DELETE);
+            listener.local_database_changed(song_name, DELETE);
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
@@ -481,7 +481,7 @@ fn other_random_target(
 }
 
 /// Communicate to the listener that we want to find the location of a given file
-pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
+pub fn send_read_request(peer: &mut Peer, name: &str, instr: FileInstructions) {
     let not = Notification {
         content: Content::FindFile {
             instr,

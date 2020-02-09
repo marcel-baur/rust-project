@@ -2,7 +2,7 @@ use crate::database::Database;
 use crate::interface::Notification;
 use crate::interface::Peer;
 use crate::network::get_own_ip_address;
-use crate::utils::Instructions;
+use crate::utils::FileInstructions;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::string::ToString;
@@ -19,7 +19,7 @@ impl Peer {
         ip_address: SocketAddr,
         onw_name: &str,
         network_table: HashMap<String, SocketAddr>,
-        open_request_table: HashMap<SystemTime, Instructions>,
+        open_request_table: HashMap<SystemTime, FileInstructions>,
         sender: SyncSender<Notification>,
     ) -> Peer {
         Peer {
@@ -60,7 +60,7 @@ impl Peer {
         }
     }
 
-    pub fn add_new_request(&mut self, time: &SystemTime, content: Instructions) {
+    pub fn add_new_request(&mut self, time: &SystemTime, content: FileInstructions) {
         self.open_request_table.insert(*time, content);
     }
 

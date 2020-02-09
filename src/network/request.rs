@@ -12,9 +12,9 @@ use crate::network::{
     other_random_target, send_local_file_status, send_read_request, send_status_request,
     send_write_request,
 };
-use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
-use crate::utils::ListenerInstr::{DELETE, NEW};
-use crate::utils::{AppListener, Instructions};
+use crate::utils::FileInstructions::{GET, ORDER, PLAY, REMOVE};
+use crate::utils::FileStatus::{DELETE, NEW};
+use crate::utils::{AppListener, FileInstructions};
 use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
@@ -31,7 +31,7 @@ pub fn push_to_db(
         peer.process_store_request((key.clone(), value.clone()));
         println!("Saved file to database");
         let key_clone = key.clone();
-        listener.file_status_changed(key_clone, NEW);
+        listener.local_database_changed(key_clone, NEW);
 
         let redundant_target = other_random_target(&peer.network_table, peer.get_ip());
         match redundant_target {
@@ -65,7 +65,7 @@ pub fn redundant_push_to_db(
     let key_clone = key.clone();
     let key_redundant_clone = key.clone();
     peer.process_store_request((key, value));
-    listener.file_status_changed(key_clone, NEW);
+    listener.local_database_changed(key_clone, NEW);
     let from_address = match from.parse::<SocketAddr>() {
         Ok(a) => a,
         Err(_e) => {
@@ -134,7 +134,7 @@ pub fn request_for_table(value: String, sender: SocketAddr, peer: &mut Peer) {
 }
 
 pub fn find_file(
-    instr: Instructions,
+    instr: FileInstructions,
     song_name: String,
     peer: &mut Peer,
     listener: &mut Box<dyn AppListener + Sync>,
@@ -145,7 +145,7 @@ pub fn find_file(
         if instr == REMOVE {
             peer.delete_file_from_database(&song_name);
             let song_clone = song_name.clone();
-            listener.file_status_changed(song_clone, DELETE);
+            listener.local_database_changed(song_clone, DELETE);
             println!("Remove file {} from database", &song_name);
 
             let id = SystemTime::now();
@@ -171,7 +171,7 @@ pub fn find_file(
     }
 }
 
-pub fn get_file(instr: Instructions, key: String, sender: SocketAddr, peer: &mut Peer) {
+pub fn get_file(instr: FileInstructions, key: String, sender: SocketAddr, peer: &mut Peer) {
     match peer.find_file(key.as_ref()) {
         Some(music) => {
             send_get_file_reponse(sender, peer.ip_address, key.as_ref(), music.clone(), instr)
@@ -184,7 +184,7 @@ pub fn get_file(instr: Instructions, key: String, sender: SocketAddr, peer: &mut
 }
 
 pub fn get_file_response(
-    instr: &Instructions,
+    instr: &FileInstructions,
     key: &str,
     value: Vec<u8>,
     peer: &mut Peer,
@@ -297,7 +297,7 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
         };
         song_order_request(redundant_target, peer.ip_address, song_name.to_string());
     } else {
-        send_read_request(peer, &song_name, Instructions::ORDER)
+        send_read_request(peer, &song_name, FileInstructions::ORDER)
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::interface::MusicState;
 use crate::interface::*;
 use crate::network::response::Message;
-use crate::utils::Instructions;
+use crate::utils::FileInstructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::process;
@@ -37,15 +37,15 @@ pub enum Content {
         value: String,
     },
     FindFile {
-        instr: Instructions,
+        instr: FileInstructions,
         song_name: String,
     },
     GetFile {
-        instr: Instructions,
+        instr: FileInstructions,
         key: String,
     },
     GetFileResponse {
-        instr: Instructions,
+        instr: FileInstructions,
         key: String,
         value: Vec<u8>,
     },

@@ -1,7 +1,7 @@
-use meff::utils::{AppListener, ListenerInstr};
+use meff::utils::{AppListener, FileStatus};
 use std::net::SocketAddr;
 use meff::interface::{Peer, MusicState, start, music_request, upload_music, music_control, delete_peer};
-use meff::utils::Instructions::{REMOVE, GET};
+use meff::utils::FileInstructions::{REMOVE, GET};
 use glib::{Sender};
 use meff::interface::MusicState::{PAUSE, PLAY, STOP, CONTINUE};
 use std::collections::HashMap;
@@ -11,22 +11,18 @@ use std::sync::{Mutex, Arc};
 #[derive(Clone)]
 pub struct Model {
     pub peer: Option<Arc<Mutex<Peer>>>,
-    pub sender: Option<Sender<(String, ListenerInstr)>>,
+    pub sender: Option<Sender<(String, FileStatus)>>,
     pub is_playing: Arc<Mutex<bool>>,
 }
 
 impl AppListener for Model {
-    fn notify(&self) {
-        println!("Hello world");
-    }
-
     #[allow(unused_variables)]
     fn notify_status(&self, files: Vec<String>, name: String) {
         println!("Received status");
     }
 
     #[allow(unused_variables)]
-    fn file_status_changed(&mut self, name: String, instr: ListenerInstr) {
+    fn local_database_changed(&mut self, name: String, instr: FileStatus) {
         //@TODO remove unwrap
         match self.sender.as_ref().unwrap().send((name, instr)) {
             Ok(_) => println!("file status changed"),
@@ -51,7 +47,7 @@ impl Model {
         Model {peer: None, sender: None, is_playing: Arc::new(Mutex::new(false))}
     }
 
-    pub fn set_sender(&mut self, sender: Sender<(String, ListenerInstr)>) {
+    pub fn set_sender(&mut self, sender: Sender<(String, FileStatus)>) {
         self.sender = Some(sender);
     }
 

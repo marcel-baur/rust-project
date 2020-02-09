@@ -1,6 +1,6 @@
 use crate::interface::Peer;
 use crate::network::send_read_request;
-use crate::utils::Instructions::PLAY;
+use crate::utils::FileInstructions::PLAY;
 use rodio::Sink;
 use std::fs;
 use std::io::{BufReader, Cursor};

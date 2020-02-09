@@ -4,7 +4,7 @@ use crate::network::notification::Content;
 use crate::network::{
     push_music_to_database, send_delete_peer_request, send_play_request, send_read_request,
 };
-use crate::utils::{AppListener, Instructions};
+use crate::utils::{AppListener, FileInstructions};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io;
@@ -34,7 +34,7 @@ pub struct Peer {
     pub ip_address: SocketAddr,
     pub network_table: HashMap<String, SocketAddr>,
     pub database: Database,
-    pub open_request_table: HashMap<SystemTime, Instructions>,
+    pub open_request_table: HashMap<SystemTime, FileInstructions>,
     pub sender: SyncSender<Notification>,
     pub redundancy_table: HashMap<SocketAddr, Vec<String>>,
 }
@@ -61,7 +61,7 @@ pub fn music_control(name: Option<String>, peer: &mut Peer, state: MusicState) {
 /// - `peer` - The local `Peer`
 /// - `name` - The name of the file
 /// - `istr` - The desired `Instructions`
-pub fn music_request(peer: &mut Peer, name: &str, instr: Instructions) {
+pub fn music_request(peer: &mut Peer, name: &str, instr: FileInstructions) {
     send_read_request(peer, name, instr)
 }
 
