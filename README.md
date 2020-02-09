@@ -56,7 +56,7 @@ Similar to the shell app, the user has the option to either join an existing net
 The interface is divided into two parts:
 - The right side contains a list of your own songs. These can be deleted, played, paused and stopped. 
 - On the left side, there are commands concerning the other peers in the network.
-    - The download button saves a specific song from other peers in your database. 
+    - The download button saves a specific song from other peers to your hard drive (file folder). 
     - The streaming button plays the song from others.
     
 
