@@ -19,7 +19,12 @@ use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
 
-pub fn push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn push_to_db(
+    key: String,
+    value: Vec<u8>,
+    peer: &mut Peer,
+    listener: &mut Box<dyn AppListener + Sync>,
+) {
     if peer.database.data.contains_key(&key) {
         println!("File already exists in your database");
     } else {

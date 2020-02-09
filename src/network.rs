@@ -445,7 +445,8 @@ pub fn send_write_request(
                     }
                 };
             }
-        }) {
+        })
+    {
         error!("Request Thread could not be spwaned: Error: {:?}", e);
     }
 }
