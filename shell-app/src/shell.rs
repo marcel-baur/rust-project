@@ -5,11 +5,9 @@ use meff::interface::{Peer, upload_music, music_request, delete_peer, music_cont
 use meff::utils;
 use meff::utils::Instructions::{GET, REMOVE};
 use std::borrow::BorrowMut;
-use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::io::stdin;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
