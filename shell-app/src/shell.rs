@@ -2,21 +2,17 @@ use prettytable::format;
 extern crate colored;
 use colored::*;
 use meff::interface::{Peer, upload_music, music_request, delete_peer, music_control};
-use meff::utils;
-use meff::utils::Instructions::{GET, REMOVE};
+use meff::utils::FileInstructions::{GET, REMOVE};
 use std::borrow::BorrowMut;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::io::stdin;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::util::Application;
 use meff::interface::MusicState::{PAUSE, STOP, CONTINUE, PLAY};
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Result<(), Box<dyn Error>> {
-    let interaction_in_progress = Arc::new(AtomicBool::new(false));
-    let i_clone = interaction_in_progress.clone();
     let arc_clone = arc.clone();
     let arc_clone2 = arc.clone();
     let peer = match arc.lock() {
@@ -25,7 +21,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
     };
 
     drop(peer);
-    let _handle = match thread::Builder::new()
+    let handle = match thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
             let peer = match arc_clone.lock() {
@@ -33,9 +29,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
                 Err(e) => e.into_inner(),
             };
             drop(peer);
-            i_clone.store(true, Ordering::SeqCst);
             handle_user_input(&arc_clone2, &model);
-            i_clone.store(false, Ordering::SeqCst);
         }) {
         Ok(h) => h,
         Err(_) => {
@@ -43,16 +37,8 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
             return Err(Box::try_from("Failed to spwan thread".to_string()).unwrap());
         }
     };
-
-    loop {
-        let peer = match arc.lock() {
-            Ok(p) => p,
-            Err(e) => e.into_inner(),
-        };
-        let _peer_clone = peer.clone();
-        drop(peer);
-        thread::sleep(utils::THREAD_SLEEP_DURATION);
-    }
+    handle.join().unwrap();
+    Ok(())
 }
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>) {
@@ -118,7 +104,6 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             Some(&"exit") => {
                 println!("You are leaving the network.");
                 delete_peer(&mut peer_clone);
-                //TODO: stop steams
             }
             Some(&"status") => {
                 print_peer_status(&arc);

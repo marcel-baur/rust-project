@@ -5,7 +5,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
-use std::{fs, io, thread};
+use std::{fs, io, thread, process};
 
 mod handshake;
 mod music_exchange;
@@ -136,7 +136,6 @@ pub fn startup(
             return Err(e);
         }
     }));
-    let sink_arc_clone_working = sink.clone();
     let _working_thread = thread::Builder::new()
         .name("working_thread".to_string())
         .spawn(move || loop {
@@ -151,11 +150,10 @@ pub fn startup(
                         Ok(a) => a,
                         Err(e) => e.into_inner(),
                     };
-                    let mut sink = match sink_arc_clone_working.lock() {
+                    let mut sink = match sink.lock() {
                         Ok(s) => s,
                         Err(e) => e.into_inner(),
                     };
-                    println!("handle notification");
                     handle_notification(not, &mut peer, &mut sink, &mut app);
                 }
                 Err(e) => {
@@ -164,20 +162,18 @@ pub fn startup(
             }
         });
 
-    let sender_clone = sender.clone();
-    match thread::Builder::new()
+    if let Err(e) = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            if let Err(_) = listen_tcp(peer_arc_clone_listen, sender_clone) {
-                println!("Failed to spawn listener")
+            if let Err(e) = listen_tcp(peer_arc_clone_listen, sender) {
+                println!("Failed to create connection: {:?}", e);
+                process::exit(1);
             };
         }) {
-        Err(e) => {println!("{:?}", e);}
-        Ok(_) => {}
+        println!("{:?}", e);
     };
 
     let _peer_arc_clone_interact = peer_arc.clone();
-    let peer_arc_clone_heartbeat = peer_arc.clone();
 
     //send request existing network table
     match ip_address {
@@ -189,10 +185,10 @@ pub fn startup(
         }
     }
 
-    if let Err(e) = thread::Builder::new()
+    if let Err(_e) = thread::Builder::new()
         .name("Heartbeat".to_string())
         .spawn(move || {
-            if let Err(e) = start_heartbeat(peer_arc_clone_heartbeat) {
+            if let Err(e) = start_heartbeat(peer_arc) {
                 eprintln!("Failed to spawn heartbeat, {:?}", e);
             }
         })
@@ -204,9 +200,7 @@ pub fn startup(
 }
 
 fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result<(), String> {
-    let clone = arc.clone();
-    let sender_clone = sender.clone();
-    let peer = match clone.lock() {
+    let peer = match arc.lock() {
         Ok(p) => p,
         Err(e) => e.into_inner(),
     };
@@ -215,7 +209,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
     let listener = match TcpListener::bind(&listen_ip) {
         Ok(l) => l,
         Err(_e) => {
-            println!("Error here {:?}", _e);
+            println!("Error: {:?}", _e);
             return Err("Could't bind TCP Listener.".to_string());
         }
     };
@@ -230,11 +224,11 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
                     Ok(val) => val,
                     Err(e) => {
                         dbg!(e);
-                        println!("Could not deserialize {:?}", &buf);
+                        println!("Could not deserialize notification");
                         continue; // skip this stream
                     }
                 };
-                if let Err(_e) = sender_clone.send(des) {
+                if let Err(_e) = sender.send(des) {
                     error!("Could not send notification through the channel.");
                 };
             }
@@ -302,7 +296,7 @@ fn handle_notification(
     //dbg!(&notification);
     let sender = notification.from;
     match notification.content {
-        Content::PushToDB { key, value, from } => {
+        Content::PushToDB { key, value, .. } => {
             push_to_db(key, value, peer, listener);
         }
         Content::RedundantPushToDB { key, value, from } => {
@@ -441,7 +435,7 @@ pub fn send_write_request(
             }
         })
     {
-        error!("Request Thread could not be spwaned: Error: {:?}", e);
+        error!("Request Thread could not be spawned: Error: {:?}", e);
     }
 }
 
@@ -550,7 +544,7 @@ pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicStat
 }
 
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
-    //    peer.drop_peer_by_ip(&addr);
+    peer.drop_peer_by_ip(&addr);
     let mut cloned_peer = peer.clone();
     for other_addr in peer.network_table.values() {
         if *other_addr != addr {

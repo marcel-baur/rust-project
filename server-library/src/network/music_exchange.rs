@@ -1,8 +1,9 @@
-use crate::network::notification::{tcp_request_with_notification, Content};
 use crate::interface::Notification;
-use crate::utils::Instructions;
+use crate::network::notification::{tcp_request_with_notification, Content};
+use crate::utils::FileInstructions;
 use std::net::SocketAddr;
 use std::time::SystemTime;
+use std::thread;
 
 /// Sends a request to the other peers to check if they have the wanted file
 pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
@@ -31,7 +32,7 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
 }
 
 /// Sends a request (as a response of ExistFileResponse Request) to get a certain file
-pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: Instructions) {
+pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: FileInstructions) {
     let not = Notification {
         content: Content::GetFile {
             instr,
@@ -49,7 +50,7 @@ pub fn send_get_file_reponse(
     from: SocketAddr,
     key: &str,
     value: Vec<u8>,
-    instr: Instructions,
+    instr: FileInstructions,
 ) {
     let not = Notification {
         content: Content::GetFileResponse {
@@ -60,7 +61,13 @@ pub fn send_get_file_reponse(
         from,
     };
 
-    tcp_request_with_notification(target, not);
+    if let Err(_e) = thread::Builder::new()
+        .name("send_get_file_reponse_thread".to_string())
+        .spawn(move || {
+            tcp_request_with_notification(target, not);
+        }) {
+        error!("could not spwan request_thread");
+    }
 }
 
 pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: String) {

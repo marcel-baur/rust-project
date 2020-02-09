@@ -39,7 +39,7 @@ pub fn push_to_db(
                 send_write_request(
                     target,
                     *peer.get_ip(),
-                    (key.clone(), value.clone()),
+                    (key.clone(), value),
                     true,
                     peer,
                 );
@@ -156,6 +156,12 @@ pub fn find_file(
                     delete_redundant_song_request(*value, peer.ip_address, &song_name);
                 }
             }
+        } else if instr == GET {
+            if let Some(file) = peer.get_db().get_data().get(&song_name) {
+                if let Err(e) = save_music_to_disk(file.clone(), &song_name) {
+                    error!("{}", e);
+                }
+            }
         }
     } else {
         let id = SystemTime::now();
@@ -200,7 +206,7 @@ pub fn get_file_response(
             Ok(())
         }
         ORDER => {
-            peer.process_store_request((key.to_string(), value.clone()));
+            peer.process_store_request((key.to_string(), value));
             Ok(())
         }
         _ => Err("Unknown command".to_string()),
@@ -292,7 +298,7 @@ pub fn order_song_request(song_name: String, peer: &mut Peer) {
                 return;
             }
         };
-        song_order_request(redundant_target, peer.ip_address, song_name.to_string());
+        song_order_request(redundant_target, peer.ip_address, song_name);
     } else {
         send_read_request(peer, &song_name, FileInstructions::ORDER)
     }
@@ -306,6 +312,7 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
 }
 
 pub fn redistribute_files(addr: SocketAddr, peer: &mut Peer) {
+    let mut peer_clone = peer.clone();
     if peer.network_table.len() > 1 {
         //let database = peer.get_db().get_data();
         let redundant_table = &peer.redundancy_table;
@@ -324,7 +331,11 @@ pub fn redistribute_files(addr: SocketAddr, peer: &mut Peer) {
                         continue;
                     }
                 };
-                song_order_request(redundant_target, peer.ip_address, song.to_string());
+                let file = match peer.find_file(song) {
+                    Some(f) => f,
+                    None => {return;}
+                };
+                send_write_request(redundant_target, peer.ip_address, (song.to_string(), file.clone()),true, &mut peer_clone );
             }
         }
         peer.redundancy_table.remove(&addr);

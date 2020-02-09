@@ -1,12 +1,13 @@
 use crate::interface::MusicState;
-use crate::network::response::Message;
 use crate::interface::*;
-use crate::utils::Instructions;
+use crate::network::response::Message;
+use crate::utils::FileInstructions;
 use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream};
 use std::process;
-use std::time::{SystemTime, Duration};
+use std::time::{Duration, SystemTime};
 
+/// The content enum for `Message`s.
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Content {
     PushToDB {
@@ -36,15 +37,15 @@ pub enum Content {
         value: String,
     },
     FindFile {
-        instr: Instructions,
+        instr: FileInstructions,
         song_name: String,
     },
     GetFile {
-        instr: Instructions,
+        instr: FileInstructions,
         key: String,
     },
     GetFileResponse {
-        instr: Instructions,
+        instr: FileInstructions,
         key: String,
         value: Vec<u8>,
     },
@@ -84,6 +85,10 @@ pub enum Content {
     },
 }
 
+/// Sends a TCPRequest to the specified target.
+/// # Parameters:
+/// - `target` - The target
+/// - `notification` - The `Notification` that is to be sent to the target
 pub fn tcp_request_with_notification(target: SocketAddr, notification: Notification) {
     let stream = match TcpStream::connect_timeout(&target, Duration::new(1, 1)) {
         Ok(s) => s,

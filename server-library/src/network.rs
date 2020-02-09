@@ -1,11 +1,11 @@
+use crate::interface::*;
 use std::io::{ErrorKind, Read};
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
-use std::{fs, io, thread};
-use crate::interface::*;
+use std::{fs, io, thread, process};
 
 mod handshake;
 mod music_exchange;
@@ -20,12 +20,11 @@ extern crate rand;
 use rand::Rng;
 
 
-
-use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
+use crate::utils::FileStatus::{DELETE, DOWNLOAD, NEW};
+use crate::utils::{AppListener, FileInstructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
-use crate::interface::*;
-use peer::{create_peer};
+use peer::create_peer;
 use request::{
     change_peer_name, delete_file_request, delete_from_network, dropped_peer, exist_file,
     exist_file_response, exit_peer, find_file, get_file, get_file_response, order_song_request,
@@ -34,16 +33,14 @@ use request::{
 };
 use std::collections::HashMap;
 use std::path::Path;
-use crate::utils::ListenerInstr::{DELETE, DOWNLOAD, NEW};
 
 fn validate_port(port: &str) -> Result<&str, String> {
-    if let Err(e) = port.parse::<u32>() {
+    if let Err(_e) = port.parse::<u32>() {
         return Err("The supplied port is not numeric".to_string());
     }
     if port.len() != 4 {
         return Err("The supplied port does not have four digits".to_string());
     }
-    // TODO: Port range for exam.
     Ok(port)
 }
 
@@ -143,7 +140,6 @@ pub fn startup(
                         Ok(a) => a,
                         Err(e) => e.into_inner(),
                     };
-                    println!("handle notification");
                     handle_notification(not, &mut peer, &mut app);
                 }
                 Err(e) => {
@@ -152,25 +148,19 @@ pub fn startup(
             }
         });
 
-    let sender_clone = sender.clone();
-    let _listener = match thread::Builder::new()
+    let sender_clone = sender;
+    if let Err(e) = thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
-            match listen_tcp(peer_arc_clone_listen, sender_clone) {
-                Ok(_) => {}
-                Err(_) => {
-                    eprintln!("Failed to spawn listener");
-                }
+            if let Err(e) = listen_tcp(peer_arc_clone_listen, sender_clone) {
+                println!("Failed to create connection: {:?}", e);
+                process::exit(1);
             };
         }) {
-        Ok(s) => s,
-        Err(_e) => {
-            return Err("Failed to spwan listener".to_string());
-        }
+        println!("{:?}", e);
     };
 
     let _peer_arc_clone_interact = peer_arc.clone();
-    let peer_arc_clone_heartbeat = peer_arc.clone();
 
     //send request existing network table
     match ip_address {
@@ -182,27 +172,22 @@ pub fn startup(
         }
     }
 
-    let _heartbeat = match thread::Builder::new()
+    if let Err(_e) = thread::Builder::new()
         .name("Heartbeat".to_string())
-        .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
-            Ok(_) => {}
-            Err(_) => {
-                eprintln!("Failed to spawn shell");
+        .spawn(move || {
+            if let Err(e) = start_heartbeat(peer_arc) {
+                eprintln!("Failed to spawn heartbeat, {:?}", e);
             }
-        }) {
-        Ok(h) => h,
-        Err(_e) => {
-            return Err("Failed to spawn shell".to_string());
-        }
+        })
+    {
+        return Err("Failed to spawn heartbeat".to_string());
     };
 
     Ok(peer_arc_clone_return)
 }
 
 fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result<(), String> {
-    let clone = arc.clone();
-    let sender_clone = sender.clone();
-    let peer = match clone.lock() {
+    let peer = match arc.lock() {
         Ok(p) => p,
         Err(e) => e.into_inner(),
     };
@@ -211,7 +196,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
     let listener = match TcpListener::bind(&listen_ip) {
         Ok(l) => l,
         Err(_e) => {
-            println!("Error here {:?}", _e);
+            println!("Error: {:?}", _e);
             return Err("Could't bind TCP Listener.".to_string());
         }
     };
@@ -226,11 +211,11 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
                     Ok(val) => val,
                     Err(e) => {
                         dbg!(e);
-                        println!("Could not deserialize {:?}", &buf);
+                        println!("Could not deserialize notification");
                         continue; // skip this stream
                     }
                 };
-                if let Err(_e) = sender_clone.send(des) {
+                if let Err(_e) = sender.send(des) {
                     error!("Could not send notification through the channel.");
                 };
             }
@@ -256,7 +241,7 @@ fn start_heartbeat(arc: Arc<Mutex<Peer>>) -> Result<(), String> {
         let network_size = peer_clone.network_table.len();
         if network_size == 1 {
             continue;
-        } else if network_size <= 10 {
+        } else if network_size <= 20 {
             send_heartbeat(&peer_clone.get_all_socketaddr_from_peers(), &mut peer_clone);
         } else {
             let successors = peer_clone.get_heartbeat_successors();
@@ -297,7 +282,7 @@ fn handle_notification(
     //dbg!(&notification);
     let sender = notification.from;
     match notification.content {
-        Content::PushToDB { key, value, from } => {
+        Content::PushToDB { key, value, .. } => {
             push_to_db(key, value, peer, listener);
         }
         Content::RedundantPushToDB { key, value, from } => {
@@ -330,11 +315,11 @@ fn handle_notification(
         Content::GetFileResponse { value, instr, key } => {
             if get_file_response(&instr, &key, value, peer).is_ok() {
                 match instr {
-                    Instructions::GET => {
-                        listener.file_status_changed(key, DOWNLOAD);
+                    FileInstructions::GET => {
+                        listener.local_database_changed(key, DOWNLOAD);
                     }
-                    Instructions::ORDER => {
-                        listener.file_status_changed(key, NEW);
+                    FileInstructions::ORDER => {
+                        listener.local_database_changed(key, NEW);
                     }
                     _ => {}
                 }
@@ -342,7 +327,7 @@ fn handle_notification(
         }
         Content::DeleteFileRequest { song_name } => {
             delete_file_request(&song_name, peer);
-            listener.file_status_changed(song_name, DELETE);
+            listener.local_database_changed(song_name, DELETE);
         }
         Content::Response { .. } => {}
         Content::ExitPeer { addr } => {
@@ -363,7 +348,7 @@ fn handle_notification(
         Content::StatusResponse { files, name } => {
             listener.notify_status(files, name);
         }
-        Content::PlayAudioRequest { name, state } => {}
+        Content::PlayAudioRequest { .. } => {}
         Content::DroppedPeer { addr } => {
             dropped_peer(addr, peer);
         }
@@ -378,29 +363,41 @@ pub fn send_write_request(
     redundant: bool,
     peer: &mut Peer,
 ) {
-    let stream = match TcpStream::connect(target) {
-        Ok(s) => s,
-        Err(_e) => {
-            handle_lost_connection(target, peer);
-            return;
-        }
-    };
-    if let true = redundant {
-        let not = Notification {
-            content: Content::RedundantPushToDB {
-                key: data.0,
-                value: data.1,
-                from: origin.to_string(),
-            },
-            from: origin,
-        };
-        match serde_json::to_writer(&stream, &not) {
-            Ok(ser) => ser,
-            Err(e) => {
-                error!("Could not serialize {:?}, Error: {:?}", &not, e);
-                println!("Failed to serialize SendRequest {:?}", &not);
+    let arc_peer = Arc::new(Mutex::new(peer.clone()));
+    if let Err(e) = thread::Builder::new()
+        .name("request_thread".to_string())
+        .spawn(move || {
+            let mut peer_lock = match arc_peer.lock() {
+                Ok(p) => p,
+                Err(e) => e.into_inner(),
+            };
+            let stream = match TcpStream::connect(target) {
+                Ok(s) => s,
+                Err(_e) => {
+                    handle_lost_connection(target, &mut peer_lock);
+                    return;
+                }
+            };
+            if let true = redundant {
+                let not = Notification {
+                    content: Content::RedundantPushToDB {
+                        key: data.0,
+                        value: data.1,
+                        from: origin.to_string(),
+                    },
+                    from: origin,
+                };
+                match serde_json::to_writer(&stream, &not) {
+                    Ok(ser) => ser,
+                    Err(e) => {
+                        error!("Could not serialize {:?}, Error: {:?}", &not, e);
+                        println!("Failed to serialize SendRequest {:?}", &not);
+                    }
+                };
             }
-        };
+        })
+    {
+        error!("Request Thread could not be spwaned: Error: {:?}", e);
     }
 }
 
@@ -433,9 +430,8 @@ fn other_random_target(
     Some(*target)
 }
 
-
 /// Communicate to the listener that we want to find the location of a given file
-pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
+pub fn send_read_request(peer: &mut Peer, name: &str, instr: FileInstructions) {
     let not = Notification {
         content: Content::FindFile {
             instr,
@@ -501,10 +497,7 @@ fn send_local_file_status(
 
 pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicState) {
     let not = Notification {
-        content: Content::PlayAudioRequest {
-            name,
-            state,
-        },
+        content: Content::PlayAudioRequest { name, state },
         from: peer.ip_address,
     };
     if let Err(e) = peer.sender.send(not) {
@@ -513,9 +506,8 @@ pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicStat
 }
 
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
-    //    peer.drop_peer_by_ip(&addr);
     let mut cloned_peer = peer.clone();
-    // TODO: Send notification to other peers that this peer was dropped
+    peer.drop_peer_by_ip(&addr);
     for other_addr in peer.network_table.values() {
         if *other_addr != addr {
             send_dropped_peer_notification(*other_addr, addr, &mut cloned_peer)
@@ -546,7 +538,6 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
     }
 }
 
-
 /// Function to check file path to mp3 and saves to db afterwards
 /// # Arguments:
 ///
@@ -555,7 +546,7 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
 /// * `peer` - Peer
 ///
 /// # Returns:
-/// Result //@TODO
+/// Result
 pub fn push_music_to_database(
     name: &str,
     file_path: &str,

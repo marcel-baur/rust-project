@@ -154,9 +154,6 @@ Cargo.lock
 /target
 /shell-app/target
 
-# mp3 files
-/file/
-
 # logs
 /log/
 gui-app/target
