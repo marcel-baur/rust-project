@@ -156,6 +156,10 @@ pub fn find_file(
                     delete_redundant_song_request(*value, peer.ip_address, &song_name);
                 }
             }
+        } else if instr == GET {
+            if let Some(file) = peer.get_db().get_data().get(&song_name) {
+                save_music_to_disk(file.clone(), &song_name);
+            }
         }
     } else {
         let id = SystemTime::now();

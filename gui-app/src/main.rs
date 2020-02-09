@@ -388,7 +388,6 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: 
     quit.connect_activate(clone!(@weak main_window => move |_| {
         let meff_quit = Rc::clone(&meff_clone_quit);
         meff_quit.borrow_mut().quit();
-        main_window.destroy();
     }));
 
     // `Primary` is `Ctrl` on Windows and Linux, and `command` on macOS

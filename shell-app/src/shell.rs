@@ -118,7 +118,6 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             Some(&"exit") => {
                 println!("You are leaving the network.");
                 delete_peer(&mut peer_clone);
-                //TODO: stop steams
             }
             Some(&"status") => {
                 print_peer_status(&arc);
