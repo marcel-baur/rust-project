@@ -105,10 +105,35 @@ For more information:
     glib-sys 
     
     glib
+    
+## Contributions
+
+The majority of this project was developed in group or in teams of two. Therefore, a division per person is rather difficult. A rough outline is the following:
+
+### Marcel
+- Architecture
+- Network
+- Threading
+
+### Elena
+- Load Management
+- Heartbeat
+- Debugging
+
+### Franziska
+- GUI
+- Graceful Exit
+- Removing Files
+- Error Handling
+
+### Fabian
+- Interface / GUI
+- Handshake
+- Audio
 
 ## Participants
 - Marcel Baur
-- Fabian Frey
-- Franziska Lang
 - Elena Liebl
+- Franziska Lang
+- Fabian Frey
 
