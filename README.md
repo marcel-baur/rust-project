@@ -22,7 +22,7 @@ Users will be able to choose what to do with the music by either downloading it 
 
 There are two ways to use the MEFF-Application:
 
-#### Shell-App
+#### Shell-App (Server version without audio functionality)
 
 If you want to create a new peer network use the following command:
 
@@ -42,17 +42,16 @@ The application can now be used with following commands:
 - `remove [mp3 name]` - deletes mp3 file from database
 - `exit` - exit network
 
-#### GUI-App
+#### GUI-App (Desktop version with audio functionality)
 
 To make the app easier to use we have created a GUI implemented with the gtk library.
 Downloading, streaming or playing the music can now be controlled by a simple user interface.
 
-Prerequisite: for using the GUI-App the gtk library must be installed
+To start the GUI-App type:
 
-    brew install gtk-3
+```cargo run```
 
-
-Similar to the shell app, the GUI can be started either by joining an existing network or creating a new network.
+Similar to the shell app, the user has the option to either join an existing network or to create a new one.
 
 The interface is divided into two parts:
 - The right side contains a list of your own songs. These can be deleted, played, paused and stopped. 
@@ -63,6 +62,17 @@ The interface is divided into two parts:
 
 <img src="https://fabianfrey.de/meff.png" width="320" />
 
+## Requirements GUI-App
+The gtk crate expects GTK+, GLib and Cairo development files to be installed on your system.
+#### macOS
+```brew install gtk+3```
+#### Debian and Ubuntu
+```sudo apt-get install libgtk-3-dev```
+#### Fedora
+```sudo dnf install gtk3-devel glib2-devel```
+
+For more information: 
+[gtk-rs Documentation](https://gtk-rs.org/docs-src/requirements)
 
 ## Crates used:
 
