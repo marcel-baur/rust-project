@@ -175,7 +175,7 @@ pub fn get_file_response(
 ) -> Result<(), String> {
     match instr {
         GET => {
-            save_music_to_disk(value, key);
+            if let Err(e) = save_music_to_disk(value, key) { return Err("Could not save music to disk.".to_string());};
             return Ok(());
         }
         ORDER => {
@@ -290,7 +290,7 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
 pub fn redistribute_files (addr: SocketAddr, peer: &mut Peer) {
     if peer.network_table.len() > 1 {
         let database = peer.get_db().get_data();
-        let mut redundant_table = &peer.redundancy_table;
+        let redundant_table = &peer.redundancy_table;
         let network_table = &peer.network_table;
         let song_list = match redundant_table.get(&addr) {
             Some(s) => s,
