@@ -61,7 +61,7 @@ pub fn send_get_file_reponse(
         from,
     };
 
-    if let Err(e) = thread::Builder::new()
+    if let Err(_e) = thread::Builder::new()
         .name("send_get_file_reponse_thread".to_string())
         .spawn(move || {
             tcp_request_with_notification(target, not);

@@ -189,7 +189,7 @@ pub fn startup(
         }
     }
 
-    if let Err(e) = thread::Builder::new()
+    if let Err(_e) = thread::Builder::new()
         .name("Heartbeat".to_string())
         .spawn(move || {
             if let Err(e) = start_heartbeat(peer_arc_clone_heartbeat) {
@@ -302,7 +302,7 @@ fn handle_notification(
     //dbg!(&notification);
     let sender = notification.from;
     match notification.content {
-        Content::PushToDB { key, value, from } => {
+        Content::PushToDB { key, value, .. } => {
             push_to_db(key, value, peer, listener);
         }
         Content::RedundantPushToDB { key, value, from } => {

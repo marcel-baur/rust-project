@@ -1,5 +1,5 @@
 use crate::shell;
-use meff::utils::{AppListener, FileInstructions, FileStatus};
+use meff::utils::{AppListener, FileStatus};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]

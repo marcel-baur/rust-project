@@ -2,7 +2,6 @@ use prettytable::format;
 extern crate colored;
 use colored::*;
 use meff::interface::{Peer, upload_music, music_request, delete_peer, music_control};
-use meff::utils;
 use meff::utils::FileInstructions::{GET, REMOVE};
 use std::borrow::BorrowMut;
 use std::convert::TryFrom;
@@ -13,7 +12,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::util::Application;
 use meff::interface::MusicState::{PAUSE, STOP, CONTINUE, PLAY};
-use std::time::Duration;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));

@@ -158,7 +158,9 @@ pub fn find_file(
             }
         } else if instr == GET {
             if let Some(file) = peer.get_db().get_data().get(&song_name) {
-                save_music_to_disk(file.clone(), &song_name);
+                if let Err(e) = save_music_to_disk(file.clone(), &song_name) {
+                    error!("{}", e);
+                }
             }
         }
     } else {

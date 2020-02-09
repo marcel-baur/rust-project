@@ -12,7 +12,7 @@ use crate::network::{
     other_random_target, send_local_file_status, send_read_request, send_status_request,
     send_write_request,
 };
-use crate::utils::FileInstructions::{GET, ORDER, PLAY, REMOVE};
+use crate::utils::FileInstructions::{GET, ORDER, REMOVE};
 use crate::utils::FileStatus::{DELETE, NEW};
 use crate::utils::{AppListener, FileInstructions};
 use std::net::SocketAddr;
@@ -158,7 +158,9 @@ pub fn find_file(
             }
         } else if instr == GET {
             if let Some(file) = peer.get_db().get_data().get(&song_name) {
-                save_music_to_disk(file.clone(), &song_name);
+                if let Err(e) = save_music_to_disk(file.clone(), &song_name) {
+                    error!("{}", e);
+                }
             }
         }
     } else {

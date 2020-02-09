@@ -385,10 +385,10 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: 
     });
 
 
-    quit.connect_activate(clone!(@weak main_window => move |_| {
+    quit.connect_activate(move |_| {
         let meff_quit = Rc::clone(&meff_clone_quit);
         meff_quit.borrow_mut().quit();
-    }));
+    });
 
     // `Primary` is `Ctrl` on Windows and Linux, and `command` on macOS
     // It isn't available directly through gdk::ModifierType, since it has
@@ -566,7 +566,7 @@ fn build_ui(application: &gtk::Application, meff: Rc<RefCell<Model>>, receiver: 
         let p = AboutDialog::new();
         p.set_authors(&["Fabian Frey, Marcel Baur, Elena Liebl, Franziska Lang"]);
         p.set_website_label(Some("MEFF - Music Entertainment For Friends "));
-        p.set_website(Some("http://gtk-rs.org"));
+        p.set_website(Some("https://github.com/marcel-baur/rust-project"));
         p.set_title("About");
         p.set_transient_for(Some(&main_window));
         p.run();
