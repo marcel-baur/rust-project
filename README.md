@@ -47,6 +47,11 @@ The application can now be used with following commands:
 To make the app easier to use we have created a GUI implemented with the gtk library.
 Downloading, streaming or playing the music can now be controlled by a simple user interface.
 
+Prerequisite: for using the GUI-App the gtk library must be installed
+
+    brew install gtk-3
+
+
 Similar to the shell app, the GUI can be started either by joining an existing network or creating a new network.
 
 The interface is divided into two parts:
