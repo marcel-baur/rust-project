@@ -3,6 +3,7 @@ use crate::network::notification::{tcp_request_with_notification, Content};
 use crate::utils::FileInstructions;
 use std::net::SocketAddr;
 use std::time::SystemTime;
+use std::thread;
 
 /// Sends a request to the other peers to check if they have the wanted file
 pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
