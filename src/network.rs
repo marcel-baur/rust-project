@@ -420,10 +420,13 @@ pub fn send_write_request(
     peer: &mut Peer,
 ) {
     let arc_peer = Arc::new(Mutex::new(peer.clone()));
-    thread::Builder::new()
+    if let Err(e) = thread::Builder::new()
         .name("request_thread".to_string())
         .spawn(move || {
-            let mut peer_lock = arc_peer.lock().unwrap();
+            let mut peer_lock = match arc_peer.lock() {
+                Ok(p) => p,
+                Err(e) => e.into_inner()
+            };
             let stream = match TcpStream::connect(target) {
                 Ok(s) => s,
                 Err(_e) => {
@@ -448,7 +451,9 @@ pub fn send_write_request(
                     }
                 };
             }
-        });
+        }) {
+        error!("Request Thread could not be spwaned: Error: {:?}", e);
+    }
 }
 
 /// Selects a random `SocketAddr` from the `network_table` that is not equal to `own_ip`. Returns
