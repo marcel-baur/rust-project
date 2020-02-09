@@ -54,8 +54,10 @@ The interface is divided into two parts:
 - On the left side, there are commands concerning the other peers in the network.
     - The download button saves a specific song from other peers in your database. 
     - The streaming button plays the song from others.
+    
 
-![GUI](https://fabianfrey.de/meff.png)
+<img src="https://fabianfrey.de/meff.png" width="320" />
+
 
 ## Crates used:
 
