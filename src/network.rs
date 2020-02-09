@@ -309,7 +309,7 @@ fn handle_notification(
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
-            push_to_db(key, value, from, peer, listener);
+            push_to_db(key, value, peer, listener);
         }
         Content::RedundantPushToDB { key, value, from } => {
             redundant_push_to_db(key, value, peer, listener, from);
@@ -414,7 +414,7 @@ pub fn send_write_request(
     peer: &mut Peer,
 ) {
     let arc_peer = Arc::new(Mutex::new(peer.clone()));
-    thread::Builder::new()
+    if let Err(e) = thread::Builder::new()
         .name("request_thread".to_string())
         .spawn(move || {
             let mut peer_lock = match arc_peer.lock() {
@@ -445,7 +445,9 @@ pub fn send_write_request(
                     }
                 };
             }
-        });
+        }) {
+        error!("Request Thread could not be spwaned: Error: {:?}", e);
+    }
 }
 
 /// Selects a random `SocketAddr` from the `network_table` that is not equal to `own_ip`. Returns
