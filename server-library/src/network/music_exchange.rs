@@ -1,6 +1,6 @@
-use crate::network::notification::{tcp_request_with_notification, Content};
 use crate::interface::Notification;
-use crate::utils::Instructions;
+use crate::network::notification::{tcp_request_with_notification, Content};
+use crate::utils::FileInstructions;
 use std::net::SocketAddr;
 use std::time::SystemTime;
 
@@ -31,7 +31,7 @@ pub fn send_exist_response(target: SocketAddr, from: SocketAddr, name: &str, id:
 }
 
 /// Sends a request (as a response of ExistFileResponse Request) to get a certain file
-pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: Instructions) {
+pub fn send_file_request(target: SocketAddr, from: SocketAddr, name: &str, instr: FileInstructions) {
     let not = Notification {
         content: Content::GetFile {
             instr,
@@ -49,7 +49,7 @@ pub fn send_get_file_reponse(
     from: SocketAddr,
     key: &str,
     value: Vec<u8>,
-    instr: Instructions,
+    instr: FileInstructions,
 ) {
     let not = Notification {
         content: Content::GetFileResponse {

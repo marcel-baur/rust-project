@@ -1,5 +1,5 @@
-use crate::network::notification::*;
 use crate::interface::*;
+use crate::network::notification::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -35,7 +35,9 @@ pub fn json_string_to_network_table(json_string: String) -> HashMap<String, Sock
     hashmap
 }
 
-pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> Result<String, String> {
+pub fn network_table_to_json(
+    network_table: &HashMap<String, SocketAddr>,
+) -> Result<String, String> {
     let mut array = vec![];
     for (key, address) in network_table {
         array.push(NetworkInfo {
@@ -46,8 +48,11 @@ pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> Res
     match serde_json::to_string(&array) {
         Ok(str) => Ok(str),
         Err(e) => {
-//            format!("Could not parse the network table to a JSON-String: {:?}", e);
-            Err(format!("Could not parse the network table to a JSON-String: {:?}", e))
+            //            format!("Could not parse the network table to a JSON-String: {:?}", e);
+            Err(format!(
+                "Could not parse the network table to a JSON-String: {:?}",
+                e
+            ))
         }
     }
 }

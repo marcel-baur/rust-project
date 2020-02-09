@@ -328,7 +328,11 @@ pub fn redistribute_files(addr: SocketAddr, peer: &mut Peer) {
                         continue;
                     }
                 };
-                song_order_request(redundant_target, peer.ip_address, song.to_string());
+                let file = match peer.find_file(song) {
+                    Some(f) => f,
+                    None => {return;}
+                };
+                send_write_request(redundant_target, peer.ip_address, (song.to_string(), file.clone()),true, peer );
             }
         }
         peer.redundancy_table.remove(&addr);

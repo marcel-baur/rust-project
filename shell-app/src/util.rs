@@ -1,5 +1,5 @@
 use crate::shell;
-use meff::utils::{AppListener, ListenerInstr};
+use meff::utils::{AppListener, FileInstructions, FileStatus};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -11,15 +11,15 @@ impl AppListener for Application {
     fn notify_status(&self, files: Vec<String>, name: String) {
         shell::print_external_files(files, name);
     }
-    fn file_status_changed(&mut self, name: String, instr: ListenerInstr) {
+    fn local_database_changed(&mut self, name: String, instr: FileStatus) {
         match instr {
-            ListenerInstr::NEW => {
+            FileStatus::NEW => {
                 println!("New file {} saved!", name);
             }
-            ListenerInstr::DELETE => {
+            FileStatus::DELETE => {
                 println!("Deleted file {}!", name);
             }
-            ListenerInstr::DOWNLOAD => {
+            FileStatus::DOWNLOAD => {
                 println!("Download file {} successfully!", name);
             }
         }

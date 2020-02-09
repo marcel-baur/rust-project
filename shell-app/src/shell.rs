@@ -3,7 +3,7 @@ extern crate colored;
 use colored::*;
 use meff::interface::{Peer, upload_music, music_request, delete_peer, music_control};
 use meff::utils;
-use meff::utils::Instructions::{GET, REMOVE};
+use meff::utils::FileInstructions::{GET, REMOVE};
 use std::borrow::BorrowMut;
 use std::convert::TryFrom;
 use std::error::Error;
@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::util::Application;
 use meff::interface::MusicState::{PAUSE, STOP, CONTINUE, PLAY};
+use std::time::Duration;
 
 pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Result<(), Box<dyn Error>> {
     let interaction_in_progress = Arc::new(AtomicBool::new(false));
@@ -43,16 +44,17 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
             return Err(Box::try_from("Failed to spwan thread".to_string()).unwrap());
         }
     };
+    Ok(())
 
-    loop {
-        let peer = match arc.lock() {
-            Ok(p) => p,
-            Err(e) => e.into_inner(),
-        };
-        let _peer_clone = peer.clone();
-        drop(peer);
-        thread::sleep(utils::THREAD_SLEEP_DURATION);
-    }
+//    loop {
+//        let peer = match arc.lock() {
+//            Ok(p) => p,
+//            Err(e) => e.into_inner(),
+//        };
+//        let _peer_clone = peer.clone();
+//        drop(peer);
+//        thread::sleep(Duration::new(10, ));
+//    }
 }
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>) {
