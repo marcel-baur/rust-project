@@ -26,7 +26,7 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
     };
 
     drop(peer);
-    let _handle = match thread::Builder::new()
+    let handle = match thread::Builder::new()
         .name("Interaction".to_string())
         .spawn(move || loop {
             let peer = match arc_clone.lock() {
@@ -44,17 +44,8 @@ pub fn spawn_shell(arc: Arc<Mutex<Peer>>, model: Arc<Mutex<Application>>) -> Res
             return Err(Box::try_from("Failed to spwan thread".to_string()).unwrap());
         }
     };
+    handle.join().unwrap();
     Ok(())
-
-//    loop {
-//        let peer = match arc.lock() {
-//            Ok(p) => p,
-//            Err(e) => e.into_inner(),
-//        };
-//        let _peer_clone = peer.clone();
-//        drop(peer);
-//        thread::sleep(Duration::new(10, ));
-//    }
 }
 
 pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>) {
