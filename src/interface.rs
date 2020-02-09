@@ -88,6 +88,10 @@ pub fn upload_music(
 /// - `port` - The port you want to listen on
 /// - `ip` - An optional `SocketAddr`. Pass a value if you want to join a network on that
 ///     `SocketAddr`. `None` if you want to start a fresh network.
+///
+/// # Returns
+/// `Result<Arc<Mutex<Peer>>, String>`The local `Peer` in a `Mutex` if `Ok`,
+/// Error message as `String` on `Err`
 pub fn start(module: Box<dyn AppListener + Sync>, name: String, port: String, ip: Option<SocketAddr>) -> Result<Arc<Mutex<Peer>>, String> {
     let clone = Arc::new(Mutex::new(module));
     match network::startup(&name, &port, ip, clone) {
