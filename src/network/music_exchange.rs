@@ -3,6 +3,7 @@ use crate::network::notification::{tcp_request_with_notification, Content};
 use crate::utils::FileInstructions;
 use std::net::SocketAddr;
 use std::time::SystemTime;
+use std::{thread};
 
 /// Sends a request to the other peers to check if they have the wanted file
 pub fn read_file_exist(target: SocketAddr, from: SocketAddr, name: &str, id: SystemTime) {
@@ -60,7 +61,13 @@ pub fn send_get_file_reponse(
         from,
     };
 
-    tcp_request_with_notification(target, not);
+    if let Err(e) = thread::Builder::new()
+        .name("send_get_file_reponse_thread".to_string())
+        .spawn(move || {
+            tcp_request_with_notification(target, not);
+        }) {
+        error!("could not spwan request_thread");
+    }
 }
 
 pub fn song_order_request(target: SocketAddr, from: SocketAddr, song_name: String) {
