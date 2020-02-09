@@ -424,7 +424,10 @@ pub fn send_write_request(
     thread::Builder::new()
         .name("request_thread".to_string())
         .spawn(move || {
-            let mut peer_lock = arc_peer.lock().unwrap();
+            let mut peer_lock = match arc_peer.lock() {
+                Ok(p) => p,
+                Err(e) => e.into_inner()
+            };
             let stream = match TcpStream::connect(target) {
                 Ok(s) => s,
                 Err(_e) => {
