@@ -230,7 +230,7 @@ fn listen_tcp(arc: Arc<Mutex<Peer>>, sender: SyncSender<Notification>) -> Result
                     Ok(val) => val,
                     Err(e) => {
                         dbg!(e);
-                        println!("Could not deserialize {:?}", &buf);
+                        println!("Could not deserialize notification");
                         continue; // skip this stream
                     }
                 };
