@@ -2,9 +2,9 @@ use crate::interface::Peer;
 use crate::network::send_read_request;
 use crate::utils::Instructions::PLAY;
 use rodio::Sink;
+use std::fs;
 use std::io::{BufReader, Cursor};
 use std::string::ToString;
-use std::fs;
 
 pub struct MusicPlayer {
     sink: Sink,
@@ -27,7 +27,7 @@ pub fn create_sink() -> Result<MusicPlayer, String> {
 pub fn save_music_to_disk(music: Vec<u8>, name: &str) -> Result<(), String> {
     println!("{}", "save_music_to_disk".to_string());
     let path = format!("../file/{}.mp3", name);
-    match fs::write(path ,music) {
+    match fs::write(path, music) {
         Ok(_) => Ok(()),
         Err(_e) => Err("could not save file to disk".to_string()),
     }
@@ -38,9 +38,13 @@ pub fn save_music_to_disk(music: Vec<u8>, name: &str) -> Result<(), String> {
 ///
 /// * `name` - String including mp3 name (key in our database)
 ///
-pub fn play_music(peer: &mut Peer, name: &Option<String>, sink: &mut MusicPlayer) -> Result<(), String> {
+pub fn play_music(
+    peer: &mut Peer,
+    name: &Option<String>,
+    sink: &mut MusicPlayer,
+) -> Result<(), String> {
     // we play sound when it is in our own database, otherwise we ask for the location
-    let title ;
+    let title;
     if let Some(song_name) = name {
         title = song_name.to_string();
     } else if let Some(song_name) = &sink.current_song_name {
@@ -77,7 +81,11 @@ pub fn continue_paused_music(sink: &mut MusicPlayer) -> Result<(), String> {
     Ok(())
 }
 
-pub fn play_music_by_vec(music: Vec<u8>, sink: &mut MusicPlayer, name: String) -> Result<(), String> {
+pub fn play_music_by_vec(
+    music: Vec<u8>,
+    sink: &mut MusicPlayer,
+    name: String,
+) -> Result<(), String> {
     sink.current_song_name = Some(name);
     let music_a = Cursor::new(music);
     let file = BufReader::new(music_a);

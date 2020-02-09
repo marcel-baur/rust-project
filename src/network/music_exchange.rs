@@ -1,5 +1,5 @@
-use crate::network::notification::{tcp_request_with_notification, Content};
 use crate::interface::Notification;
+use crate::network::notification::{tcp_request_with_notification, Content};
 use crate::utils::Instructions;
 use std::net::SocketAddr;
 use std::time::SystemTime;

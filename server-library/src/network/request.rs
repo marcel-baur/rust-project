@@ -51,6 +51,7 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
     }
 }
 
+/// Redundantly save a file on another peer.
 pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>, from: String) {
     let key_clone = key.clone();
     let key_redundant_clone = key.clone();
@@ -67,6 +68,7 @@ pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listen
     }
 }
 
+/// Change the name of a peer to a new `value`
 pub fn change_peer_name(value: String, sender: SocketAddr, peer: &mut Peer) {
     peer.network_table.remove(&peer.name);
     peer.name = value;
@@ -76,6 +78,7 @@ pub fn change_peer_name(value: String, sender: SocketAddr, peer: &mut Peer) {
     send_table_request(sender, *peer.get_ip(), &peer.name);
 }
 
+/// Send the network table to all other peers in the network.
 pub fn send_network_table(value: Vec<u8>, peer: &mut Peer) {
     let table = match String::from_utf8(value) {
         Ok(val) => val,
@@ -107,6 +110,7 @@ pub fn send_network_update_table(value: Vec<u8>, peer: &mut Peer) {
     }
 }
 
+/// Request the current network table when a peer wants to join the network.
 pub fn request_for_table(value: String, sender: SocketAddr, peer: &mut Peer) {
     // checks if key is unique, otherwise send change name request
     if peer.network_table.contains_key(&value) {

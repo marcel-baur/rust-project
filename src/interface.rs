@@ -1,15 +1,17 @@
 use crate::database::Database;
-use crate::network::{push_music_to_database, send_read_request, send_play_request, send_delete_peer_request};
-use crate::network::notification::{Content};
+use crate::network;
+use crate::network::notification::Content;
+use crate::network::{
+    push_music_to_database, send_delete_peer_request, send_play_request, send_read_request,
+};
+use crate::utils::{AppListener, Instructions};
 use serde::{Deserialize, Serialize};
-use crate::utils::{Instructions, AppListener};
 use std::collections::HashMap;
+use std::io;
 use std::net::SocketAddr;
 use std::sync::mpsc::SyncSender;
-use std::time::SystemTime;
-use std::io;
-use crate::network;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum MusicState {
@@ -34,7 +36,7 @@ pub struct Peer {
     pub database: Database,
     pub open_request_table: HashMap<SystemTime, Instructions>,
     pub sender: SyncSender<Notification>,
-    pub redundancy_table: HashMap<SocketAddr, Vec<String>>
+    pub redundancy_table: HashMap<SocketAddr, Vec<String>>,
 }
 
 /// This function removes the Peer from the Network. Call it if you want to disconnect your
@@ -78,7 +80,6 @@ pub fn upload_music(
     push_music_to_database(name, file_path, addr, peer)
 }
 
-
 /// Use this function to connect to the network.
 /// # Parameters
 /// - `module` - A listener object that implements `AppListener` and `Sync` as a boxed value
@@ -90,10 +91,15 @@ pub fn upload_music(
 /// # Returns
 /// `Result<Arc<Mutex<Peer>>, String>`The local `Peer` in a `Mutex` if `Ok`,
 /// Error message as `String` on `Err`
-pub fn start(module: Box<dyn AppListener + Sync>, name: String, port: String, ip: Option<SocketAddr>) -> Result<Arc<Mutex<Peer>>, String> {
+pub fn start(
+    module: Box<dyn AppListener + Sync>,
+    name: String,
+    port: String,
+    ip: Option<SocketAddr>,
+) -> Result<Arc<Mutex<Peer>>, String> {
     let clone = Arc::new(Mutex::new(module));
     match network::startup(&name, &port, ip, clone) {
         Ok(p) => Ok(p),
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     }
 }

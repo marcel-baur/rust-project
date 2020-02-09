@@ -1,3 +1,4 @@
+use crate::interface::*;
 use std::io::{ErrorKind, Read};
 use std::net::TcpListener;
 use std::net::{SocketAddr, TcpStream};
@@ -5,7 +6,6 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::{Arc, Mutex};
 use std::{fs, io, thread};
-use crate::interface::*;
 
 mod handshake;
 mod music_exchange;
@@ -24,10 +24,11 @@ use crate::audio::{
     stop_current_playing_music, MusicPlayer,
 };
 
+use crate::utils::ListenerInstr::{DELETE, DOWNLOAD, NEW};
 use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
-use peer::{create_peer};
+use peer::create_peer;
 use request::{
     change_peer_name, delete_file_request, delete_from_network, dropped_peer, exist_file,
     exist_file_response, exit_peer, find_file, get_file, get_file_response, order_song_request,
@@ -36,7 +37,6 @@ use request::{
 };
 use std::collections::HashMap;
 use std::path::Path;
-use crate::utils::ListenerInstr::{DELETE, DOWNLOAD, NEW};
 
 fn validate_port(port: &str) -> Result<&str, String> {
     if let Err(_e) = port.parse::<u32>() {
@@ -195,18 +195,15 @@ pub fn startup(
         }
     }
 
-    let _heartbeat = match thread::Builder::new()
+    if let Err(e) = thread::Builder::new()
         .name("Heartbeat".to_string())
-        .spawn(move || match start_heartbeat(peer_arc_clone_heartbeat) {
-            Ok(_) => {}
-            Err(_) => {
-                eprintln!("Failed to spawn shell");
+        .spawn(move || {
+            if let Err(e) = start_heartbeat(peer_arc_clone_heartbeat) {
+                eprintln!("Failed to spawn heartbeat, {:?}", e);
             }
-        }) {
-        Ok(h) => h,
-        Err(_e) => {
-            return Err("Failed to spawn shell".to_string());
-        }
+        })
+    {
+        return Err("Failed to spawn heartbeat".to_string());
     };
 
     Ok(peer_arc_clone_return)
@@ -344,9 +341,7 @@ fn handle_notification(
         Content::GetFileResponse { value, instr, key } => {
             if get_file_response(&instr, &key, value, peer, sink).is_ok() {
                 match instr {
-                    Instructions::PLAY => {
-                        listener.player_playing(Some(key))
-                    }
+                    Instructions::PLAY => listener.player_playing(Some(key)),
                     Instructions::GET => {
                         listener.file_status_changed(key, DOWNLOAD);
                     }
@@ -355,7 +350,6 @@ fn handle_notification(
                     }
                     _ => {}
                 }
-
             }
         }
         Content::DeleteFileRequest { song_name } => {
@@ -387,22 +381,22 @@ fn handle_notification(
                     if play_music(peer, &name, sink).is_ok() {
                         listener.player_playing(name);
                     }
-                },
+                }
                 MusicState::PAUSE => {
                     if pause_current_playing_music(sink).is_ok() {
                         println!("pause");
                     }
-                },
+                }
                 MusicState::STOP => {
                     if stop_current_playing_music(sink).is_ok() {
                         listener.player_stopped();
                     }
-                },
+                }
                 MusicState::CONTINUE => {
                     if continue_paused_music(sink).is_ok() {
                         println!("Continue");
                     }
-                },
+                }
             };
         }
         Content::DroppedPeer { addr } => {
@@ -425,7 +419,7 @@ pub fn send_write_request(
         .spawn(move || {
             let mut peer_lock = match arc_peer.lock() {
                 Ok(p) => p,
-                Err(e) => e.into_inner()
+                Err(e) => e.into_inner(),
             };
             let stream = match TcpStream::connect(target) {
                 Ok(s) => s,
@@ -482,7 +476,6 @@ fn other_random_target(
     }
     Some(*target)
 }
-
 
 /// Communicate to the listener that we want to find the location of a given file
 pub fn send_read_request(peer: &mut Peer, name: &str, instr: Instructions) {
@@ -551,10 +544,7 @@ fn send_local_file_status(
 
 pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicState) {
     let not = Notification {
-        content: Content::PlayAudioRequest {
-            name,
-            state,
-        },
+        content: Content::PlayAudioRequest { name, state },
         from: peer.ip_address,
     };
     if let Err(e) = peer.sender.send(not) {
@@ -595,7 +585,6 @@ fn send_dropped_peer_notification(target: SocketAddr, dropped_addr: SocketAddr, 
         println!("Failed to serialize SendRequest {:?}", &not);
     }
 }
-
 
 /// Function to check file path to mp3 and saves to db afterwards
 /// # Arguments:

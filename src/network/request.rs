@@ -1,4 +1,5 @@
-use crate::audio::{play_music_by_vec,save_music_to_disk,MusicPlayer};
+use crate::audio::{play_music_by_vec, save_music_to_disk, MusicPlayer};
+use crate::interface::Peer;
 use crate::network::handshake::{
     json_string_to_network_table, send_change_name_request, send_network_table_request,
     send_table_request, send_table_to_all_peers, update_table_after_delete,
@@ -7,19 +8,24 @@ use crate::network::music_exchange::{
     delete_redundant_song_request, read_file_exist, send_exist_response, send_file_request,
     send_get_file_reponse, song_order_request,
 };
-use crate::interface::Peer;
 use crate::network::{
-    other_random_target, send_local_file_status, send_read_request,
-    send_status_request, send_write_request,
+    other_random_target, send_local_file_status, send_read_request, send_status_request,
+    send_write_request,
 };
 use crate::utils::Instructions::{GET, ORDER, PLAY, REMOVE};
+use crate::utils::ListenerInstr::{DELETE, NEW};
 use crate::utils::{AppListener, Instructions};
 use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
-use crate::utils::ListenerInstr::{NEW, DELETE};
 
-pub fn push_to_db(key: String, value: Vec<u8>, _from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn push_to_db(
+    key: String,
+    value: Vec<u8>,
+    _from: String,
+    peer: &mut Peer,
+    listener: &mut Box<dyn AppListener + Sync>,
+) {
     if peer.database.data.contains_key(&key) {
         println!("File already exists in your database");
     } else {
@@ -40,7 +46,9 @@ pub fn push_to_db(key: String, value: Vec<u8>, _from: String, peer: &mut Peer, l
                 );
                 match peer.redundancy_table.get_mut(&target) {
                     Some(p) => p.push(key),
-                    None => {peer.redundancy_table.insert(target.clone(), vec![key]);}
+                    None => {
+                        peer.redundancy_table.insert(target.clone(), vec![key]);
+                    }
                 }
             }
             None => println!("Only peer in network. No redundancy possible"),
@@ -48,19 +56,31 @@ pub fn push_to_db(key: String, value: Vec<u8>, _from: String, peer: &mut Peer, l
     }
 }
 
-pub fn redundant_push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>, from: String) {
+pub fn redundant_push_to_db(
+    key: String,
+    value: Vec<u8>,
+    peer: &mut Peer,
+    listener: &mut Box<dyn AppListener + Sync>,
+    from: String,
+) {
     let key_clone = key.clone();
     let key_redundant_clone = key.clone();
     peer.process_store_request((key, value));
     listener.file_status_changed(key_clone, NEW);
     let from_address = match from.parse::<SocketAddr>() {
         Ok(a) => a,
-        Err(_e) => {error!("Could not parse senders address to SocketAddr"); return;}
+        Err(_e) => {
+            error!("Could not parse senders address to SocketAddr");
+            return;
+        }
     };
 
     match peer.redundancy_table.get_mut(&from_address) {
         Some(p) => p.push(key_redundant_clone),
-        None => {peer.redundancy_table.insert(from_address, vec![key_redundant_clone]);}
+        None => {
+            peer.redundancy_table
+                .insert(from_address, vec![key_redundant_clone]);
+        }
     }
 }
 
@@ -177,16 +197,16 @@ pub fn get_file_response(
             play_music_by_vec(value, sink, key.to_string())
         }
         GET => {
-            if let Err(_e) = save_music_to_disk(value, &key.to_string()) { return Err("Could not save music to disk".to_string());};
+            if let Err(_e) = save_music_to_disk(value, &key.to_string()) {
+                return Err("Could not save music to disk".to_string());
+            };
             Ok(())
         }
         ORDER => {
             peer.process_store_request((key.to_string(), value.clone()));
             Ok(())
         }
-        _ => {
-            Err("Unknown command".to_string())
-        }
+        _ => Err("Unknown command".to_string()),
     }
 }
 
@@ -289,14 +309,16 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
     }
 }
 
-pub fn redistribute_files (addr: SocketAddr, peer: &mut Peer) {
+pub fn redistribute_files(addr: SocketAddr, peer: &mut Peer) {
     if peer.network_table.len() > 1 {
         //let database = peer.get_db().get_data();
         let redundant_table = &peer.redundancy_table;
         let network_table = &peer.network_table;
         let song_list = match redundant_table.get(&addr) {
             Some(s) => s,
-            None => {return;}
+            None => {
+                return;
+            }
         };
         if network_table.len() > 1 {
             for song in song_list {
