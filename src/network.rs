@@ -165,14 +165,15 @@ pub fn startup(
         });
 
     let sender_clone = sender.clone();
-    if let Err(e) = thread::Builder::new()
+    match thread::Builder::new()
         .name("TCPListener".to_string())
         .spawn(move || {
             if let Err(_) = listen_tcp(peer_arc_clone_listen, sender_clone) {
-                Err("Failed to spawn listener".to_string())
+                println!("Failed to spawn listener")
             };
         }) {
-        Err(format!("{:?}", e))
+        Err(e) => {println!("{:?}", e);}
+        Ok(_) => {}
     };
 
     let _peer_arc_clone_interact = peer_arc.clone();
