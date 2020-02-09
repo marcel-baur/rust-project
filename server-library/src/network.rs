@@ -140,7 +140,6 @@ pub fn startup(
                         Ok(a) => a,
                         Err(e) => e.into_inner(),
                     };
-                    println!("handle notification");
                     handle_notification(not, &mut peer, &mut app);
                 }
                 Err(e) => {
