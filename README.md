@@ -24,7 +24,7 @@ There are two ways to use the MEFF-Application:
 
 #### Shell-App
 
-If you want create a new peer network using the following command:
+If you want to create a new peer network use the following command:
 
 `cargo run <your name> <port>`
 
@@ -45,9 +45,9 @@ The application can now be used with following commands:
 #### GUI-App
 
 To make the app easier to use we have created a GUI implemented with the gtk library.
-Downloading, streaming or playing the music is now controlled by a simple user interface.
+Downloading, streaming or playing the music can now be controlled by a simple user interface.
 
-Similar to the shell app, the app can be started either by joining an existing network or creating a new network.
+Similar to the shell app, the GUI can be started either by joining an existing network or creating a new network.
 
 The interface is divided into two parts:
 - The right side contains a list of your own songs. These can be deleted, played, paused and stopped. 
@@ -55,6 +55,7 @@ The interface is divided into two parts:
     - The download button saves a specific song from other peers in your database. 
     - The streaming button plays the song from others.
 
+![GUI](https://fabianfrey.de/meff.png)
 
 ## Crates used:
 
