@@ -17,11 +17,9 @@ use crate::utils::{AppListener, Instructions};
 use std::net::SocketAddr;
 use std::process;
 use std::time::SystemTime;
-use crate::interface::Notification;
-use crate::network::notification::{Content};
 use crate::utils::ListenerInstr::{NEW, DELETE};
 
-pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn push_to_db(key: String, value: Vec<u8>, _from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     if peer.database.data.contains_key(&key) {
         println!("File already exists in your database");
     } else {
@@ -40,7 +38,6 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
                     true,
                     peer,
                 );
-                let mut peer_clone = peer.clone();
                 match peer.redundancy_table.get_mut(&target) {
                     Some(p) => p.push(key),
                     None => {peer.redundancy_table.insert(target.clone(), vec![key]);}
@@ -169,7 +166,7 @@ pub fn get_file(instr: Instructions, key: String, sender: SocketAddr, peer: &mut
 
 pub fn get_file_response(
     instr: &Instructions,
-    key: &String,
+    key: &str,
     value: Vec<u8>,
     peer: &mut Peer,
     sink: &mut MusicPlayer,
@@ -177,18 +174,18 @@ pub fn get_file_response(
     match instr {
         PLAY => {
             //save to tmp and play audio
-            play_music_by_vec(value, sink, key.clone())
+            play_music_by_vec(value, sink, key.to_string())
         }
         GET => {
-            save_music_to_disk(value, key);
-            return Ok(());
+            if let Err(_e) = save_music_to_disk(value, &key.to_string()) { return Err("Could not save music to disk".to_string());};
+            Ok(())
         }
         ORDER => {
-            peer.process_store_request((key.clone(), value.clone()));
-            return Ok(());
+            peer.process_store_request((key.to_string(), value.clone()));
+            Ok(())
         }
         _ => {
-            return Err("Unknown command".to_string());
+            Err("Unknown command".to_string())
         }
     }
 }
@@ -294,8 +291,8 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
 
 pub fn redistribute_files (addr: SocketAddr, peer: &mut Peer) {
     if peer.network_table.len() > 1 {
-        let database = peer.get_db().get_data();
-        let mut redundant_table = &peer.redundancy_table;
+        //let database = peer.get_db().get_data();
+        let redundant_table = &peer.redundancy_table;
         let network_table = &peer.network_table;
         let song_list = match redundant_table.get(&addr) {
             Some(s) => s,
