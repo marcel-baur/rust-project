@@ -35,7 +35,7 @@ pub fn json_string_to_network_table(json_string: String) -> HashMap<String, Sock
     hashmap
 }
 
-pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> String {
+pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> Result<String, String> {
     let mut array = vec![];
     for (key, address) in network_table {
         array.push(NetworkInfo {
@@ -43,13 +43,26 @@ pub fn network_table_to_json(network_table: &HashMap<String, SocketAddr>) -> Str
             address: address.clone().to_string(),
         });
     }
-    serde_json::to_string(&array).unwrap()
+    match serde_json::to_string(&array) {
+        Ok(str) => Ok(str),
+        Err(e) => {
+//            format!("Could not parse the network table to a JSON-String: {:?}", e);
+            Err(format!("Could not parse the network table to a JSON-String: {:?}", e))
+        }
+    }
 }
 
 pub fn send_network_table_request(target: SocketAddr, peer: &Peer) {
+    let value = match network_table_to_json(&peer.network_table) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("{}", e);
+            return;
+        }
+    };
     let not = Notification {
         content: Content::SendNetworkTable {
-            value: network_table_to_json(&peer.network_table).into_bytes(),
+            value: value.into_bytes(),
         },
         from: peer.ip_address,
     };
@@ -62,9 +75,16 @@ pub fn send_network_update_table_request(
     from: SocketAddr,
     hashmap: &HashMap<String, SocketAddr>,
 ) {
+    let value = match network_table_to_json(hashmap) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("{}", e);
+            return;
+        }
+    };
     let not = Notification {
         content: Content::SendNetworkUpdateTable {
-            value: network_table_to_json(hashmap).into_bytes(),
+            value: value.into_bytes(),
         },
         from,
     };
