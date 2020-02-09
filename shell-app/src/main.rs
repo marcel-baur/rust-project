@@ -2,10 +2,8 @@ extern crate meff;
 use crate::shell::spawn_shell;
 use crate::util::Application;
 use clap::{App, Arg};
-use meff::interface;
 use meff::interface::{Peer, start};
 use std::net::SocketAddr;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 #[macro_use]

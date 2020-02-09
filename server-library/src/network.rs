@@ -37,7 +37,7 @@ use request::{
 };
 use std::collections::HashMap;
 use std::path::Path;
-use crate::utils::ListenerInstr::{DELETE, DOWNLOAD};
+use crate::utils::ListenerInstr::{DELETE, DOWNLOAD, NEW};
 
 fn validate_port(port: &str) -> Result<&str, String> {
     if let Err(e) = port.parse::<u32>() {
@@ -336,9 +336,11 @@ fn handle_notification(
                     Instructions::GET => {
                         listener.file_status_changed(key, DOWNLOAD);
                     }
+                    Instructions::ORDER => {
+                        listener.file_status_changed(key, NEW);
+                    }
                     _ => {}
                 }
-
             }
         }
         Content::DeleteFileRequest { song_name } => {
