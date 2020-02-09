@@ -509,8 +509,8 @@ pub fn send_play_request(name: Option<String>, peer: &mut Peer, state: MusicStat
 }
 
 fn handle_lost_connection(addr: SocketAddr, peer: &mut Peer) {
-    //    peer.drop_peer_by_ip(&addr);
     let mut cloned_peer = peer.clone();
+    peer.drop_peer_by_ip(&addr);
     for other_addr in peer.network_table.values() {
         if *other_addr != addr {
             send_dropped_peer_notification(*other_addr, addr, &mut cloned_peer)
