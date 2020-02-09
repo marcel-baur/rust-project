@@ -27,7 +27,6 @@ use crate::audio::{
 use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
 use notification::*;
-use crate::interface::*;
 use peer::{create_peer};
 use request::{
     change_peer_name, delete_file_request, delete_from_network, dropped_peer, exist_file,
@@ -40,7 +39,7 @@ use std::path::Path;
 use crate::utils::ListenerInstr::{DELETE, DOWNLOAD, NEW};
 
 fn validate_port(port: &str) -> Result<&str, String> {
-    if let Err(e) = port.parse::<u32>() {
+    if let Err(_e) = port.parse::<u32>() {
         return Err("The supplied port is not numeric".to_string());
     }
     if port.len() != 4 {
@@ -391,7 +390,7 @@ fn handle_notification(
                 },
                 MusicState::PAUSE => {
                     if pause_current_playing_music(sink).is_ok() {
-                        println!("{}", "pause");
+                        println!("pause");
                     }
                 },
                 MusicState::STOP => {
@@ -401,7 +400,7 @@ fn handle_notification(
                 },
                 MusicState::CONTINUE => {
                     if continue_paused_music(sink).is_ok() {
-                        println!("{}", "continue");
+                        println!("Continue");
                     }
                 },
             };

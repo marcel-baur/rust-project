@@ -1,17 +1,15 @@
 use crate::database::Database;
-use crate::network::{get_own_ip_address, push_music_to_database, send_read_request, send_play_request, send_delete_peer_request};
+use crate::network::{push_music_to_database, send_read_request, send_play_request, send_delete_peer_request};
 use crate::network::notification::{Content};
 use serde::{Deserialize, Serialize};
 use crate::utils::{Instructions, AppListener};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::string::ToString;
 use std::sync::mpsc::SyncSender;
 use std::time::SystemTime;
 use std::io;
 use crate::network;
 use std::sync::{Arc, Mutex};
-use std::hash::Hash;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum MusicState {

@@ -2,7 +2,6 @@ use crate::interface::Peer;
 use crate::network::send_read_request;
 use crate::utils::Instructions::PLAY;
 use rodio::Sink;
-use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Cursor};
 use std::string::ToString;
 use std::fs;
@@ -25,13 +24,13 @@ pub fn create_sink() -> Result<MusicPlayer, String> {
     })
 }
 
-pub fn save_music_to_disk(music: Vec<u8>, name: &String) -> Result<(), String> {
+pub fn save_music_to_disk(music: Vec<u8>, name: &str) -> Result<(), String> {
     println!("{}", "save_music_to_disk".to_string());
     let path = format!("../file/{}.mp3", name);
     match fs::write(path ,music) {
-        Ok(_) => return Ok(()),
-        Err(_e) => return Err("could not save file to disk".to_string()),
-    };
+        Ok(_) => Ok(()),
+        Err(_e) => Err("could not save file to disk".to_string()),
+    }
 }
 
 /// plays audio when mp3 is in database otherwise sends request to find file
@@ -41,7 +40,7 @@ pub fn save_music_to_disk(music: Vec<u8>, name: &String) -> Result<(), String> {
 ///
 pub fn play_music(peer: &mut Peer, name: &Option<String>, sink: &mut MusicPlayer) -> Result<(), String> {
     // we play sound when it is in our own database, otherwise we ask for the location
-    let mut title = String::new();
+    let title ;
     if let Some(song_name) = name {
         title = song_name.to_string();
     } else if let Some(song_name) = &sink.current_song_name {
