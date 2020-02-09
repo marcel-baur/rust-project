@@ -306,6 +306,7 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
 
 
 pub fn redistribute_files(addr: SocketAddr, peer: &mut Peer) {
+    let mut peer_clone = peer.clone();
     if peer.network_table.len() > 1 {
         //let database = peer.get_db().get_data();
         let redundant_table = &peer.redundancy_table;
@@ -328,7 +329,7 @@ pub fn redistribute_files(addr: SocketAddr, peer: &mut Peer) {
                     Some(f) => f,
                     None => {return;}
                 };
-                send_write_request(redundant_target, peer.ip_address, (song.to_string(), file.clone()),true, peer );
+                send_write_request(redundant_target, peer.ip_address, (song.to_string(), file.clone()),true, &mut peer_clone );
             }
         }
         peer.redundancy_table.remove(&addr);
