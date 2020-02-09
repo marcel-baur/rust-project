@@ -124,14 +124,12 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
             Some(&"play") => {
                 if instructions.len() == 2 {
                     music_control(Some(instructions[1].to_string()), &mut peer_clone, PLAY);
-                } else {
-                    if *model_clone.is_playing.lock().unwrap() {
+                } else if *model_clone.is_playing.lock().unwrap() {
                         music_control(None, &mut peer_clone, CONTINUE);
                     } else {
                         println!("File name is missing. For more information type help.\n");
                     }
                 }
-            }
             Some(&"remove") => {
                 if instructions.len() == 2 {
                     music_request(&mut peer_clone, instructions[1], REMOVE);
@@ -151,6 +149,7 @@ pub fn handle_user_input(arc: &Arc<Mutex<Peer>>, model: &Arc<Mutex<Application>>
         }
     }
 }
+
 
 pub fn show_help_instructions() {
     let info = "\nHelp Menu:\n\n\

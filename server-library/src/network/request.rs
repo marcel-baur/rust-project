@@ -21,7 +21,7 @@ use crate::interface::Notification;
 use crate::network::notification::{Content};
 use crate::utils::ListenerInstr::{NEW, DELETE};
 
-pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
+pub fn push_to_db(key: String, value: Vec<u8>, peer: &mut Peer, listener: &mut Box<dyn AppListener + Sync>) {
     if peer.database.data.contains_key(&key) {
         println!("File already exists in your database");
     } else {
@@ -40,7 +40,6 @@ pub fn push_to_db(key: String, value: Vec<u8>, from: String, peer: &mut Peer, li
                     true,
                     peer,
                 );
-                let mut peer_clone = peer.clone();
                 match peer.redundancy_table.get_mut(&target) {
                     Some(p) => p.push(key),
                     None => {peer.redundancy_table.insert(target.clone(), vec![key]);}
@@ -289,7 +288,7 @@ pub fn delete_file_request(song_name: &str, peer: &mut Peer) {
 
 pub fn redistribute_files (addr: SocketAddr, peer: &mut Peer) {
     if peer.network_table.len() > 1 {
-        let database = peer.get_db().get_data();
+        //let database = peer.get_db().get_data();
         let redundant_table = &peer.redundancy_table;
         let network_table = &peer.network_table;
         let song_list = match redundant_table.get(&addr) {

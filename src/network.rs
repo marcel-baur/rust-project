@@ -312,7 +312,7 @@ fn handle_notification(
     let sender = notification.from;
     match notification.content {
         Content::PushToDB { key, value, from } => {
-            push_to_db(key, value, from, peer, listener);
+            push_to_db(key, value, peer, listener);
         }
         Content::RedundantPushToDB { key, value, from } => {
             redundant_push_to_db(key, value, peer, listener, from);
