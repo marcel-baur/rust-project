@@ -179,7 +179,7 @@ pub fn startup(
         }) {
         Ok(s) => s,
         Err(_e) => {
-            return Err("Failed to spwan listener".to_string());
+            return Err("Failed to spawn listener".to_string());
         }
     };
 

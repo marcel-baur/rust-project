@@ -88,6 +88,7 @@ pub fn tcp_request_with_notification(target: SocketAddr, notification: Notificat
     let stream = match TcpStream::connect_timeout(&target, Duration::new(1, 1)) {
         Ok(s) => s,
         Err(_e) => {
+            println!("{:?}", _e);
             handle_error(notification.content, target);
             return;
         }
