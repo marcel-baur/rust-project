@@ -19,10 +19,7 @@ extern crate rand;
 
 use rand::Rng;
 
-use crate::audio::{
-    continue_paused_music, create_sink, pause_current_playing_music, play_music,
-    stop_current_playing_music, MusicPlayer,
-};
+
 
 use crate::utils::{AppListener, Instructions, HEARTBEAT_SLEEP_DURATION};
 use handshake::send_table_request;
